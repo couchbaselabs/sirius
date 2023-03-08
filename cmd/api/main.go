@@ -13,7 +13,7 @@ type Config struct{}
 func main() {
 	app := Config{}
 
-	log.Printf("Starting DocLoader serives at port %s\n", webPort)
+	log.Printf("Starting Document Loading Service at port %s\n", webPort)
 
 	//define the server
 	srv := http.Server{

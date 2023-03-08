@@ -13,3 +13,12 @@ Start server directly
 ```textmate
   $ make run
 ```
+
+Deploy sirius on docker ( Make sure docker desktop is running)
+```textmate
+$ make deploy
+```
+To stop sirius after docker deployment
+```textmate
+$ make down
+```
