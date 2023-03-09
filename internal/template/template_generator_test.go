@@ -1,29 +1,16 @@
 package template
 
 import (
-	"encoding/json"
+	"log"
 	"testing"
 )
 
-func TestGenerateRandomJSON(t *testing.T) {
-
-	pData := generateRandomJSON(personTemplate)
-	if pStr, err := json.Marshal(pData); err != nil {
-		t.Fail()
-	} else {
-		p := &Person{}
-		if err = json.Unmarshal(pStr, p); err != nil {
-			t.Fail()
-		}
-	}
-}
-
 func TestGeneratePerson(t *testing.T) {
-	p, e := GeneratePerson()
-	if e != nil {
+	persons := GeneratePerson(10, 1678361550549466000)
+	if len(persons) == 0 {
 		t.Fail()
 	}
-	if p == (Person{}) {
-		t.Fail()
+	for _, p := range persons {
+		log.Println(p)
 	}
 }

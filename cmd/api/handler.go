@@ -3,7 +3,6 @@ package main
 import (
 	"crypto/sha256"
 	"github.com/couchbaselabs/sirius/internal/communication"
-	"log"
 	"net/http"
 )
 
@@ -26,7 +25,6 @@ func (app *Config) startExperiment(w http.ResponseWriter, r *http.Request) {
 	if err := app.readJSON(w, r, reqPayload); err != nil {
 		app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
-	log.Println(reqPayload)
 
 	if err := reqPayload.Validate(); err != nil {
 		app.errorJSON(w, err, http.StatusBadRequest)
