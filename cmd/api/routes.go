@@ -25,6 +25,7 @@ func (app *Config) routes() http.Handler {
 	mux.Use(middleware.Heartbeat("/ping"))
 
 	mux.Get("/", app.testServer)
+	//mux.Post("/create", app.CreateDocument)
 
 	return mux
 }
