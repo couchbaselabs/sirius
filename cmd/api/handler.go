@@ -1,9 +1,8 @@
 package main
 
 import (
-	"encoding/json"
-	"github.com/couchbaselabs/sirius/internal/requests"
-	"io"
+	"crypto/sha256"
+	"github.com/couchbaselabs/sirius/internal/communication"
 	"log"
 	"net/http"
 )
@@ -20,32 +19,36 @@ func (app *Config) testServer(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (app *Config) createDocument(w http.ResponseWriter, r *http.Request) {
-	payload := jsonResponse{
-		Error:   false,
-		Message: "Document Creation Accepted",
+func (app *Config) startExperiment(w http.ResponseWriter, r *http.Request) {
+
+	reqPayload := &communication.Request{}
+
+	if err := app.readJSON(w, r, reqPayload); err != nil {
+		app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
+	log.Println(reqPayload)
 
-	req := &requests.CreateRequest{}
-
-	// Decode request
-	b, err := io.ReadAll(r.Body)
-	if err != nil {
-		app.errorJSON(w, err, http.StatusInternalServerError)
-	}
-
-	err = json.Unmarshal(b, req)
-	if err != nil {
+	if err := reqPayload.Validate(); err != nil {
 		app.errorJSON(w, err, http.StatusBadRequest)
+		return
 	}
 
-	// validate request
+	// start the experiment
+	token := sha256.Sum256([]byte(reqPayload.Username + reqPayload.Password))
+	seed := reqPayload.Seed
 
-	log.Println(req)
-	/* initiate a couchbase client */
+	// return a response with token and seed
+	resData := communication.Response{
+		Token: token,
+		Seed:  seed,
+	}
 
-	/* Service request by uploading document in the cluster using couchbase */
+	resPayload := jsonResponse{
+		Error:   false,
+		Message: "Successfully started requested operation",
+		Data:    resData,
+	}
 
-	/* return token for polling result */
-	app.writeJSON(w, http.StatusOK, payload)
+	app.writeJSON(w, http.StatusOK, resPayload)
+
 }
