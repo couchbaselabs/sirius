@@ -57,7 +57,7 @@ func GenerateKeys(count int, size int, seed int64) []string {
 	fake := faker.NewWithSeed(rand.NewSource(seed))
 	for i := 0; i < count; i++ {
 		key := fmt.Sprintf("%d", time.Now().UnixNano())
-		//time.Sleep(1 * time.Microsecond)
+		time.Sleep(1 * time.Microsecond)
 		key += fmt.Sprintf("%d%s", time.Now().UnixNano(), fake.BinaryString().BinaryString(size))
 		key = key[:size]
 		keys = append(keys, key)
