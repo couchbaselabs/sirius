@@ -1,8 +1,10 @@
 package template
 
 import (
+	"fmt"
 	"github.com/jaswdr/faker"
 	"math/rand"
+	"time"
 )
 
 type Address struct {
@@ -19,24 +21,46 @@ type Person struct {
 	Age       int     `json:"age,omitempty"`
 	Email     string  `json:"email,omitempty"`
 	Address   Address `json:"address,omitempty"`
+	Summary   string  `json:"summary,omitempty"`
+	//Summary2  string  `json:"summary2,omitempty"`
 }
 
 // GeneratePersons return a Person with random details
-func GeneratePersons(count int, seed int64) []Person {
+func GeneratePersons(count int, seed int64) []*Person {
 
-	p := make([]Person, count)
+	p := make([]*Person, count)
 
 	fake := faker.NewWithSeed(rand.NewSource(seed))
 	for i := 0; i < count; i++ {
-		p[i].FirstName = fake.Person().FirstName()
-		p[i].Lastname = fake.Person().LastName()
-		p[i].Age = fake.IntBetween(0, 100)
-		p[i].Email = fake.Internet().CompanyEmail()
-		p[i].Address.State = fake.Address().State()
-		p[i].Address.City = fake.Address().City()
-		p[i].Address.Street = fake.Address().StreetName()
-		p[i].Address.Zipcode = fake.Address().PostCode()
-		p[i].Address.Country = fake.Address().Country()
+		p[i] = &Person{
+			FirstName: fake.Person().FirstName(),
+			Lastname:  fake.Person().LastName(),
+			Age:       fake.IntBetween(0, 100),
+			Email:     fake.Internet().CompanyEmail(),
+			Address: Address{
+				State:   fake.Address().State(),
+				City:    fake.Address().City(),
+				Street:  fake.Address().StreetName(),
+				Zipcode: fake.Address().PostCode(),
+				Country: fake.Address().Country(),
+			},
+			Summary: fake.Lorem().Sentence(1000),
+			//Summary2: fake.Lorem().Sentence(1000),
+		}
 	}
+
 	return p
+}
+
+func GenerateKeys(count int, size int, seed int64) []string {
+	var keys []string
+	fake := faker.NewWithSeed(rand.NewSource(seed))
+	for i := 0; i < count; i++ {
+		key := fmt.Sprintf("%d", time.Now().UnixNano())
+		//time.Sleep(1 * time.Microsecond)
+		key += fmt.Sprintf("%d%s", time.Now().UnixNano(), fake.BinaryString().BinaryString(size))
+		key = key[:size]
+		keys = append(keys, key)
+	}
+	return keys
 }
