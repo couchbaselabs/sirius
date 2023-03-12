@@ -36,7 +36,7 @@ type Generator struct {
 	Template        interface{}
 }
 
-// Next will return back list of keys and person templates
+// Next will return list of keys and person templates
 func (g *Generator) Next(seed int64) ([]string, []*template.Person) {
 	keys := template.GenerateKeys(g.BatchSize, g.KeySize, seed)
 	personTemplate := template.GeneratePersons(g.BatchSize, seed)

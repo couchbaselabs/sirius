@@ -21,7 +21,7 @@ type Person struct {
 	Age       int     `json:"age,omitempty"`
 	Email     string  `json:"email,omitempty"`
 	Address   Address `json:"address,omitempty"`
-	Summary   string  `json:"summary,omitempty"`
+	//Summary   string  `json:"summary,omitempty"`
 	//Summary2  string  `json:"summary2,omitempty"`
 }
 
@@ -44,7 +44,7 @@ func GeneratePersons(count int, seed int64) []*Person {
 				Zipcode: fake.Address().PostCode(),
 				Country: fake.Address().Country(),
 			},
-			Summary: fake.Lorem().Sentence(1000),
+			//Summary: fake.Lorem().Sentence(1000),
 			//Summary2: fake.Lorem().Sentence(1000),
 		}
 	}

@@ -1,76 +1,97 @@
 package tasks
 
 import (
+	"encoding/gob"
+	"fmt"
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/communication"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
 	"log"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 )
 
+const ResultPath = "./results/result-logs"
+
 type UserData struct {
-	Token [32]byte `json:"token"`
-	Seed  []int64  `json:"seed"`
+	Seed []int64 `json:"seed"`
+}
+
+type TaskError struct {
+	Key string      `json:"key"`
+	Doc interface{} `json:"doc"`
+	Err string      `json:"string"`
+}
+
+type TaskOperationCounter struct {
+	Success int
+	Failure int
+	lock    sync.Mutex
+}
+
+type TaskResult struct {
+	UserData             UserData             `json:"-"`
+	TaskError            []*TaskError         `json:"taskError"`
+	TaskOperationCounter TaskOperationCounter `json:"task_operation_counter"`
 }
 
 type Task struct {
-	UserData    UserData
-	Req         *communication.Request
-	TaskResults []interface{}
-	TaskErrors  []error
-	ClientError error
+	UserData             UserData
+	Request              *communication.TaskRequest
+	taskError            []*TaskError
+	clientError          error
+	taskOperationCounter TaskOperationCounter
 }
 
-func (e *Task) Handler() {
-
-	go e.initiateLoading()
-}
-
-func (e *Task) initiateLoading() {
+func (t *Task) Handler() error {
 
 	var connectionString string
-	switch e.Req.Service {
+	switch t.Request.Service {
 	case communication.OnPremService:
-		connectionString = "couchbase://" + e.Req.Host
+		connectionString = "couchbase://" + t.Request.Host
 	case communication.CapellaService:
-		connectionString = "couchbases://" + e.Req.Host
+		connectionString = "couchbases://" + t.Request.Host
 	}
 
 	cluster, err := gocb.Connect(connectionString, gocb.ClusterOptions{
 		Authenticator: gocb.PasswordAuthenticator{
-			Username: e.Req.Username,
-			Password: e.Req.Password,
+			Username: t.Request.Username,
+			Password: t.Request.Password,
 		},
 	})
 	if err != nil {
-		e.ClientError = err
+		t.clientError = err
 		log.Println(err)
-		return
-	} else {
-		log.Println("Connected")
+		return err
 	}
 
-	// open bucket
-	bucket := cluster.Bucket(e.Req.Bucket)
-	log.Println(bucket.Name(), connectionString, e.Req.Username, e.Req.Password, e.Req.Scope, e.Req.Collection)
-
+	bucket := cluster.Bucket(t.Request.Bucket)
 	err = bucket.WaitUntilReady(5*time.Second, nil)
-
 	if err != nil {
-		e.ClientError = err
+		t.clientError = err
 		log.Println(err)
-		return
+		return err
 	}
 
-	log.Println(bucket.Name())
-	col := bucket.Scope(e.Req.Scope).Collection(e.Req.Collection)
-	log.Println(col.Name())
-	switch e.Req.Operation {
-	case communication.InsertOperation:
-		e.insert(col)
-	case communication.UpsertOperation:
-		log.Println("upsert")
+	col := bucket.Scope(t.Request.Scope).Collection(t.Request.Collection)
+	// initialise a doc generator
+	gen := docgenerator.Generator{
+		Itr:           0,
+		End:           t.Request.Iteration,
+		BatchSize:     t.Request.BatchSize,
+		DocType:       t.Request.DocType,
+		KeySize:       t.Request.KeySize,
+		DocSize:       0,
+		RandomDocSize: false,
+		RandomKeySize: false,
+		Seed:          t.Request.Seed,
+		Template:      nil,
+	}
+	switch t.Request.Operation {
+	case communication.InsertOperation, communication.UpsertOperation:
+		t.insertUpsert(gen, col)
 	case communication.DeleteOperation:
 		log.Println("delete")
 	case communication.GetOperation:
@@ -79,42 +100,80 @@ func (e *Task) initiateLoading() {
 
 	// Close connection and cluster.
 	err = cluster.Close(nil)
-	e.ClientError = err
-
-}
-
-func (e *Task) insert(col *gocb.Collection) {
-	gen := docgenerator.Generator{
-		Itr:           0,
-		End:           e.Req.Iteration,
-		BatchSize:     e.Req.BatchSize,
-		DocType:       e.Req.DocType,
-		KeySize:       e.Req.KeySize,
-		DocSize:       0,
-		RandomDocSize: false,
-		RandomKeySize: false,
-		Seed:          e.Req.Seed,
-		Template:      nil,
+	if err != nil {
+		t.clientError = err
+		log.Println(err)
+		return err
 	}
 
+	// save the task result-logs into a file
+	if err := t.saveResultIntoFile(); err != nil {
+		log.Println(err.Error())
+		return err
+	}
+	return nil
+}
+
+func (t *Task) insertUpsert(gen docgenerator.Generator, col *gocb.Collection) {
 	for i := gen.Itr; i < gen.End; i++ {
 		keys, personsTemplate := gen.Next(gen.Seed[i])
-		counter := 0
 		wg := sync.WaitGroup{}
 		wg.Add(len(keys))
 		for index, key := range keys {
 			go func(key string, doc interface{}) {
 				defer wg.Done()
-				result, err := col.Insert(key, doc, nil)
-				counter += 1
-				if err != nil {
-					e.TaskErrors = append(e.TaskErrors, err)
+				var err error
+				switch t.Request.Operation {
+				case communication.InsertOperation:
+					_, err = col.Insert(key, doc, nil)
+				case communication.UpsertOperation:
+					_, err = col.Upsert(key, doc, nil)
+
 				}
-				e.TaskResults = append(e.TaskResults, result)
+
+				if err != nil {
+					log.Println(err)
+					t.taskOperationCounter.lock.Lock()
+					t.taskError = append(t.taskError, &TaskError{
+						Key: key,
+						Doc: doc,
+						Err: err.Error(),
+					})
+					t.taskOperationCounter.Failure++
+					t.taskOperationCounter.lock.Unlock()
+				}
 			}(key, *personsTemplate[index])
 		}
 		wg.Wait()
-
-		log.Println(i, e.Req.Bucket, e.Req.Scope, e.Req.Collection, counter)
 	}
+	t.taskOperationCounter.Success = (gen.End * gen.BatchSize) - t.taskOperationCounter.Failure
+	log.Println(t.Request.Operation, t.Request.Bucket, t.Request.Scope, t.Request.Collection, t.taskOperationCounter.Success)
+}
+
+// Save the results into a file
+func (t *Task) saveResultIntoFile() error {
+	tr := TaskResult{
+		UserData:             t.UserData,
+		TaskError:            t.taskError,
+		TaskOperationCounter: t.taskOperationCounter,
+	}
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	fileName := filepath.Join(cwd, ResultPath, fmt.Sprintf("%d", tr.UserData.Seed[0]))
+	// save the value to a file
+	log.Println(fileName)
+	file, err := os.Create(fileName)
+	if err != nil {
+		return err
+	}
+	encoder := gob.NewEncoder(file)
+	if err := encoder.Encode(tr); err != nil {
+		return err
+	}
+	file.Close()
+	return nil
 }

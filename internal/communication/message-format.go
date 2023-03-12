@@ -26,7 +26,7 @@ const (
 const DefaultScope string = "_default"
 const DefaultCollection string = "_default"
 
-type Request struct {
+type TaskRequest struct {
 	Service         ServiceType               `json:"service"`
 	Username        string                    `json:"username"`
 	Password        string                    `json:"password"`
@@ -53,7 +53,7 @@ type Request struct {
 }
 
 // Validate cross checks the validity of an incoming request
-func (r *Request) Validate() error {
+func (r *TaskRequest) Validate() error {
 
 	if r.Service == "" {
 		r.Service = OnPremService
@@ -94,15 +94,20 @@ func (r *Request) Validate() error {
 		return fmt.Errorf("incorrect operation type")
 	}
 
+	time.Sleep(1 * time.Microsecond)
 	for i := 0; i < r.Iteration; i++ {
-		time.Sleep(1 * time.Millisecond)
+		time.Sleep(1 * time.Microsecond)
 		r.Seed = append(r.Seed, time.Now().UnixNano())
 	}
 
 	return nil
 }
 
+type TaskResult struct {
+	Seed         string `json:"seed"`
+	DeleteRecord bool   `json:"deleteRecord"`
+}
+
 type Response struct {
-	Token [32]byte `json:"token"`
-	Seed  int64    `json:"seed"`
+	Seed string `json:"seed"`
 }
