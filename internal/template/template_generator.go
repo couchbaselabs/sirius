@@ -21,11 +21,9 @@ type Person struct {
 	Age       int     `json:"age,omitempty"`
 	Email     string  `json:"email,omitempty"`
 	Address   Address `json:"address,omitempty"`
-	Summary   string  `json:"summary,omitempty"`
-	//Summary2  string  `json:"summary2,omitempty"`
 }
 
-// GeneratePersons return a Person with random details
+// GeneratePersons return a Person with random details.
 func GeneratePersons(count int, seed int64) []*Person {
 
 	p := make([]*Person, count)
@@ -44,14 +42,13 @@ func GeneratePersons(count int, seed int64) []*Person {
 				Zipcode: fake.Address().PostCode(),
 				Country: fake.Address().Country(),
 			},
-			Summary: fake.Lorem().Sentence(1000),
-			//Summary2: fake.Lorem().Sentence(1000),
 		}
 	}
 
 	return p
 }
 
+// GenerateKeys return a list of random keys which of user defined size.
 func GenerateKeys(count int, size int, seed int64) []string {
 	var keys []string
 	fake := faker.NewWithSeed(rand.NewSource(seed))

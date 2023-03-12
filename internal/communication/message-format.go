@@ -26,7 +26,8 @@ const (
 const DefaultScope string = "_default"
 const DefaultCollection string = "_default"
 
-type Request struct {
+// TaskRequest represents a structure of doc loading task.
+type TaskRequest struct {
 	Service         ServiceType               `json:"service"`
 	Username        string                    `json:"username"`
 	Password        string                    `json:"password"`
@@ -52,8 +53,8 @@ type Request struct {
 	Seed            []int64                   `json:"seed,omitempty"`
 }
 
-// Validate cross checks the validity of an incoming request
-func (r *Request) Validate() error {
+// Validate cross checks the validity of an incoming request to schedule a task.
+func (r *TaskRequest) Validate() error {
 
 	if r.Service == "" {
 		r.Service = OnPremService
@@ -82,7 +83,7 @@ func (r *Request) Validate() error {
 	if r.DocType == "" {
 		r.DocType = docgenerator.JsonDocument
 	}
-	if r.KeySize == 0 {
+	if r.KeySize == 0 || r.KeySize > docgenerator.DefaultKeySize {
 		r.KeySize = docgenerator.DefaultKeySize
 	}
 	if r.DocSize == 0 {
@@ -94,15 +95,22 @@ func (r *Request) Validate() error {
 		return fmt.Errorf("incorrect operation type")
 	}
 
+	time.Sleep(1 * time.Microsecond)
 	for i := 0; i < r.Iteration; i++ {
-		time.Sleep(1 * time.Millisecond)
+		time.Sleep(1 * time.Microsecond)
 		r.Seed = append(r.Seed, time.Now().UnixNano())
 	}
 
 	return nil
 }
 
+// TaskResult represents a request structure for retrieving result of the task.
+type TaskResult struct {
+	Seed         string `json:"seed"`
+	DeleteRecord bool   `json:"deleteRecord"`
+}
+
+// Response represents a response structure which is returned to user upon scheduling a task.
 type Response struct {
-	Token [32]byte `json:"token"`
-	Seed  int64    `json:"seed"`
+	Seed string `json:"seed"`
 }

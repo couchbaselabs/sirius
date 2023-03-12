@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/cors"
 )
 
+// routes returns a http Handler which supports multiple http request.
 func (app *Config) routes() http.Handler {
 
 	mux := chi.NewRouter()
@@ -26,6 +27,7 @@ func (app *Config) routes() http.Handler {
 
 	mux.Get("/", app.testServer)
 	mux.Post("/task", app.addTask)
+	mux.Post("/task-result", app.taskResult)
 
 	return mux
 }

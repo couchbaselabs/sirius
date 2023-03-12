@@ -16,6 +16,8 @@ const (
 const DefaultKeySize int = 250
 const DefaultDocSize int = 1000000
 
+// Generator helps to generate random document for inserting and updating random
+// as per the doc loading task requirement.
 type Generator struct {
 	Itr             int
 	End             int
@@ -36,7 +38,7 @@ type Generator struct {
 	Template        interface{}
 }
 
-// Next will return back list of keys and person templates
+// Next will return list of keys and person templates
 func (g *Generator) Next(seed int64) ([]string, []*template.Person) {
 	keys := template.GenerateKeys(g.BatchSize, g.KeySize, seed)
 	personTemplate := template.GeneratePersons(g.BatchSize, seed)
