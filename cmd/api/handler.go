@@ -52,7 +52,7 @@ func (app *Config) addTask(w http.ResponseWriter, r *http.Request) {
 
 	// prepare response for http request
 	respPayload := communication.Response{
-		Seed: fmt.Sprintf("%d", seed[0]),
+		Seed: fmt.Sprintf("%d", seed),
 	}
 
 	resPayload := jsonResponse{

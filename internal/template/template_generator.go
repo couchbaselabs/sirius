@@ -1,11 +1,6 @@
 package template
 
-import (
-	"fmt"
-	"github.com/jaswdr/faker"
-	"math/rand"
-	"time"
-)
+import "github.com/jaswdr/faker"
 
 type Address struct {
 	Street  string `json:"street,omitempty"`
@@ -24,12 +19,10 @@ type Person struct {
 }
 
 // GeneratePersons return a Person with random details.
-func GeneratePersons(count int, seed int64) []*Person {
+func GeneratePersons(count int64, fake faker.Faker) []*Person {
 
 	p := make([]*Person, count)
-
-	fake := faker.NewWithSeed(rand.NewSource(seed))
-	for i := 0; i < count; i++ {
+	for i := int64(0); i < count; i++ {
 		p[i] = &Person{
 			FirstName: fake.Person().FirstName(),
 			Lastname:  fake.Person().LastName(),
@@ -44,20 +37,5 @@ func GeneratePersons(count int, seed int64) []*Person {
 			},
 		}
 	}
-
 	return p
-}
-
-// GenerateKeys return a list of random keys which of user defined size.
-func GenerateKeys(count int, size int, seed int64) []string {
-	var keys []string
-	fake := faker.NewWithSeed(rand.NewSource(seed))
-	for i := 0; i < count; i++ {
-		key := fmt.Sprintf("%d", time.Now().UnixNano())
-		time.Sleep(1 * time.Microsecond)
-		key += fmt.Sprintf("%d%s", time.Now().UnixNano(), fake.BinaryString().BinaryString(size))
-		key = key[:size]
-		keys = append(keys, key)
-	}
-	return keys
 }
