@@ -6,7 +6,9 @@ import (
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/communication"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
+	"github.com/jaswdr/faker"
 	"log"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"sync"
@@ -16,7 +18,7 @@ import (
 const ResultPath = "./results/result-logs"
 
 type UserData struct {
-	Seed []int64 `json:"seed"`
+	Seed int64 `json:"seed"`
 }
 
 type TaskError struct {
@@ -26,9 +28,9 @@ type TaskError struct {
 }
 
 type TaskOperationCounter struct {
-	Success int
-	Failure int
-	lock    sync.Mutex
+	Success int64      `json:"success"`
+	Failure int64      `json:"failure"`
+	lock    sync.Mutex `json:"-"`
 }
 
 type TaskResult struct {
@@ -87,6 +89,7 @@ func (t *Task) Handler() error {
 		RandomDocSize: false,
 		RandomKeySize: false,
 		Seed:          t.Request.Seed,
+		Fake:          faker.NewWithSeed(rand.NewSource(t.Request.Seed)),
 		Template:      nil,
 	}
 	switch t.Request.Operation {
@@ -116,21 +119,21 @@ func (t *Task) Handler() error {
 
 func (t *Task) insertUpsert(gen docgenerator.Generator, col *gocb.Collection) {
 	for i := gen.Itr; i < gen.End; i++ {
-		keys, personsTemplate := gen.Next(gen.Seed[i])
+		personsTemplate := gen.Next(gen.BatchSize)
 		wg := sync.WaitGroup{}
-		wg.Add(len(keys))
-		for index, key := range keys {
-			go func(key string, doc interface{}) {
+		wg.Add(len(personsTemplate))
+		for index, person := range personsTemplate {
+			go func(iteration, batchSize, index int64, doc interface{}) {
 				defer wg.Done()
 				var err error
+				key := gen.GetKey(iteration, batchSize, index, gen.Seed)
 				switch t.Request.Operation {
 				case communication.InsertOperation:
-					_, err = col.Insert(key, doc, nil)
+					_, err = col.Insert(key, person, nil)
 				case communication.UpsertOperation:
-					_, err = col.Upsert(key, doc, nil)
+					_, err = col.Upsert(key, person, nil)
 
 				}
-
 				if err != nil {
 					log.Println(err)
 					t.taskOperationCounter.lock.Lock()
@@ -142,7 +145,7 @@ func (t *Task) insertUpsert(gen docgenerator.Generator, col *gocb.Collection) {
 					t.taskOperationCounter.Failure++
 					t.taskOperationCounter.lock.Unlock()
 				}
-			}(key, *personsTemplate[index])
+			}(i, gen.BatchSize, int64(index), person)
 		}
 		wg.Wait()
 	}
@@ -153,9 +156,12 @@ func (t *Task) insertUpsert(gen docgenerator.Generator, col *gocb.Collection) {
 // Save the results into a file
 func (t *Task) saveResultIntoFile() error {
 	tr := TaskResult{
-		UserData:             t.UserData,
-		TaskError:            t.taskError,
-		TaskOperationCounter: t.taskOperationCounter,
+		UserData:  t.UserData,
+		TaskError: t.taskError,
+		TaskOperationCounter: TaskOperationCounter{
+			Success: t.taskOperationCounter.Success,
+			Failure: t.taskOperationCounter.Failure,
+		},
 	}
 
 	cwd, err := os.Getwd()
@@ -163,7 +169,7 @@ func (t *Task) saveResultIntoFile() error {
 		return err
 	}
 
-	fileName := filepath.Join(cwd, ResultPath, fmt.Sprintf("%d", tr.UserData.Seed[0]))
+	fileName := filepath.Join(cwd, ResultPath, fmt.Sprintf("%d", tr.UserData.Seed))
 
 	// save the value to a file
 	file, err := os.Create(fileName)

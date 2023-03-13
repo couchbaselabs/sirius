@@ -35,8 +35,8 @@ type TaskRequest struct {
 	Bucket          string                    `json:"bucket"`
 	Scope           string                    `json:"scope,omitempty"`
 	Collection      string                    `json:"collection,omitempty"`
-	Iteration       int                       `json:"iteration,omitempty"`
-	BatchSize       int                       `json:"batchSize,omitempty"`
+	Iteration       int64                     `json:"iteration,omitempty"`
+	BatchSize       int64                     `json:"batchSize,omitempty"`
 	DocType         docgenerator.DocumentType `json:"docType,omitempty"`
 	KeySize         int                       `json:"keySize,omitempty"`
 	DocSize         int                       `json:"docSize,omitempty"`
@@ -50,7 +50,7 @@ type TaskRequest struct {
 	Timeout         time.Duration             `json:"timeout,omitempty"`
 	RetryStrategy   gocb.RetryStrategy        `json:"retryStrategy,omitempty"`
 	Operation       DocumentOperation         `json:"operation"`
-	Seed            []int64                   `json:"seed,omitempty"`
+	Seed            int64                     `json:"seed,omitempty"`
 }
 
 // Validate cross checks the validity of an incoming request to schedule a task.
@@ -94,13 +94,9 @@ func (r *TaskRequest) Validate() error {
 	default:
 		return fmt.Errorf("incorrect operation type")
 	}
-
+	// this sleep ensures that seed generated is always different.
 	time.Sleep(1 * time.Microsecond)
-	for i := 0; i < r.Iteration; i++ {
-		time.Sleep(1 * time.Microsecond)
-		r.Seed = append(r.Seed, time.Now().UnixNano())
-	}
-
+	r.Seed = time.Now().UnixNano()
 	return nil
 }
 
