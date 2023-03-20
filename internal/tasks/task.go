@@ -1,30 +1,58 @@
 package tasks
 
 import (
-	"encoding/gob"
-	"fmt"
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/communication"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
 	"github.com/jaswdr/faker"
 	"log"
 	"math/rand"
-	"os"
-	"path/filepath"
 	"sync"
 	"time"
 )
 
-const ResultPath = "./results/result-logs"
+const ResultPath = "./internal/tasks/result-logs"
+const TaskStatePath = "./internal/tasks/task-state"
 
 type UserData struct {
 	Seed int64 `json:"seed"`
 }
 
-type TaskError struct {
-	Key string      `json:"key"`
-	Doc interface{} `json:"doc"`
-	Err string      `json:"string"`
+type InsertTaskError struct {
+	Err map[int64]struct{}
+}
+
+type UpsertTaskError struct {
+	Err map[int64]struct{}
+}
+
+type DeleteTask struct {
+	Del map[int64]struct{}
+}
+
+type UpsertTaskOperation struct {
+	Start           int64
+	End             int64
+	FieldToChange   []string
+	UpsertTaskError UpsertTaskError
+}
+
+type UpsertTask struct {
+	Operation []UpsertTaskOperation
+}
+
+type TaskState struct {
+	Host            string
+	BUCKET          string
+	SCOPE           string
+	Collection      string
+	Seed            int64
+	SeedEnd         int64
+	KeyPrefix       string
+	KeySuffix       string
+	InsertTaskError InsertTaskError
+	DeleteTask      DeleteTask
+	UpsertTask      UpsertTask
 }
 
 type TaskOperationCounter struct {
@@ -35,16 +63,16 @@ type TaskOperationCounter struct {
 
 type TaskResult struct {
 	UserData             UserData             `json:"-"`
-	TaskError            []*TaskError         `json:"taskError"`
+	error                error                `json:"error,omitempty"`
 	TaskOperationCounter TaskOperationCounter `json:"task_operation_counter"`
 }
 
 type Task struct {
-	UserData             UserData
-	Request              *communication.TaskRequest
-	taskError            []*TaskError
-	clientError          error
-	taskOperationCounter TaskOperationCounter
+	UserData    UserData
+	Request     *communication.TaskRequest
+	TaskState   TaskState
+	Result      TaskResult
+	clientError error
 }
 
 func (t *Task) Handler() error {
@@ -76,29 +104,40 @@ func (t *Task) Handler() error {
 		log.Println(err)
 		return err
 	}
-
 	col := bucket.Scope(t.Request.Scope).Collection(t.Request.Collection)
+
+	// Retrieve the original collection state if it existed.
+	// TODO : Retrieved the original state of collection.
+	taskState, err := t.readTaskStateFromFile()
+	if err == nil {
+		t.TaskState = taskState
+		if t.Request.Operation == communication.InsertOperation {
+			t.TaskState.SeedEnd += t.Request.Iteration * t.Request.BatchSize
+		}
+	} else {
+		t.TaskState.SeedEnd = t.Request.Seed
+	}
+
 	// initialise a doc generator
 	gen := docgenerator.Generator{
-		Itr:           0,
-		End:           t.Request.Iteration,
-		BatchSize:     t.Request.BatchSize,
-		DocType:       t.Request.DocType,
-		KeySize:       t.Request.KeySize,
-		DocSize:       0,
-		RandomDocSize: false,
-		RandomKeySize: false,
-		Seed:          t.Request.Seed,
-		Fake:          faker.NewWithSeed(rand.NewSource(t.Request.Seed)),
-		Template:      nil,
+		DocType:   t.Request.DocType,
+		KeyPrefix: t.Request.KeyPrefix,
+		KeySuffix: t.Request.KeyPrefix,
+		Seed:      t.Request.Seed,
+		SeedEnd:   t.TaskState.SeedEnd,
+		Template:  t.Request.Template,
 	}
+
+	// Call the doc loading operation
 	switch t.Request.Operation {
-	case communication.InsertOperation, communication.UpsertOperation:
-		t.insertUpsert(gen, col)
+	case communication.InsertOperation:
+		t.insertDocuments(gen, col)
+	case communication.UpsertOperation:
+		log.Println("upsert")
 	case communication.DeleteOperation:
-		log.Println("delete")
-	case communication.GetOperation:
-		log.Println("get")
+		t.deleteDocument(gen, col)
+	case communication.GetRangeOpertaion:
+		log.Println("validated")
 	}
 
 	// Close connection and cluster.
@@ -109,77 +148,52 @@ func (t *Task) Handler() error {
 		return err
 	}
 
+	// save the task-state
+	if err := t.saveTaskStateToFile(); err != nil {
+		t.Result.error = err
+	}
+
 	// save the task result-logs into a file
-	if err := t.saveResultIntoFile(); err != nil {
+	if err := SaveResultIntoFile(t.Result); err != nil {
 		log.Println(err.Error())
 		return err
 	}
+
 	return nil
 }
 
-func (t *Task) insertUpsert(gen docgenerator.Generator, col *gocb.Collection) {
-	for i := gen.Itr; i < gen.End; i++ {
-		personsTemplate := gen.Next(gen.BatchSize)
-		wg := sync.WaitGroup{}
-		wg.Add(len(personsTemplate))
-		for index, person := range personsTemplate {
-			go func(iteration, batchSize, index int64, doc interface{}) {
-				defer wg.Done()
-				var err error
-				key := gen.GetKey(iteration, batchSize, index, gen.Seed)
-				switch t.Request.Operation {
-				case communication.InsertOperation:
-					_, err = col.Insert(key, person, nil)
-				case communication.UpsertOperation:
-					_, err = col.Upsert(key, person, nil)
+func (t *Task) insertDocuments(gen docgenerator.Generator, col *gocb.Collection) {
 
-				}
+	for i := int64(0); i < t.Request.Iteration; i++ {
+		wg := sync.WaitGroup{}
+		wg.Add(int(t.Request.BatchSize))
+		for index := int64(0); index < t.Request.BatchSize; index++ {
+			go func(iteration, batchSize, index int64) {
+				defer wg.Done()
+				docId, key := gen.GetDocIdAndKey(iteration, t.Request.BatchSize, index)
+				fake := faker.NewWithSeed(rand.NewSource(key))
+				doc := gen.Template.GenerateDocument(&fake)
+				_, err := col.Insert(docId, doc, nil)
 				if err != nil {
 					log.Println(err)
-					t.taskOperationCounter.lock.Lock()
-					t.taskError = append(t.taskError, &TaskError{
-						Key: key,
-						Doc: doc,
-						Err: err.Error(),
-					})
-					t.taskOperationCounter.Failure++
-					t.taskOperationCounter.lock.Unlock()
+					t.incrementFailure()
+					return
 				}
-			}(i, gen.BatchSize, int64(index), person)
+			}(i, t.Request.BatchSize, index)
 		}
 		wg.Wait()
 	}
-	t.taskOperationCounter.Success = (gen.End * gen.BatchSize) - t.taskOperationCounter.Failure
-	log.Println(t.Request.Operation, t.Request.Bucket, t.Request.Scope, t.Request.Collection, t.taskOperationCounter.Success)
+	t.Result.TaskOperationCounter.Success = (t.Request.Iteration * t.Request.BatchSize) - t.Result.TaskOperationCounter.Failure
+	log.Println(t.Request.Operation, t.Request.Bucket, t.Request.Scope, t.Request.Collection, t.Result.TaskOperationCounter.Success)
 }
 
-// Save the results into a file
-func (t *Task) saveResultIntoFile() error {
-	tr := TaskResult{
-		UserData:  t.UserData,
-		TaskError: t.taskError,
-		TaskOperationCounter: TaskOperationCounter{
-			Success: t.taskOperationCounter.Success,
-			Failure: t.taskOperationCounter.Failure,
-		},
-	}
+func (t *Task) deleteDocument(gen docgenerator.Generator, col *gocb.Collection) {
+	// TODO : Delete Documents will  delete documents.
+	// Ensure that document which we are going to delete should be present in the collection.
+}
 
-	cwd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-
-	fileName := filepath.Join(cwd, ResultPath, fmt.Sprintf("%d", tr.UserData.Seed))
-
-	// save the value to a file
-	file, err := os.Create(fileName)
-	if err != nil {
-		return err
-	}
-	encoder := gob.NewEncoder(file)
-	if err := encoder.Encode(tr); err != nil {
-		return err
-	}
-	file.Close()
-	return nil
+func (t *Task) incrementFailure() {
+	t.Result.TaskOperationCounter.lock.Lock()
+	t.Result.TaskOperationCounter.Failure++
+	t.Result.TaskOperationCounter.lock.Unlock()
 }

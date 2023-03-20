@@ -4,16 +4,19 @@ import (
 	"fmt"
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
+	"github.com/couchbaselabs/sirius/internal/template"
+	"strconv"
 	"time"
 )
 
 type DocumentOperation string
 
 const (
-	InsertOperation DocumentOperation = "insert"
-	UpsertOperation DocumentOperation = "upsert"
-	DeleteOperation DocumentOperation = "delete"
-	GetOperation    DocumentOperation = "get"
+	InsertOperation   DocumentOperation = "insert"
+	UpsertOperation   DocumentOperation = "upsert"
+	DeleteOperation   DocumentOperation = "delete"
+	GetOperation      DocumentOperation = "get"
+	GetRangeOpertaion DocumentOperation = "get-range"
 )
 
 type ServiceType string
@@ -50,12 +53,19 @@ type TaskRequest struct {
 	Timeout         time.Duration             `json:"timeout,omitempty"`
 	RetryStrategy   gocb.RetryStrategy        `json:"retryStrategy,omitempty"`
 	Operation       DocumentOperation         `json:"operation"`
-	Seed            int64                     `json:"seed,omitempty"`
+	SeedToken       string                    `json:"seed"`
+	Start           int64                     `json:"start,omitempty"`
+	End             int64                     `json:"end,omitempty"`
+	TemplateToken   string                    `json:"template"`
+	KeyPrefix       string                    `json:"keyPrefix,omitempty"`
+	KeySuffix       string                    `json:"keySuffix,omitempty"`
+	Template        template.Template
+	Seed            int64
 }
 
 // Validate cross checks the validity of an incoming request to schedule a task.
 func (r *TaskRequest) Validate() error {
-
+	var err error
 	if r.Service == "" {
 		r.Service = OnPremService
 	}
@@ -89,14 +99,25 @@ func (r *TaskRequest) Validate() error {
 	if r.DocSize == 0 {
 		r.DocSize = docgenerator.DefaultDocSize
 	}
+
 	switch r.Operation {
-	case InsertOperation, DeleteOperation, UpsertOperation, GetOperation:
+	case InsertOperation:
+		time.Sleep(1 * time.Microsecond) // this sleep ensures that seed generated is always different.
+		r.Seed = time.Now().UnixNano()
 	default:
-		return fmt.Errorf("incorrect operation type")
+		if r.SeedToken == "" {
+			return fmt.Errorf("seed is missing for task")
+		}
+		r.Seed, err = strconv.ParseInt(r.SeedToken, 10, 64)
+		if err != nil {
+			return err
+		}
 	}
-	// this sleep ensures that seed generated is always different.
-	time.Sleep(1 * time.Microsecond)
-	r.Seed = time.Now().UnixNano()
+
+	r.Template, err = template.InitialiseTemplate(r.TemplateToken)
+	if err != nil {
+		return fmt.Errorf("expecting template for doc loading operations")
+	}
 	return nil
 }
 
@@ -106,7 +127,7 @@ type TaskResult struct {
 	DeleteRecord bool   `json:"deleteRecord"`
 }
 
-// Response represents a response structure which is returned to user upon scheduling a task.
-type Response struct {
+// TaskResponse represents a response structure which is returned to user upon scheduling a task.
+type TaskResponse struct {
 	Seed string `json:"seed"`
 }

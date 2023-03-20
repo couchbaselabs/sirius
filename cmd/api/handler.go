@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/couchbaselabs/sirius/internal/communication"
 	"github.com/couchbaselabs/sirius/internal/tasks"
-	"github.com/couchbaselabs/sirius/results"
+	"log"
 	"net/http"
 )
 
@@ -34,7 +34,7 @@ func (app *Config) addTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusBadRequest)
 		return
 	}
-
+	log.Println(reqPayload)
 	// prepare the user data payload for responding back
 	seed := reqPayload.Seed
 
@@ -42,6 +42,19 @@ func (app *Config) addTask(w http.ResponseWriter, r *http.Request) {
 	task := &tasks.Task{
 		UserData: tasks.UserData{
 			Seed: seed,
+		},
+		Result: tasks.TaskResult{
+			UserData: tasks.UserData{
+				Seed: seed,
+			},
+			TaskOperationCounter: tasks.TaskOperationCounter{},
+		},
+		TaskState: tasks.TaskState{
+			Host:       reqPayload.Host,
+			BUCKET:     reqPayload.Bucket,
+			SCOPE:      reqPayload.Scope,
+			Collection: reqPayload.Collection,
+			Seed:       seed,
 		},
 		Request: reqPayload,
 	}
@@ -51,7 +64,7 @@ func (app *Config) addTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// prepare response for http request
-	respPayload := communication.Response{
+	respPayload := communication.TaskResponse{
 		Seed: fmt.Sprintf("%d", seed),
 	}
 
@@ -73,7 +86,7 @@ func (app *Config) taskResult(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	result, err := results.ReadResultFromFile(reqPayload.Seed, reqPayload.DeleteRecord)
+	result, err := tasks.ReadResultFromFile(reqPayload.Seed, reqPayload.DeleteRecord)
 
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusBadRequest)
