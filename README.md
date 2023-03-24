@@ -1,6 +1,13 @@
 # sirius
 Rest based Couchbase doc loader for QA tests written in Golang.
 
+```text
+Before building the project, add the following directories to you local copy of the repo.
+$ mkdir ./internal/tasks
+$ mkdir ./internal/tasks/result-logs
+$ mkdir ./internal/tasks/task-state
+```
+
 ```textmate
 Steps to build sirius
 1. Execute make command
