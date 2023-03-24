@@ -35,10 +35,8 @@ func (app *Config) addTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Println(reqPayload)
-	// prepare the user data payload for responding back
 	seed := reqPayload.Seed
 
-	// prepare the doc loading task
 	task := &tasks.Task{
 		UserData: tasks.UserData{
 			Seed: seed,
@@ -48,6 +46,7 @@ func (app *Config) addTask(w http.ResponseWriter, r *http.Request) {
 				Seed: seed,
 			},
 			TaskOperationCounter: tasks.TaskOperationCounter{},
+			Operation:            reqPayload.Operation,
 		},
 		TaskState: tasks.TaskState{
 			Host:       reqPayload.Host,
@@ -55,17 +54,28 @@ func (app *Config) addTask(w http.ResponseWriter, r *http.Request) {
 			SCOPE:      reqPayload.Scope,
 			Collection: reqPayload.Collection,
 			Seed:       seed,
+			SeedEnd:    seed,
+			KeyPrefix:  reqPayload.KeyPrefix,
+			KeySuffix:  reqPayload.KeySuffix,
 		},
 		Request: reqPayload,
 	}
-	// add the prepared task in the task manager
+
+	taskState, err := task.ReadTaskStateFromFile()
+	if err == nil {
+		task.TaskState = taskState
+		if task.Request.Operation == communication.InsertOperation {
+			task.TaskState.SeedEnd += task.Request.Iteration * task.Request.BatchSize
+		}
+		task.Result.UserData.Seed = taskState.Seed
+	}
+
 	if err := app.taskManager.AddTask(task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
 
-	// prepare response for http request
 	respPayload := communication.TaskResponse{
-		Seed: fmt.Sprintf("%d", seed),
+		Seed: fmt.Sprintf("%d", task.Result.UserData.Seed),
 	}
 
 	resPayload := jsonResponse{
@@ -75,7 +85,6 @@ func (app *Config) addTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_ = app.writeJSON(w, http.StatusOK, resPayload)
-
 }
 
 // taskResult is responsible for handling user request to get status of the task

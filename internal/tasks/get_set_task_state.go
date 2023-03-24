@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 )
 
-func (t *Task) readTaskStateFromFile() (TaskState, error) {
+func (t *Task) ReadTaskStateFromFile() (TaskState, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return TaskState{}, err
@@ -15,8 +15,7 @@ func (t *Task) readTaskStateFromFile() (TaskState, error) {
 	// For testing purpose
 	//fileName := filepath.Join(cwd, "task-state", buildTaskName(t.TaskState.Host, t.TaskState.BUCKET, t.TaskState.SCOPE, t.TaskState.Collection))
 
-	// load the task state from the file
-	fileName := filepath.Join(cwd, "task-state", buildTaskName(t.TaskState.Host, t.TaskState.BUCKET, t.TaskState.SCOPE, t.TaskState.Collection))
+	fileName := filepath.Join(cwd, TaskStatePath, buildTaskName(t.TaskState.Host, t.TaskState.BUCKET, t.TaskState.SCOPE, t.TaskState.Collection))
 	taskState := TaskState{}
 	file, err := os.Open(fileName)
 	if err != nil {
@@ -31,7 +30,7 @@ func (t *Task) readTaskStateFromFile() (TaskState, error) {
 	}
 	return taskState, nil
 }
-func (t *Task) saveTaskStateToFile() error {
+func (t *Task) SaveTaskStateToFile() error {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return err

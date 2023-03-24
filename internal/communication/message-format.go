@@ -5,7 +5,6 @@ import (
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
 	"github.com/couchbaselabs/sirius/internal/template"
-	"strconv"
 	"time"
 )
 
@@ -16,7 +15,7 @@ const (
 	UpsertOperation   DocumentOperation = "upsert"
 	DeleteOperation   DocumentOperation = "delete"
 	GetOperation      DocumentOperation = "get"
-	GetRangeOpertaion DocumentOperation = "get-range"
+	ValidateOperation DocumentOperation = "validate"
 )
 
 type ServiceType string
@@ -59,6 +58,7 @@ type TaskRequest struct {
 	TemplateToken   string                    `json:"template"`
 	KeyPrefix       string                    `json:"keyPrefix,omitempty"`
 	KeySuffix       string                    `json:"keySuffix,omitempty"`
+	FieldsToChange  []string                  `json:"fieldsToChange,omitempty"`
 	Template        template.Template
 	Seed            int64
 }
@@ -104,14 +104,9 @@ func (r *TaskRequest) Validate() error {
 	case InsertOperation:
 		time.Sleep(1 * time.Microsecond) // this sleep ensures that seed generated is always different.
 		r.Seed = time.Now().UnixNano()
+	case DeleteOperation, UpsertOperation, GetOperation, ValidateOperation:
 	default:
-		if r.SeedToken == "" {
-			return fmt.Errorf("seed is missing for task")
-		}
-		r.Seed, err = strconv.ParseInt(r.SeedToken, 10, 64)
-		if err != nil {
-			return err
-		}
+		return fmt.Errorf("invalid Operation")
 	}
 
 	r.Template, err = template.InitialiseTemplate(r.TemplateToken)
