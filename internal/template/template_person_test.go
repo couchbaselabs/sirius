@@ -17,7 +17,7 @@ func TestGeneratePerson(t *testing.T) {
 	document2 := template.GenerateDocument(&fake2)
 	log.Println(document1)
 	log.Println(document2)
-	err, ok := template.Compare(document1, document2)
+	ok, err := template.Compare(document1, document2)
 
 	if err != nil {
 		log.Println(err)
@@ -29,7 +29,7 @@ func TestGeneratePerson(t *testing.T) {
 	}
 
 	// test to update the document1 and comparing it with original document
-	err, document3 := template.UpdateDocument([]string{"firstName", "lastName", "age"}, document1, &fake1)
+	document3, err := template.UpdateDocument([]string{"firstName", "lastName", "age"}, document1, &fake1)
 	if err != nil {
 		log.Println(err)
 		t.Fail()
@@ -39,16 +39,16 @@ func TestGeneratePerson(t *testing.T) {
 	if !ok {
 		t.Fail()
 	}
-	log.Println(document1Updated)
+	log.Println(document1Updated, document1)
 
-	err, ok = template.Compare(document1, document2)
+	ok, err = template.Compare(document1Updated, document1)
 
 	if err != nil {
 		fmt.Println(err)
 		t.Fail()
 	}
 
-	if ok {
+	if !ok {
 		t.Fail()
 	}
 

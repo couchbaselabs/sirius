@@ -32,18 +32,9 @@ func TestSaveTaskStateToFile(t *testing.T) {
 			Collection: "collection",
 			Seed:       1678775265835097000,
 			SeedEnd:    1678775265835097000,
-			InsertTaskError: InsertTaskError{
-				Err: make(map[int64]struct{}),
-			},
-			DeleteTask: DeleteTask{
-				Del: make(map[int64]struct{}),
-			},
-			UpsertTask: UpsertTask{
-				Operation: []UpsertTaskOperation{},
-			},
 		},
 	}
-	if err := task.saveTaskStateToFile(); err != nil {
+	if err := task.SaveTaskStateToFile(); err != nil {
 		log.Println(err)
 		t.Fail()
 	}
@@ -63,7 +54,7 @@ func TestReadTaskStateFromFile(t *testing.T) {
 		},
 	}
 	var err error
-	task.TaskState, err = task.readTaskStateFromFile()
+	task.TaskState, err = task.ReadTaskStateFromFile()
 	if err != nil {
 		t.Fail()
 	}

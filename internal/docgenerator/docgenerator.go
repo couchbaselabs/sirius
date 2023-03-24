@@ -32,6 +32,7 @@ func (g *Generator) GetDocIdAndKey(iteration, batchSize, offset int64) (string, 
 	return fmt.Sprintf("%s%d%s", g.KeyPrefix, newKey, g.KeySuffix), newKey
 }
 
+// BuildKey returns the formatted key with unique identifier.
 func (g *Generator) BuildKey(key int64) string {
 	return fmt.Sprintf("%s%d%s", g.KeyPrefix, key, g.KeySuffix)
 }

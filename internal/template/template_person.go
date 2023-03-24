@@ -39,10 +39,10 @@ func (p *Person) GenerateDocument(fake *faker.Faker) interface{} {
 	}
 }
 
-func (p *Person) UpdateDocument(fieldsToChange []string, lastUpdatedDocument interface{}, fake *faker.Faker) (error, interface{}) {
+func (p *Person) UpdateDocument(fieldsToChange []string, lastUpdatedDocument interface{}, fake *faker.Faker) (interface{}, error) {
 	person, ok := lastUpdatedDocument.(*Person)
 	if !ok {
-		return fmt.Errorf("unable to decode last updated document to person template"), nil
+		return nil, fmt.Errorf("unable to decode last updated document to person template")
 	}
 	// Generating the original document
 	checkFields := make(map[string]struct{})
@@ -76,17 +76,17 @@ func (p *Person) UpdateDocument(fieldsToChange []string, lastUpdatedDocument int
 	if _, ok := checkFields["address.country"]; ok {
 		person.Address.Country = fake.Address().Country()
 	}
-	return nil, person
+	return person, nil
 }
 
-func (p *Person) Compare(document1 interface{}, document2 interface{}) (error, bool) {
+func (p *Person) Compare(document1 interface{}, document2 interface{}) (bool, error) {
 	p1, ok := document1.(*Person)
 	if !ok {
-		return fmt.Errorf("unable to decode first document to person template"), false
+		return false, fmt.Errorf("unable to decode first document to person template")
 	}
 	p2, ok := document2.(*Person)
 	if !ok {
-		return fmt.Errorf("unable to decode second document to person template"), false
+		return false, fmt.Errorf("unable to decode second document to person template")
 	}
-	return nil, reflect.DeepEqual(p1, p2)
+	return reflect.DeepEqual(p1, p2), nil
 }

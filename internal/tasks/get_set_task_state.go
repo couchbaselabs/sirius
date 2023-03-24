@@ -7,7 +7,8 @@ import (
 	"path/filepath"
 )
 
-func (t *Task) readTaskStateFromFile() (TaskState, error) {
+// ReadTaskStateFromFile restores  the TaskState as a meta-data of a cluster into a file
+func (t *Task) ReadTaskStateFromFile() (TaskState, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return TaskState{}, err
@@ -15,8 +16,7 @@ func (t *Task) readTaskStateFromFile() (TaskState, error) {
 	// For testing purpose
 	//fileName := filepath.Join(cwd, "task-state", buildTaskName(t.TaskState.Host, t.TaskState.BUCKET, t.TaskState.SCOPE, t.TaskState.Collection))
 
-	// load the task state from the file
-	fileName := filepath.Join(cwd, "task-state", buildTaskName(t.TaskState.Host, t.TaskState.BUCKET, t.TaskState.SCOPE, t.TaskState.Collection))
+	fileName := filepath.Join(cwd, TaskStatePath, buildTaskName(t.TaskState.Host, t.TaskState.BUCKET, t.TaskState.SCOPE, t.TaskState.Collection))
 	taskState := TaskState{}
 	file, err := os.Open(fileName)
 	if err != nil {
@@ -31,7 +31,9 @@ func (t *Task) readTaskStateFromFile() (TaskState, error) {
 	}
 	return taskState, nil
 }
-func (t *Task) saveTaskStateToFile() error {
+
+// SaveTaskStateToFile stores the TaskState as a meta-data of a cluster into a file
+func (t *Task) SaveTaskStateToFile() error {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return err
@@ -39,7 +41,6 @@ func (t *Task) saveTaskStateToFile() error {
 	// For testing purpose
 	//fileName := filepath.Join(cwd, "task-state", buildTaskName(t.TaskState.Host, t.TaskState.BUCKET, t.TaskState.SCOPE, t.TaskState.Collection))
 
-	// save the value to a file
 	fileName := filepath.Join(cwd, TaskStatePath, buildTaskName(t.TaskState.Host, t.TaskState.BUCKET, t.TaskState.SCOPE, t.TaskState.Collection))
 	file, err := os.Create(fileName)
 	if err != nil {
@@ -55,6 +56,21 @@ func (t *Task) saveTaskStateToFile() error {
 	return nil
 }
 
+// checkForTaskValidity returns if a meta-data for cluster even exists or not.
+func (t *Task) checkForTaskValidity() error {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	fileName := filepath.Join(cwd, TaskStatePath, buildTaskName(t.TaskState.Host, t.TaskState.BUCKET, t.TaskState.SCOPE, t.TaskState.Collection))
+	_, err = os.Open(fileName)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// buildTaskName returns the name of the TaskState meta-data file.
 func buildTaskName(host, bucket, scope, collection string) string {
 	return fmt.Sprintf("%s_%s_%s_%s", host, bucket, scope, collection)
 }

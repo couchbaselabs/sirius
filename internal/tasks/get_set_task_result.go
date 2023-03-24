@@ -15,7 +15,6 @@ func SaveResultIntoFile(result TaskResult) error {
 		return err
 	}
 	fileName := filepath.Join(cwd, ResultPath, fmt.Sprintf("%d", result.UserData.Seed))
-	// save the value to a file
 	file, err := os.Create(fileName)
 	if err != nil {
 		return err
