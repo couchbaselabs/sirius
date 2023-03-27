@@ -5,7 +5,7 @@ import (
 )
 
 type Template interface {
-	GenerateDocument(fake *faker.Faker) interface{}
+	GenerateDocument(fake *faker.Faker, documentSize int64) (interface{}, error)
 	UpdateDocument(fieldsToChange []string, lastUpdatedDocument interface{}, fake *faker.Faker) (interface{}, error)
 	Compare(document1 interface{}, document2 interface{}) (bool, error)
 }

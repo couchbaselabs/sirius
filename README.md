@@ -2,8 +2,7 @@
 Rest based Couchbase doc loader for QA tests written in Golang.
 
 ```text
-Before building the project, add the following directories to you local copy of the repo.
-$ mkdir ./internal/tasks
+Before building on local, add the following directories to you local copy of the repo.
 $ mkdir ./internal/tasks/result-logs
 $ mkdir ./internal/tasks/task-state
 ```

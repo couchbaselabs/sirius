@@ -37,17 +37,18 @@ type UpsertTask struct {
 }
 
 type TaskState struct {
-	Host       string
-	BUCKET     string
-	SCOPE      string
-	Collection string
-	Seed       int64
-	SeedEnd    int64
-	KeyPrefix  string
-	KeySuffix  string
-	InsertTask InsertTask
-	DeleteTask DeleteTask
-	UpsertTask []UpsertTask
+	Host         string
+	BUCKET       string
+	SCOPE        string
+	Collection   string
+	DocumentSize int64
+	Seed         int64
+	SeedEnd      int64
+	KeyPrefix    string
+	KeySuffix    string
+	InsertTask   InsertTask
+	DeleteTask   DeleteTask
+	UpsertTask   []UpsertTask
 }
 
 type TaskOperationCounter struct {
@@ -71,7 +72,7 @@ type Task struct {
 	clientError error
 }
 
-// Handler is excecuted after a task is scheduled and proceeds  with the doc type operation.
+// Handler is executed after a task is scheduled and proceeds  with the doc type operation.
 func (t *Task) Handler() error {
 	var connectionString string
 	switch t.Request.Service {
@@ -151,8 +152,12 @@ func (t *Task) insertDocuments(gen docgenerator.Generator, col *gocb.Collection)
 				defer wg.Done()
 				docId, key := gen.GetDocIdAndKey(iteration, t.Request.BatchSize, index)
 				fake := faker.NewWithSeed(rand.NewSource(key))
-				doc := gen.Template.GenerateDocument(&fake)
-				_, err := col.Insert(docId, doc, nil)
+				doc, err := gen.Template.GenerateDocument(&fake, t.TaskState.DocumentSize)
+				if err != nil {
+					t.incrementFailure(key)
+					return
+				}
+				_, err = col.Insert(docId, doc, nil)
 				if err != nil {
 					t.incrementFailure(key)
 					return
@@ -254,7 +259,11 @@ func (t *Task) upsertDocuments(gen docgenerator.Generator, col *gocb.Collection)
 					}
 					docId := gen.BuildKey(key)
 					fake := faker.NewWithSeed(rand.NewSource(key))
-					originalDoc := gen.Template.GenerateDocument(&fake)
+					originalDoc, err := gen.Template.GenerateDocument(&fake, t.TaskState.DocumentSize)
+					if err != nil {
+						t.incrementFailure(key)
+						return
+					}
 					originalDoc, err = t.retracePreviousMutations(key, originalDoc, gen, &fake)
 					if err != nil {
 						return
@@ -321,6 +330,10 @@ func (t *Task) ValidateDocuments(gen docgenerator.Generator, col *gocb.Collectio
 						return
 					}
 					result, err := col.Get(docId, nil)
+					if err != nil {
+						t.incrementFailure(key)
+						return
+					}
 					if err := result.Content(&resultFromHost); err != nil {
 						t.incrementFailure(key)
 						return
@@ -332,7 +345,11 @@ func (t *Task) ValidateDocuments(gen docgenerator.Generator, col *gocb.Collectio
 						return
 					}
 					fake := faker.NewWithSeed(rand.NewSource(key))
-					originalDocument := gen.Template.GenerateDocument(&fake)
+					originalDocument, err := gen.Template.GenerateDocument(&fake, t.TaskState.DocumentSize)
+					if err != nil {
+						t.incrementFailure(key)
+						return
+					}
 					originalDocument, err = t.retracePreviousMutations(key, originalDocument, gen, &fake)
 					if err != nil {
 						t.incrementFailure(key)
