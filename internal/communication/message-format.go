@@ -41,7 +41,7 @@ type TaskRequest struct {
 	BatchSize       int64                     `json:"batchSize,omitempty"`
 	DocType         docgenerator.DocumentType `json:"docType,omitempty"`
 	KeySize         int                       `json:"keySize,omitempty"`
-	DocSize         int                       `json:"docSize,omitempty"`
+	DocSize         int64                     `json:"docSize,omitempty"`
 	RandomDocSize   bool                      `json:"randomDocSize,omitempty"`
 	RandomKeySize   bool                      `json:"randomKeySize,omitempty"`
 	Expiry          time.Duration             `json:"expiry,omitempty"`

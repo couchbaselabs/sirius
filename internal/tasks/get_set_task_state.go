@@ -63,8 +63,7 @@ func (t *Task) checkForTaskValidity() error {
 		return err
 	}
 	fileName := filepath.Join(cwd, TaskStatePath, buildTaskName(t.TaskState.Host, t.TaskState.BUCKET, t.TaskState.SCOPE, t.TaskState.Collection))
-	_, err = os.Open(fileName)
-	if err != nil {
+	if _, err := os.Stat(fileName); err != nil {
 		return err
 	}
 	return nil

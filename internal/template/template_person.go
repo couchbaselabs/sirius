@@ -1,6 +1,7 @@
 package template
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/jaswdr/faker"
 	"reflect"
@@ -20,11 +21,11 @@ type Person struct {
 	Age       int     `json:"age,omitempty"`
 	Email     string  `json:"email,omitempty"`
 	Address   Address `json:"address,omitempty"`
-	Payload   string  `json:"payload"`
+	Padding   string  `json:"payload"`
 }
 
-func (p *Person) GenerateDocument(fake *faker.Faker) interface{} {
-	return &Person{
+func (p *Person) GenerateDocument(fake *faker.Faker, documentSize int64) (interface{}, error) {
+	person := &Person{
 		FirstName: fake.Person().FirstName(),
 		Lastname:  fake.Person().LastName(),
 		Age:       fake.IntBetween(0, 100),
@@ -37,6 +38,15 @@ func (p *Person) GenerateDocument(fake *faker.Faker) interface{} {
 			Country: fake.Address().Country(),
 		},
 	}
+	personDocument, err := json.Marshal(*person)
+	if err != nil {
+		return nil, err
+	}
+
+	if (len(personDocument)) < int(documentSize) {
+		person.Padding = fake.RandomStringWithLength(int(documentSize) - (len(personDocument)))
+	}
+	return person, nil
 }
 
 func (p *Person) UpdateDocument(fieldsToChange []string, lastUpdatedDocument interface{}, fake *faker.Faker) (interface{}, error) {

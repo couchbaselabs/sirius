@@ -13,7 +13,7 @@ const (
 )
 
 const DefaultKeySize int = 250
-const DefaultDocSize int = 1000000
+const DefaultDocSize int64 = 1024
 
 // Generator helps to generate random document for inserting and updating random
 // as per the doc loading task requirement.
