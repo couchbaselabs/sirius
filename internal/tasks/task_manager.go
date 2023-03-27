@@ -28,6 +28,9 @@ func NewTasKManager(size int) *TaskManager {
 // AddTask will add task in the taskQueue for scheduling. it returns no error on
 // successful addition of task to the queue.
 func (tm *TaskManager) AddTask(task *Task) error {
+	if err := tm.ctx.Err(); err != nil {
+		return err
+	}
 	select {
 	case tm.taskQueue <- task:
 	default:

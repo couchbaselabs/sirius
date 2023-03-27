@@ -21,6 +21,10 @@ func TestTaskManager(t *testing.T) {
 		t.Fail()
 	}
 
+	if err := tm.AddTask(&Task{}); err == nil {
+		t.Fail()
+	}
+
 }
 
 func TestSaveTaskStateToFile(t *testing.T) {
