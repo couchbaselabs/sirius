@@ -15,21 +15,18 @@ func TestGenerator_GetNextKey(t *testing.T) {
 		t.Fail()
 	}
 	g := Generator{
-		Itr:       0,
-		ItrEnd:    2,
-		BatchSize: 10,
-		DocType:   "",
-		KeySize:   120,
-		Seed:      1678383842563225000,
-		template:  temp,
+
+		Seed:     1678383842563225000,
+		SeedEnd:  1678383842563225000,
+		Template: temp,
 	}
-	for i := g.Itr; i < g.ItrEnd; i++ {
-		for index := int64(0); index < g.BatchSize; index++ {
-			docId, key := g.GetDocIdAndKey(i, g.BatchSize, index, g.Seed)
+	for i := int64(0); i < int64(10); i++ {
+		for index := int64(0); index < int64(10); index++ {
+			docId, key := g.GetDocIdAndKey(i, 10, index)
 			log.Println(key, docId)
 			fake := faker.NewWithSeed(rand.NewSource(key))
-			doc, ok := g.template.GenerateDocument(&fake).(*template.Person)
-			if !ok {
+			doc, err := g.Template.GenerateDocument(&fake, 1024)
+			if err != nil {
 				t.Fail()
 			}
 			log.Println(doc)

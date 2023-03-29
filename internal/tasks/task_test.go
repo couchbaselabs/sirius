@@ -70,10 +70,8 @@ func TestSaveResultIntoFile(t *testing.T) {
 		UserData: UserData{
 			Seed: 1678623796852619000,
 		},
-		TaskOperationCounter: TaskOperationCounter{
-			Failure: 0,
-			Success: 1,
-		},
+		Success: 0,
+		Failure: 1,
 	}
 
 	if err := SaveResultIntoFile(taskResult); err != nil {
