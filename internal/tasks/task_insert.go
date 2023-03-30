@@ -24,7 +24,9 @@ func (t *Task) insertDocuments(gen docgenerator.Generator, col *gocb.Collection)
 					t.incrementFailure(key, docId, err.Error())
 					return
 				}
-				_, err = col.Insert(docId, doc, nil)
+				_, err = col.Insert(docId, doc, &gocb.InsertOptions{
+					DurabilityLevel: t.Request.DurabilityLevel,
+				})
 				if err != nil {
 					t.incrementFailure(key, docId, err.Error())
 					return
