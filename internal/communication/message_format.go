@@ -25,8 +25,13 @@ const (
 	CapellaService ServiceType = "capella"
 )
 
-const DefaultScope string = "_default"
-const DefaultCollection string = "_default"
+const (
+	DurabilityLevelMajority                   string = "MAJORITY"
+	DurabilityLevelMajorityAndPersistToActive string = "MAJORITY_AND_PERSIST_TO_ACTIVE"
+	DurabilityLevelPersistToMajority          string = "PERSIST_TO_MAJORITY"
+	DefaultScope                              string = "_default"
+	DefaultCollection                         string = "_default"
+)
 
 // TaskRequest represents a structure of doc loading task.
 type TaskRequest struct {
@@ -47,7 +52,7 @@ type TaskRequest struct {
 	Expiry                   time.Duration             `json:"expiry,omitempty"`
 	PersistTo                uint                      `json:"PersistTo,omitempty"`
 	ReplicateTo              uint                      `json:"replicateTo,omitempty"`
-	DurabilityLevel          gocb.DurabilityLevel      `json:"durabilityLevel,omitempty"`
+	Durability               string                    `json:"durability,omitempty"`
 	Transcoder               gocb.Transcoder           `json:"transcoder,omitempty"`
 	Timeout                  time.Duration             `json:"timeout,omitempty"`
 	RetryStrategy            gocb.RetryStrategy        `json:"retryStrategy,omitempty"`
@@ -63,11 +68,11 @@ type TaskRequest struct {
 	ReadYourOwnWriteAttempts int                       `json:"readYourOwnWriteAttempts,omitempty"`
 	Template                 template.Template
 	Seed                     int64
+	DurabilityLevel          gocb.DurabilityLevel
 }
 
 // Validate cross checks the validity of an incoming request to schedule a task.
 func (r *TaskRequest) Validate() error {
-	var err error
 	if r.Service == "" {
 		r.Service = OnPremService
 	}
@@ -111,9 +116,17 @@ func (r *TaskRequest) Validate() error {
 		return fmt.Errorf("invalid Operation")
 	}
 
-	r.Template, err = template.InitialiseTemplate(r.TemplateToken)
-	if err != nil {
-		return fmt.Errorf("expecting template for doc loading operations")
+	r.Template, _ = template.InitialiseTemplate(r.TemplateToken)
+
+	switch r.Durability {
+	case DurabilityLevelMajority:
+		r.DurabilityLevel = gocb.DurabilityLevelMajority
+	case DurabilityLevelMajorityAndPersistToActive:
+		r.DurabilityLevel = gocb.DurabilityLevelMajorityAndPersistOnMaster
+	case DurabilityLevelPersistToMajority:
+		r.DurabilityLevel = gocb.DurabilityLevelPersistToMajority
+	default:
+		r.DurabilityLevel = gocb.DurabilityLevelNone
 	}
 	return nil
 }
