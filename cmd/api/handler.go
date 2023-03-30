@@ -45,8 +45,10 @@ func (app *Config) addTask(w http.ResponseWriter, r *http.Request) {
 			UserData: tasks.UserData{
 				Seed: seed,
 			},
-			TaskOperationCounter: tasks.TaskOperationCounter{},
-			Operation:            reqPayload.Operation,
+			Operation: reqPayload.Operation,
+			Success:   0,
+			Failure:   0,
+			Error:     make(map[string][]string),
 		},
 		TaskState: tasks.TaskState{
 			Host:         reqPayload.Host,
@@ -62,12 +64,8 @@ func (app *Config) addTask(w http.ResponseWriter, r *http.Request) {
 		Request: reqPayload,
 	}
 
-	taskState, err := task.ReadTaskStateFromFile()
-	if err == nil {
+	if taskState, err := task.ReadTaskStateFromFile(); err == nil {
 		task.TaskState = taskState
-		if task.Request.Operation == communication.InsertOperation {
-			task.TaskState.SeedEnd += task.Request.Iteration * task.Request.BatchSize
-		}
 		task.Result.UserData.Seed = taskState.Seed
 	}
 
