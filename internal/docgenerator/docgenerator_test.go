@@ -10,26 +10,22 @@ import (
 
 func TestGenerator_GetNextKey(t *testing.T) {
 
-	temp, err := template.InitialiseTemplate("person")
-	if err != nil {
-		t.Fail()
-	}
-	g := Generator{
+	temp := template.InitialiseTemplate("person")
 
+	g := Generator{
 		Seed:     1678383842563225000,
 		SeedEnd:  1678383842563225000,
 		Template: temp,
 	}
 	for i := int64(0); i < int64(10); i++ {
-		for index := int64(0); index < int64(10); index++ {
-			docId, key := g.GetDocIdAndKey(i, 10, index)
-			log.Println(key, docId)
-			fake := faker.NewWithSeed(rand.NewSource(key))
-			doc, err := g.Template.GenerateDocument(&fake, 1024)
-			if err != nil {
-				t.Fail()
-			}
-			log.Println(doc)
+		docId, key := g.GetDocIdAndKey(i)
+		log.Println(key, docId)
+		fake := faker.NewWithSeed(rand.NewSource(key))
+		doc, err := g.Template.GenerateDocument(&fake, 1024)
+		if err != nil {
+			t.Fail()
 		}
+		log.Println(doc)
 	}
+
 }

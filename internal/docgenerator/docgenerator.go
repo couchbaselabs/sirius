@@ -8,8 +8,8 @@ import (
 type DocumentType string
 
 const (
-	JsonDocument   DocumentType = "json"
-	BinaryDocument DocumentType = "binary"
+	JsonDocument   string = "json"
+	BinaryDocument string = "binary"
 )
 
 const DefaultKeySize int = 250
@@ -18,7 +18,7 @@ const DefaultDocSize int64 = 1024
 // Generator helps to generate random document for inserting and updating random
 // as per the doc loading task requirement.
 type Generator struct {
-	DocType   DocumentType
+	DocType   string
 	KeyPrefix string
 	KeySuffix string
 	Seed      int64
@@ -26,9 +26,20 @@ type Generator struct {
 	Template  template.Template
 }
 
+func ConfigGenerator(doctype, keyPrefix, keySuffix string, seed, seedEnd int64, template template.Template) *Generator {
+	return &Generator{
+		DocType:   doctype,
+		KeyPrefix: keyPrefix,
+		KeySuffix: keySuffix,
+		Seed:      seed,
+		SeedEnd:   seedEnd,
+		Template:  template,
+	}
+}
+
 // GetDocIdAndKey will return key for the next document
-func (g *Generator) GetDocIdAndKey(iteration, batchSize, offset int64) (string, int64) {
-	newKey := offset + (iteration * batchSize) + g.SeedEnd
+func (g *Generator) GetDocIdAndKey(iteration int64) (string, int64) {
+	newKey := iteration + g.SeedEnd
 	return fmt.Sprintf("%s%d%s", g.KeyPrefix, newKey, g.KeySuffix), newKey
 }
 
