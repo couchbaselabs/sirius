@@ -153,8 +153,8 @@ func (task *InsertTask) Do() error {
 // insertDocuments uploads new documents in a bucket.scope.collection in a defined batch size at multiple iterations.
 func insertDocuments(task *InsertTask) {
 	var l sync.Mutex
-	rateLimiter := make(chan struct{}, MaxConcurrentOps)
-	dataChannel := make(chan int64, MaxConcurrentOps)
+	rateLimiter := make(chan struct{}, MaxConcurrentRoutines)
+	dataChannel := make(chan int64, MaxConcurrentRoutines)
 	group := errgroup.Group{}
 
 	for iteration := int64(0); iteration < task.Count; iteration++ {

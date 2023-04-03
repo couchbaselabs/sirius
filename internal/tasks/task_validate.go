@@ -119,8 +119,8 @@ func validateDocuments(task *ValidateTask) {
 		deleteCheck[k] = struct{}{}
 	}
 
-	rateLimiter := make(chan struct{}, MaxConcurrentOps)
-	dataChannel := make(chan int64, MaxConcurrentOps)
+	rateLimiter := make(chan struct{}, MaxConcurrentRoutines)
+	dataChannel := make(chan int64, MaxConcurrentRoutines)
 	group := errgroup.Group{}
 
 	for key := task.State.Seed; key < task.State.SeedEnd; key++ {

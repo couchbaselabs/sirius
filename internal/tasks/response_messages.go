@@ -4,6 +4,7 @@ const (
 	InsertOperation   string = "insert"
 	DeleteOperation   string = "delete"
 	UpsertOperation   string = "upsert"
+	FlushOperation    string = "flush"
 	ValidateOperation string = "validate"
 )
 

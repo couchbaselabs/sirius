@@ -1,4 +1,6 @@
 DOC_LOADER_SERVER=sirius
+TASK_RESULT_PATH=./internal/task_result/result-logs
+TASK_STATE_PATH=./internal/task_state/task_state_logs
 
 run: up_build
 	./${DOC_LOADER_SERVER}
@@ -19,6 +21,8 @@ up_build: build_sirius
 
 build_sirius:
 	@echo "Building Sirius"
+	mkdir -p ${TASK_RESULT_PATH}
+	mkdir -p ${TASK_STATE_PATH}
 	go build -o ${DOC_LOADER_SERVER} ./cmd/api
 
 build_sirius_for_docker:

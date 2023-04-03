@@ -9,10 +9,9 @@ import (
 	"github.com/couchbaselabs/sirius/internal/template"
 	"golang.org/x/sync/errgroup"
 	"log"
-	"sync"
 )
 
-type DeleteTask struct {
+type FlushTask struct {
 	ConnectionString string `json:"connectionString"`
 	Username         string `json:"username"`
 	Password         string `json:"password"`
@@ -20,8 +19,6 @@ type DeleteTask struct {
 	Bucket           string `json:"bucket"`
 	Scope            string `json:"scope,omitempty"`
 	Collection       string `json:"collection,omitempty"`
-	Start            int64  `json:"start"`
-	End              int64  `json:"end"`
 	Operation        string
 	State            *task_state.TaskState
 	Result           *task_result.TaskResult
@@ -30,7 +27,7 @@ type DeleteTask struct {
 }
 
 // Config checks the validity of DeleteTask
-func (task *DeleteTask) Config() (int64, error) {
+func (task *FlushTask) Config() (int64, error) {
 	if task.ConnectionString == "" {
 		return 0, fmt.Errorf("empty connection string")
 	}
@@ -46,30 +43,22 @@ func (task *DeleteTask) Config() (int64, error) {
 	if task.Collection == "" {
 		task.Collection = DefaultCollection
 	}
-	if task.Start == 0 {
-		task.Start = 1
-		task.End = 1
-	}
-	if task.Start > task.End {
-		return 0, fmt.Errorf("delete operation start to end range is malformed")
-	}
-	task.Operation = DeleteOperation
-
+	task.Operation = FlushOperation
 	// restore the original cluster state which should exist for operation, returns an error if task state don't exist else returns nil
 	state, ok := task_state.ConfigTaskState(task.ConnectionString, task.Bucket, task.Scope, task.Collection, "", "", "",
 		0, 0, 0)
 	if !ok {
-		return 0, fmt.Errorf("no such cluster's state exists for deletion")
+		return 0, fmt.Errorf("no such cluster's state exists for flush")
 	}
 	task.State = state
 	return task.State.Seed, nil
 }
 
-func (task *DeleteTask) Describe() string {
+func (task *FlushTask) Describe() string {
 	return "Delete Task delete documents in bulk from the cluster"
 }
 
-func (task *DeleteTask) Do() error {
+func (task *FlushTask) Do() error {
 	// prepare a result for the task
 	task.Result = task_result.ConfigTaskResult(task.Operation, task.State.Seed)
 
@@ -91,18 +80,18 @@ func (task *DeleteTask) Do() error {
 		task.State.Seed, task.State.SeedEnd, template.InitialiseTemplate(task.State.TemplateName))
 
 	// do bulk loading
-	deleteDocuments(task)
+	flushBucket(task)
 
 	// close the sdk connection
 	_ = task.connection.Close()
 
 	// save the cluster result into the file
-	if err := task.State.SaveTaskStateToFile(); err != nil {
+	if err := task.State.DeleteTaskStateFromFile(); err != nil {
 		task.Result.ErrorOther = err.Error()
 	}
 
 	// calculated result success here to prevent late update in failure due to locking.
-	task.Result.Success = task.End - task.Start - task.Result.Failure + 1
+	task.Result.Success = task.State.SeedEnd - task.State.Seed
 
 	// save the result into a file
 	if err := task.Result.SaveResultIntoFile(); err != nil {
@@ -113,13 +102,8 @@ func (task *DeleteTask) Do() error {
 }
 
 // deleteDocuments delete the document stored on a host from start to end.
-func deleteDocuments(task *DeleteTask) {
+func flushBucket(task *FlushTask) {
 
-	var l sync.Mutex
-	insertErrorCheck := make(map[int64]struct{})
-	for _, k := range task.State.InsertTaskState.Err {
-		insertErrorCheck[k] = struct{}{}
-	}
 	deleteCheck := make(map[int64]struct{})
 	for _, k := range task.State.DeleteTaskState.Del {
 		deleteCheck[k] = struct{}{}
@@ -129,38 +113,24 @@ func deleteDocuments(task *DeleteTask) {
 	dataChannel := make(chan int64, MaxConcurrentRoutines)
 	group := errgroup.Group{}
 
-	for i := task.Start; i <= task.End; i++ {
+	for key := task.State.Seed; key < task.State.SeedEnd; key++ {
 		rateLimiter <- struct{}{}
-		dataChannel <- i
+		dataChannel <- key
 
 		group.Go(func() error {
-			offset := (<-dataChannel) - 1
-			key := task.gen.Seed + offset
-			if _, ok := insertErrorCheck[key]; ok {
-				<-rateLimiter
-				return fmt.Errorf("key is in InsertErrorCheck")
-			}
+			key := <-dataChannel
 			if _, ok := deleteCheck[key]; ok {
 				<-rateLimiter
 				return fmt.Errorf("key is delete from the server")
 			}
-
 			docId := task.gen.BuildKey(key)
-			if key > task.State.SeedEnd || key < task.State.Seed {
-				task.Result.IncrementFailure(docId, "docId out of bound")
-				<-rateLimiter
-				return fmt.Errorf("docId out of bound")
-			}
+
 			_, err := task.connection.Collection.Remove(docId, nil)
 			if err != nil {
 				task.Result.IncrementFailure(docId, err.Error())
 				<-rateLimiter
 				return err
 			}
-			l.Lock()
-			task.State.DeleteTaskState.Del = append(task.State.DeleteTaskState.Del, key)
-			l.Unlock()
-
 			<-rateLimiter
 			return nil
 		})

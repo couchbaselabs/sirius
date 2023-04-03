@@ -131,8 +131,8 @@ func upsertDocuments(task *UpsertTask) {
 		deleteCheck[k] = struct{}{}
 	}
 
-	rateLimiter := make(chan struct{}, MaxConcurrentOps)
-	dataChannel := make(chan int64, MaxConcurrentOps)
+	rateLimiter := make(chan struct{}, MaxConcurrentRoutines)
+	dataChannel := make(chan int64, MaxConcurrentRoutines)
 	group := errgroup.Group{}
 
 	for i := task.Start; i <= task.End; i++ {

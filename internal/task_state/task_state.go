@@ -137,6 +137,21 @@ func (t *TaskState) SaveTaskStateToFile() error {
 	return nil
 }
 
+func (t *TaskState) DeleteTaskStateFromFile() error {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	// For testing purpose
+	//fileName := filepath.Join(cwd, "task_state_logs", buildTaskName(t.TaskState.Host, t.TaskState.BUCKET, t.TaskState.SCOPE, t.TaskState.Collection))
+
+	fileName := filepath.Join(cwd, TaskStatePath, buildTaskName(t.Host, t.BUCKET, t.SCOPE, t.Collection))
+	if err := os.Remove(fileName); err != nil {
+		return err
+	}
+	return nil
+}
+
 // CheckForTaskValidity returns if a meta-data for cluster even exists or not.
 func (t *TaskState) CheckForTaskValidity() error {
 	cwd, err := os.Getwd()
