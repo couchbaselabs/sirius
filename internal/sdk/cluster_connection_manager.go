@@ -35,6 +35,9 @@ func (c *ConnectionManager) Connect() error {
 			Username: c.username,
 			Password: c.password,
 		},
+		CircuitBreakerConfig: gocb.CircuitBreakerConfig{
+			Disabled: true,
+		},
 	})
 
 	c.Bucket = c.Cluster.Bucket(c.bucket)

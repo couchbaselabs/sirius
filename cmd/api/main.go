@@ -5,6 +5,7 @@ import (
 	"github.com/couchbaselabs/sirius/internal/tasks-manager"
 	"log"
 	"net/http"
+	"os"
 )
 
 const webPort = "80"
@@ -33,6 +34,7 @@ func main() {
 	err := srv.ListenAndServe()
 	if err != nil {
 		app.taskManager.StopTaskManager()
-		log.Panic(err)
+		log.Println(err)
+		os.Exit(-1)
 	}
 }

@@ -145,8 +145,6 @@ func (task *InsertTask) Do() error {
 		log.Println("not able to save result into ", task.State.Seed)
 		return err
 	}
-	log.Println(task.State.Seed, task.State.SeedEnd)
-
 	return nil
 }
 
