@@ -12,7 +12,7 @@ func TestGeneratePerson(t *testing.T) {
 	// Test to compare two same document generated from same seed
 	fake1 := faker.NewWithSeed(rand.NewSource(1678693916037126000))
 	fake2 := faker.NewWithSeed(rand.NewSource(1678693916037126000))
-	template, _ := InitialiseTemplate("person")
+	template := InitialiseTemplate("person")
 	document1, err := template.GenerateDocument(&fake1, 1024)
 	if err != nil {
 		t.Fail()

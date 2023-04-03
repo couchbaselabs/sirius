@@ -11,11 +11,11 @@ type Template interface {
 }
 
 // InitialiseTemplate returns a template as an interface defined by user request.
-func InitialiseTemplate(template string) (Template, error) {
+func InitialiseTemplate(template string) Template {
 	switch template {
 	case "person":
-		return &Person{}, nil
+		return &Person{}
 	default:
-		return &Person{}, nil
+		return &Person{}
 	}
 }

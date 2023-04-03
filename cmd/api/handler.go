@@ -2,9 +2,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/couchbaselabs/sirius/internal/communication"
+	"github.com/couchbaselabs/sirius/internal/task_result"
 	"github.com/couchbaselabs/sirius/internal/tasks"
-	"log"
 	"net/http"
 )
 
@@ -20,61 +19,50 @@ func (app *Config) testServer(w http.ResponseWriter, _ *http.Request) {
 
 }
 
-// addTask is responsible for decoding user request and building a doc loading task which is scheduled
-// by task manager.
-func (app *Config) addTask(w http.ResponseWriter, r *http.Request) {
-
-	// decode and validate http request
-	reqPayload := &communication.TaskRequest{}
+// taskResult is responsible for handling user request to get status of the task
+// scheduled.
+func (app *Config) taskResult(w http.ResponseWriter, r *http.Request) {
+	reqPayload := &tasks.RequestResult{}
 	if err := app.readJSON(w, r, reqPayload); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	if err := reqPayload.Validate(); err != nil {
+	result, err := task_result.ReadResultFromFile(reqPayload.Seed, reqPayload.DeleteRecord)
+	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusBadRequest)
 		return
 	}
-	log.Println(reqPayload)
-	seed := reqPayload.Seed
-
-	task := &tasks.Task{
-		UserData: tasks.UserData{
-			Seed: seed,
-		},
-		Result: tasks.TaskResult{
-			UserData: tasks.UserData{
-				Seed: seed,
-			},
-			Operation: reqPayload.Operation,
-			Success:   0,
-			Failure:   0,
-			Error:     make(map[string][]string),
-		},
-		TaskState: tasks.TaskState{
-			Host:         reqPayload.Host,
-			BUCKET:       reqPayload.Bucket,
-			SCOPE:        reqPayload.Scope,
-			Collection:   reqPayload.Collection,
-			DocumentSize: reqPayload.DocSize,
-			Seed:         seed,
-			SeedEnd:      seed,
-			KeyPrefix:    reqPayload.KeyPrefix,
-			KeySuffix:    reqPayload.KeySuffix,
-		},
-		Request: reqPayload,
+	respPayload := jsonResponse{
+		Error:   false,
+		Message: "Successfully retrieved result-logs",
+		Data:    result,
 	}
 
-	if taskState, err := task.ReadTaskStateFromFile(); err == nil {
-		task.TaskState = taskState
-		task.Result.UserData.Seed = taskState.Seed
+	_ = app.writeJSON(w, http.StatusOK, respPayload)
+}
+
+// insertTask is used to bulk loading documents into buckets
+func (app *Config) insertTask(w http.ResponseWriter, r *http.Request) {
+	// decode and validate http request
+
+	request := &tasks.InsertTask{}
+	if err := app.readJSON(w, r, request); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	seed, err := request.Config()
+
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
 	}
 
-	if err := app.taskManager.AddTask(task); err != nil {
+	if err := app.taskManager.AddTask(request); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
 
-	respPayload := communication.TaskResponse{
-		Seed: fmt.Sprintf("%d", task.Result.UserData.Seed),
+	respPayload := tasks.TaskResponse{
+		Seed: fmt.Sprintf("%d", seed),
 	}
 
 	resPayload := jsonResponse{
@@ -86,26 +74,101 @@ func (app *Config) addTask(w http.ResponseWriter, r *http.Request) {
 	_ = app.writeJSON(w, http.StatusOK, resPayload)
 }
 
-// taskResult is responsible for handling user request to get status of the task
-// scheduled.
-func (app *Config) taskResult(w http.ResponseWriter, r *http.Request) {
-	reqPayload := &communication.TaskResult{}
-	if err := app.readJSON(w, r, reqPayload); err != nil {
+// deleteTask is used to bulk loading documents into buckets
+func (app *Config) deleteTask(w http.ResponseWriter, r *http.Request) {
+	// decode and validate http request
+
+	request := &tasks.DeleteTask{}
+	if err := app.readJSON(w, r, request); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	result, err := tasks.ReadResultFromFile(reqPayload.Seed, reqPayload.DeleteRecord)
+	seed, err := request.Config()
 
 	if err != nil {
-		_ = app.errorJSON(w, err, http.StatusBadRequest)
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
 
-	respPayload := jsonResponse{
-		Error:   false,
-		Message: "Successfully retrieved result-logs",
-		Data:    result,
+	if err := app.taskManager.AddTask(request); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
 
-	_ = app.writeJSON(w, http.StatusOK, respPayload)
+	respPayload := tasks.TaskResponse{
+		Seed: fmt.Sprintf("%d", seed),
+	}
+
+	resPayload := jsonResponse{
+		Error:   false,
+		Message: "Successfully started requested doc loading",
+		Data:    respPayload,
+	}
+
+	_ = app.writeJSON(w, http.StatusOK, resPayload)
+}
+
+// upsertTask is used to bulk loading documents into buckets
+func (app *Config) upsertTask(w http.ResponseWriter, r *http.Request) {
+	// decode and validate http request
+
+	request := &tasks.UpsertTask{}
+	if err := app.readJSON(w, r, request); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	seed, err := request.Config()
+
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+
+	if err := app.taskManager.AddTask(request); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+	}
+
+	respPayload := tasks.TaskResponse{
+		Seed: fmt.Sprintf("%d", seed),
+	}
+
+	resPayload := jsonResponse{
+		Error:   false,
+		Message: "Successfully started requested doc loading",
+		Data:    respPayload,
+	}
+
+	_ = app.writeJSON(w, http.StatusOK, resPayload)
+}
+
+// validateTask is used to bulk loading documents into buckets
+func (app *Config) validateTask(w http.ResponseWriter, r *http.Request) {
+	// decode and validate http request
+
+	request := &tasks.ValidateTask{}
+	if err := app.readJSON(w, r, request); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	seed, err := request.Config()
+
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+
+	if err := app.taskManager.AddTask(request); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+	}
+
+	respPayload := tasks.TaskResponse{
+		Seed: fmt.Sprintf("%d", seed),
+	}
+
+	resPayload := jsonResponse{
+		Error:   false,
+		Message: "Successfully started requested doc loading",
+		Data:    respPayload,
+	}
+
+	_ = app.writeJSON(w, http.StatusOK, resPayload)
 }

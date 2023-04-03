@@ -2,22 +2,22 @@ package main
 
 import (
 	"fmt"
-	"github.com/couchbaselabs/sirius/internal/tasks"
+	"github.com/couchbaselabs/sirius/internal/tasks-manager"
 	"log"
 	"net/http"
 )
 
 const webPort = "80"
-const TaskQueueSize = 30
+const TaskQueueSize = 100
 
 type Config struct {
-	taskManager *tasks.TaskManager
+	taskManager *tasks_manager.TaskManager
 }
 
 func main() {
 
 	app := Config{
-		taskManager: tasks.NewTasKManager(TaskQueueSize),
+		taskManager: tasks_manager.NewTasKManager(TaskQueueSize),
 	}
 
 	//start the Task Manager

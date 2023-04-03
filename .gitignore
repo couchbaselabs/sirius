@@ -1,5 +1,5 @@
 .idea
-/internal/tasks/result-logs
-/internal/tasks/task-state
+/internal/task_state/task_state_logs
+/internal/task_result/result-logs
 /sirius
 
