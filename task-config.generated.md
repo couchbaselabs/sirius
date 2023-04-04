@@ -4,19 +4,19 @@
 Each task can be executed using REST endpoints. All tasks tags to provide additional
 configuration that is also available on a per-task basis:
 
- * [/delete](#/delete)
- * [/flush](#/flush)
- * [/insert](#/insert)
- * [/upsert](#/upsert)
- * [/validate](#/validate)
+ * [/delete](#delete)
+ * [/flush](#flush)
+ * [/insert](#insert)
+ * [/upsert](#upsert)
+ * [/validate](#validate)
 
 ---
 #### /delete
 
  REST : POST
 
-| Name | Type | JSON Tag 
-| ---- | ---- | -------- 
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
 | `ConnectionString` | `string` | `json:connectionString`  |
 | `Username` | `string` | `json:username`  |
 | `Password` | `string` | `json:password`  |
@@ -32,8 +32,8 @@ configuration that is also available on a per-task basis:
 
  REST : POST
 
-| Name | Type | JSON Tag 
-| ---- | ---- | -------- 
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
 | `ConnectionString` | `string` | `json:connectionString`  |
 | `Username` | `string` | `json:username`  |
 | `Password` | `string` | `json:password`  |
@@ -47,8 +47,8 @@ configuration that is also available on a per-task basis:
 
  REST : POST
 
-| Name | Type | JSON Tag 
-| ---- | ---- | -------- 
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
 | `ConnectionString` | `string` | `json:connectionString`  |
 | `Username` | `string` | `json:username`  |
 | `Password` | `string` | `json:password`  |
@@ -76,8 +76,8 @@ configuration that is also available on a per-task basis:
 
  REST : POST
 
-| Name | Type | JSON Tag 
-| ---- | ---- | -------- 
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
 | `ConnectionString` | `string` | `json:connectionString`  |
 | `Username` | `string` | `json:username`  |
 | `Password` | `string` | `json:password`  |
@@ -93,8 +93,8 @@ configuration that is also available on a per-task basis:
 
  REST : POST
 
-| Name | Type | JSON Tag 
-| ---- | ---- | -------- 
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
 | `ConnectionString` | `string` | `json:connectionString`  |
 | `Username` | `string` | `json:username`  |
 | `Password` | `string` | `json:password`  |
