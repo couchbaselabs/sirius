@@ -15,6 +15,8 @@ func InitialiseTemplate(template string) Template {
 	switch template {
 	case "person":
 		return &Person{}
+	case "small":
+		return &SmallTemplate{}
 	default:
 		return &Person{}
 	}
