@@ -103,7 +103,11 @@ func (task *InsertTask) Config() (int64, error) {
 }
 
 func (task *InsertTask) Describe() string {
-	return "InsertTask uploads bulk of data into the clusters"
+	return " Insert task uploads documents in bulk into a bucket.\n" +
+		"The durability while inserting a document can be set using following values in the 'durability' JSON tag :-\n" +
+		"1. MAJORITY\n" +
+		"2. MAJORITY_AND_PERSIST_TO_ACTIVE\n" +
+		"3. PERSIST_TO_MAJORITY\n"
 }
 
 func (task *InsertTask) Do() error {

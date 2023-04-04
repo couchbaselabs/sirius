@@ -55,7 +55,9 @@ func (task *FlushTask) Config() (int64, error) {
 }
 
 func (task *FlushTask) Describe() string {
-	return "Delete Task delete documents in bulk from the cluster"
+	return `Flush task tries to clear a bucket by deleting all documents in a bucket.
+The current state of that bucket would be lost. Hence, we need to initiate insert task again
+for creating a state of a bucket.`
 }
 
 func (task *FlushTask) Do() error {
