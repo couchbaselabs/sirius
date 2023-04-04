@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"sort"
+	"strings"
 )
 
 const FileName = "task-config.generated.md"
@@ -31,7 +32,8 @@ configuration that is also available on a per-task basis:
 
 `
 	for _, k := range keys {
-		output += fmt.Sprintf(" * [%s](#%s)\n", k, k)
+		a := strings.Replace(strings.ToLower(k), "/", "", 1)
+		output += fmt.Sprintf(" * [%s](#%s)\n", k, a)
 	}
 	output += "\n---\n"
 
@@ -53,8 +55,8 @@ configuration that is also available on a per-task basis:
 			output += fmt.Sprintf("No fields found on struct.\n")
 			continue
 		}
-		output += "| Name | Type | JSON Tag \n"
-		output += "| ---- | ---- | -------- \n"
+		output += "| Name | Type | JSON Tag |\n"
+		output += "| ---- | ---- | -------- |\n"
 		for i := 0; i < val.Elem().NumField(); i++ {
 			f := val.Elem().Type().Field(i)
 			if _, ok := f.Tag.Lookup("json"); !ok {
