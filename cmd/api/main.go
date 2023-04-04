@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/couchbaselabs/sirius/internal/generate"
 	"github.com/couchbaselabs/sirius/internal/tasks-manager"
 	"log"
 	"net/http"
@@ -16,6 +17,7 @@ type Config struct {
 }
 
 func main() {
+	go generate.Generate()
 
 	app := Config{
 		taskManager: tasks_manager.NewTasKManager(TaskQueueSize),
