@@ -2,7 +2,8 @@
 Rest based Couchbase doc loader for QA tests written in Golang.
 **MakeFile** can be used to compile and run sirius. We can directly build it on a local environment or docker container.
 
-[REST Method](task-config.generated.md)
+
+Doc loader different capabilities are  described using  [**REST ENDPOINT**](task-config.generated.md).
 
 **Start sirius directly**
 ```shell

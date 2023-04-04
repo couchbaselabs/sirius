@@ -7,6 +7,7 @@ configuration that is also available on a per-task basis:
  * [/delete](#delete)
  * [/flush](#flush)
  * [/insert](#insert)
+ * [/result](#result)
  * [/upsert](#upsert)
  * [/validate](#validate)
 
@@ -14,6 +15,9 @@ configuration that is also available on a per-task basis:
 #### /delete
 
  REST : POST
+
+Description : Delete task deletes documents in bulk into a bucket.
+The task will delete documents from [start,end] inclusive.
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
@@ -32,6 +36,10 @@ configuration that is also available on a per-task basis:
 
  REST : POST
 
+Description : Flush task tries to clear a bucket by deleting all documents in a bucket.
+The current state of that bucket would be lost. Hence, we need to initiate insert task again
+for creating a state of a bucket.
+
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
 | `ConnectionString` | `string` | `json:connectionString`  |
@@ -46,6 +54,13 @@ configuration that is also available on a per-task basis:
 #### /insert
 
  REST : POST
+
+Description :  Insert task uploads documents in bulk into a bucket.
+The durability while inserting a document can be set using following values in the 'durability' JSON tag :-
+1. MAJORITY
+2. MAJORITY_AND_PERSIST_TO_ACTIVE
+3. PERSIST_TO_MAJORITY
+
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
@@ -72,9 +87,26 @@ configuration that is also available on a per-task basis:
 | `TemplateName` | `string` | `json:template`  |
 
 ---
+#### /result
+
+ REST : POST
+
+Description :  Task result is retrieved via this endpoint.
+
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `Seed` | `string` | `json:seed`  |
+| `DeleteRecord` | `bool` | `json:deleteRecord`  |
+
+---
 #### /upsert
 
  REST : POST
+
+Description : Upsert task mutates documents in bulk into a bucket.
+The task will update the fields in a documents ranging from [start,end] inclusive.
+We need to share the fields we want to update in a json document using SQL++ sytax.
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
@@ -93,6 +125,8 @@ configuration that is also available on a per-task basis:
 
  REST : POST
 
+Description : validate every document in the cluster's bucket
+
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
 | `ConnectionString` | `string` | `json:connectionString`  |
@@ -101,5 +135,29 @@ configuration that is also available on a per-task basis:
 | `Bucket` | `string` | `json:bucket`  |
 | `Scope` | `string` | `json:scope,omitempty`  |
 | `Collection` | `string` | `json:collection,omitempty`  |
+
+---
+
+---
+**API's Response Description**.
+
+1. Response after initiating a TASK.
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `Seed` | `string` | `json:seed`  |
+
+---
+2. Response which contains the TASK's result.
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `Seed` | `int64` | `json:seed`  |
+| `Operation` | `string` | `json:operation`  |
+| `ErrorOther` | `string` | `json:other-errors,omitempty`  |
+| `Success` | `int64` | `json:success`  |
+| `Failure` | `int64` | `json:failure`  |
+| `ValidationError` | `slice` | `json:validation-errors,omitempty`  |
+| `Error` | `map` | `json:errors`  |
 
 ---

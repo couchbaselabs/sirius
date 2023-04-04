@@ -4,7 +4,7 @@ import "github.com/couchbaselabs/sirius/internal/tasks"
 
 type TaskRegister struct {
 	httpMethod string
-	config     interface{}
+	config     tasks.Task
 }
 
 type Register struct {
@@ -17,5 +17,6 @@ func (r *Register) RegisteredTasks() map[string]TaskRegister {
 		"/upsert":   {"POST", &tasks.UpsertTask{}},
 		"/validate": {"POST", &tasks.ValidateTask{}},
 		"/flush":    {"POST", &tasks.FlushTask{}},
+		"/result":   {"POST", &tasks.TaskResult{}},
 	}
 }

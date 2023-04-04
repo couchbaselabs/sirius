@@ -22,7 +22,7 @@ func (app *Config) testServer(w http.ResponseWriter, _ *http.Request) {
 // taskResult is responsible for handling user request to get status of the task
 // scheduled.
 func (app *Config) taskResult(w http.ResponseWriter, r *http.Request) {
-	reqPayload := &tasks.RequestResult{}
+	reqPayload := &tasks.TaskResult{}
 	if err := app.readJSON(w, r, reqPayload); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return

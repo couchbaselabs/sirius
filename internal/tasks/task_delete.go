@@ -66,7 +66,8 @@ func (task *DeleteTask) Config() (int64, error) {
 }
 
 func (task *DeleteTask) Describe() string {
-	return "Delete Task delete documents in bulk from the cluster"
+	return `Delete task deletes documents in bulk into a bucket.
+The task will delete documents from [start,end] inclusive.`
 }
 
 func (task *DeleteTask) Do() error {

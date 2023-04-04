@@ -67,7 +67,9 @@ func (task *UpsertTask) Config() (int64, error) {
 }
 
 func (task *UpsertTask) Describe() string {
-	return "upsert task is used for change documents in bulk"
+	return `Upsert task mutates documents in bulk into a bucket.
+The task will update the fields in a documents ranging from [start,end] inclusive.
+We need to share the fields we want to update in a json document using SQL++ sytax.`
 }
 
 func (task *UpsertTask) Do() error {
