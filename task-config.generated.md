@@ -79,12 +79,12 @@ The durability while inserting a document can be set using following values in t
 | `RandomDocSize` | `bool` | `json:randomDocSize,omitempty`  |
 | `RandomKeySize` | `bool` | `json:randomKeySize,omitempty`  |
 | `Expiry` | `int64` | `json:expiry,omitempty`  |
-| `PersistTo` | `uint` | `json:PersistTo,omitempty`  |
+| `PersistTo` | `uint` | `json:persistTo,omitempty`  |
 | `ReplicateTo` | `uint` | `json:replicateTo,omitempty`  |
 | `Durability` | `string` | `json:durability,omitempty`  |
 | `Timeout` | `int` | `json:timeout,omitempty`  |
 | `ReadYourOwnWrite` | `bool` | `json:readYourOwnWrite,omitempty`  |
-| `TemplateName` | `string` | `json:template`  |
+| `TemplateName` | `string` | `json:template,omitempty`  |
 
 ---
 #### /result
@@ -135,8 +135,6 @@ Description : validate every document in the cluster's bucket
 | `Bucket` | `string` | `json:bucket`  |
 | `Scope` | `string` | `json:scope,omitempty`  |
 | `Collection` | `string` | `json:collection,omitempty`  |
-
----
 
 ---
 **API's Response Description**.

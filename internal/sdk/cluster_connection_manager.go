@@ -40,6 +40,10 @@ func (c *ConnectionManager) Connect() error {
 		},
 	})
 
+	if err != nil {
+		return err
+	}
+
 	c.Bucket = c.Cluster.Bucket(c.bucket)
 	if err = c.Bucket.WaitUntilReady(5*time.Second, nil); err != nil {
 		return err

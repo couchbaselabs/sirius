@@ -32,12 +32,12 @@ type InsertTask struct {
 	RandomDocSize    bool          `json:"randomDocSize,omitempty"`
 	RandomKeySize    bool          `json:"randomKeySize,omitempty"`
 	Expiry           time.Duration `json:"expiry,omitempty"`
-	PersistTo        uint          `json:"PersistTo,omitempty"`
+	PersistTo        uint          `json:"persistTo,omitempty"`
 	ReplicateTo      uint          `json:"replicateTo,omitempty"`
 	Durability       string        `json:"durability,omitempty"`
 	Timeout          int           `json:"timeout,omitempty"`
 	ReadYourOwnWrite bool          `json:"readYourOwnWrite,omitempty"`
-	TemplateName     string        `json:"template"`
+	TemplateName     string        `json:"template,omitempty"`
 	Template         template.Template
 	Seed             int64
 	DurabilityLevel  gocb.DurabilityLevel
@@ -50,7 +50,6 @@ type InsertTask struct {
 
 // Config configures  the insert task
 func (task *InsertTask) Config() (int64, error) {
-
 	if task.ConnectionString == "" {
 		return 0, fmt.Errorf("empty connection string")
 	}
@@ -69,6 +68,7 @@ func (task *InsertTask) Config() (int64, error) {
 	if task.DocType == "" {
 		task.DocType = docgenerator.JsonDocument
 	}
+
 	if task.KeySize == 0 || task.KeySize > docgenerator.DefaultKeySize {
 		task.KeySize = docgenerator.DefaultKeySize
 	}
@@ -78,10 +78,11 @@ func (task *InsertTask) Config() (int64, error) {
 	if task.DocSize == 0 {
 		task.DocSize = docgenerator.DefaultDocSize
 	}
+	if task.Timeout == 0 {
+		task.Timeout = 10
+	}
 	task.Operation = InsertOperation
-
 	task.Template = template.InitialiseTemplate(task.TemplateName)
-
 	switch task.Durability {
 	case DurabilityLevelMajority:
 		task.DurabilityLevel = gocb.DurabilityLevelMajority
@@ -94,11 +95,9 @@ func (task *InsertTask) Config() (int64, error) {
 	}
 	time.Sleep(1 * time.Microsecond) // this sleep ensures that seed generated is always different.
 	task.Seed = time.Now().UnixNano()
-
 	// restore the original cluster state
 	task.State, _ = task_state.ConfigTaskState(task.ConnectionString, task.Bucket, task.Scope, task.Collection, task.TemplateName, task.KeyPrefix, task.KeySuffix,
 		task.DocSize, task.Seed, task.Seed)
-
 	return task.State.Seed, nil
 }
 
@@ -178,6 +177,7 @@ func insertDocuments(task *InsertTask) {
 				DurabilityLevel: task.DurabilityLevel,
 				PersistTo:       task.PersistTo,
 				ReplicateTo:     task.ReplicateTo,
+				Timeout:         time.Duration(task.Timeout) * time.Second,
 			})
 
 			if err != nil {

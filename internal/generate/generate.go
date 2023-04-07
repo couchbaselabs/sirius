@@ -14,12 +14,6 @@ import (
 
 const FileName = "task-config.generated.md"
 
-type jsonResponse struct {
-	Error   bool   `json:"error"`
-	Message string `json:"message"`
-	Data    any    `json:"data,omitempty"`
-}
-
 func Generate() {
 	cwd, _ := os.Getwd()
 	filename := filepath.Join(cwd, FileName)
@@ -96,8 +90,6 @@ configuration that is also available on a per-task basis:
 		}
 		output += "\n---\n"
 	}
-
-	output += "\n---\n"
 
 	output += "**API's Response Description**.\n\n" +
 		"1. Response after initiating a TASK.\n\n"
