@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/couchbaselabs/sirius/internal/task_result"
 	"github.com/couchbaselabs/sirius/internal/tasks"
+	"log"
 	"net/http"
 )
 
@@ -27,6 +28,7 @@ func (app *Config) taskResult(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
+	log.Print(reqPayload)
 	result, err := task_result.ReadResultFromFile(reqPayload.Seed, reqPayload.DeleteRecord)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusBadRequest)
@@ -47,6 +49,7 @@ func (app *Config) insertTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
+	log.Print(request)
 	seed, err := request.Config()
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
@@ -73,6 +76,7 @@ func (app *Config) deleteTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
+	log.Print(request)
 	seed, err := request.Config()
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
@@ -99,6 +103,7 @@ func (app *Config) upsertTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
+	log.Print(request)
 	seed, err := request.Config()
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
@@ -125,6 +130,7 @@ func (app *Config) validateTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
+	log.Print(request)
 	seed, err := request.Config()
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
@@ -152,6 +158,7 @@ func (app *Config) flushTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
+	log.Println(request)
 	seed, err := request.Config()
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)

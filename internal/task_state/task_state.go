@@ -7,6 +7,7 @@ import (
 	"github.com/jaswdr/faker"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 const TaskStatePath = "./internal/task_state/task_state_logs"
@@ -85,6 +86,13 @@ func (t *TaskState) RetracePreviousMutations(key int64, doc interface{}, gen doc
 
 // buildTaskName returns the name of the TaskState meta-data file.
 func buildTaskName(host, bucket, scope, collection string) string {
+	if strings.Contains(host, "couchbase://") {
+		host = strings.ReplaceAll(host, "couchbase://", "")
+	}
+	if strings.Contains(host, "couchbases://") {
+		host = strings.ReplaceAll(host, "couchbases://", "")
+	}
+
 	return fmt.Sprintf("%s_%s_%s_%s", host, bucket, scope, collection)
 }
 
