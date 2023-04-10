@@ -11,3 +11,6 @@ services:
     deploy:
       mode: replicated
       replicas: 1
+    volumes:
+      - ./internal/task_state/task_state_logs:/internal/task_state/task_state_logs
+      - ./internal/task_result/result-logs:/internal/task_result/result-logs
