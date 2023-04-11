@@ -28,7 +28,7 @@ func (app *Config) taskResult(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	log.Print(reqPayload)
+	log.Print(reqPayload, "result")
 	result, err := task_result.ReadResultFromFile(reqPayload.Seed, reqPayload.DeleteRecord)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusBadRequest)
@@ -49,7 +49,7 @@ func (app *Config) insertTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	log.Print(request)
+	log.Print(request, "insert")
 	seed, err := request.Config()
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
@@ -76,7 +76,7 @@ func (app *Config) deleteTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	log.Print(request)
+	log.Print(request, "delete")
 	seed, err := request.Config()
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
@@ -103,7 +103,7 @@ func (app *Config) upsertTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	log.Print(request)
+	log.Print(request, "upsert")
 	seed, err := request.Config()
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
@@ -130,7 +130,7 @@ func (app *Config) validateTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	log.Print(request)
+	log.Print(request, "validate")
 	seed, err := request.Config()
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
@@ -158,7 +158,7 @@ func (app *Config) flushTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	log.Println(request)
+	log.Println(request, "flush")
 	seed, err := request.Config()
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
