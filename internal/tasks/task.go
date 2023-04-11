@@ -1,6 +1,6 @@
 package tasks
 
-const MaxConcurrentRoutines = 1500
+const MaxConcurrentRoutines = 30
 
 const (
 	DurabilityLevelMajority                   string = "MAJORITY"
