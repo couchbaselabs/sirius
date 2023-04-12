@@ -36,4 +36,4 @@ build_sirius_for_docker:
 
 clean_run: clean_dir run
 
-clean_deploy: clean_dir deploy
+clean_deploy: clean_dir build_dir deploy
