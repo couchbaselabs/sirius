@@ -34,6 +34,6 @@ clean_dir:
 build_sirius_for_docker:
 	env GOOS=linux CGO_ENABLED=0 go build -o ${DOC_LOADER_SERVER} ./cmd/api
 
-clean run: clean_dir run
+clean_run: clean_dir run
 
-clean deploy: clean_dir build_dir build_sirius_for_docker
+clean_deploy: clean_dir deploy
