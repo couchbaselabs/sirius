@@ -115,16 +115,18 @@ func (task *DeleteTask) Do() error {
 
 // deleteDocuments delete the document stored on a host from start to end.
 func deleteDocuments(task *DeleteTask) {
+	d := task_state.DeleteTaskState{
+		Start: task.Start,
+		End:   task.End,
+	}
 
 	var l sync.Mutex
 	insertErrorCheck := make(map[int64]struct{})
 	for _, k := range task.State.InsertTaskState.Err {
 		insertErrorCheck[k] = struct{}{}
 	}
-	deleteCheck := make(map[int64]struct{})
-	for _, k := range task.State.DeleteTaskState.Del {
-		deleteCheck[k] = struct{}{}
-	}
+
+	deleteCheck := task.State.RetracePreviousDeletions()
 
 	rateLimiter := make(chan struct{}, MaxConcurrentRoutines)
 	dataChannel := make(chan int64, MaxConcurrentRoutines)
@@ -155,12 +157,12 @@ func deleteDocuments(task *DeleteTask) {
 			_, err := task.connection.Collection.Remove(docId, nil)
 			if err != nil {
 				task.Result.IncrementFailure(docId, err.Error())
+				l.Lock()
+				d.Err = append(d.Err, offset)
+				l.Unlock()
 				<-rateLimiter
 				return err
 			}
-			l.Lock()
-			task.State.DeleteTaskState.Del = append(task.State.DeleteTaskState.Del, key)
-			l.Unlock()
 
 			<-rateLimiter
 			return nil
@@ -169,5 +171,6 @@ func deleteDocuments(task *DeleteTask) {
 	_ = group.Wait()
 	close(rateLimiter)
 	close(dataChannel)
+	task.State.DeleteTaskState = append(task.State.DeleteTaskState, d)
 	log.Println(task.Operation, task.Bucket, task.Scope, task.Collection)
 }

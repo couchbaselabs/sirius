@@ -17,7 +17,9 @@ type InsertTaskState struct {
 }
 
 type DeleteTaskState struct {
-	Del []int64
+	Start int64
+	End   int64
+	Err   []int64
 }
 
 type UpsertTaskState struct {
@@ -39,7 +41,7 @@ type TaskState struct {
 	KeyPrefix       string
 	KeySuffix       string
 	InsertTaskState InsertTaskState
-	DeleteTaskState DeleteTaskState
+	DeleteTaskState []DeleteTaskState
 	UpsertTaskState []UpsertTaskState
 }
 
@@ -82,6 +84,27 @@ func (t *TaskState) RetracePreviousMutations(key int64, doc interface{}, gen doc
 		}
 	}
 	return doc, nil
+}
+
+// RetracePreviousDeletions return the previously deleted elements
+func (t *TaskState) RetracePreviousDeletions() map[int64]struct{} {
+	notDelete := make(map[int64]struct{})
+	deleted := make(map[int64]struct{})
+	for _, d := range t.DeleteTaskState {
+		for _, k := range d.Err {
+			notDelete[k+t.Seed-1] = struct{}{}
+		}
+	}
+
+	for _, d := range t.DeleteTaskState {
+		for k := d.Start; k <= d.End; k++ {
+			if _, ok := notDelete[k+t.Seed-1]; ok {
+				continue
+			}
+			deleted[k+t.Seed-1] = struct{}{}
+		}
+	}
+	return deleted
 }
 
 // buildTaskName returns the name of the TaskState meta-data file.

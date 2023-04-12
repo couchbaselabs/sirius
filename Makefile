@@ -5,8 +5,6 @@ TASK_STATE_PATH=./internal/task_state/task_state_logs
 run: build_dir build_sirius
 	./${DOC_LOADER_SERVER}
 
-clean deploy: clean_dir build_dir build_sirius_for_docker
-
 deploy: build_sirius_for_docker
 	@echo "Stopping docker images (if running...)"
 	docker-compose down
@@ -24,13 +22,18 @@ build_sirius:
 	go build -o ${DOC_LOADER_SERVER} ./cmd/api
 
 build_dir:
+	@echo "Building directory to store task's meta-data and results"
 	mkdir -p ${TASK_RESULT_PATH}
 	mkdir -p ${TASK_STATE_PATH}
 
 clean_dir:
-	rm -r ${TASK_RESULT_PATH}
-	rm -r ${TASK_STATE_PATH}
+	@echo "Clean meta-data of task state and task results"
+	if [ -d ${TASK_RESULT_PATH} ]; then rm -Rf ${TASK_RESULT_PATH}; fi
+	if [ -d ${TASK_STATE_PATH} ]; then rm -Rf ${TASK_STATE_PATH}; fi
 
 build_sirius_for_docker:
 	env GOOS=linux CGO_ENABLED=0 go build -o ${DOC_LOADER_SERVER} ./cmd/api
 
+clean_run: clean_dir run
+
+clean_deploy: clean_dir deploy

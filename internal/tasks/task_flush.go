@@ -106,10 +106,7 @@ func (task *FlushTask) Do() error {
 // deleteDocuments delete the document stored on a host from start to end.
 func flushBucket(task *FlushTask) {
 
-	deleteCheck := make(map[int64]struct{})
-	for _, k := range task.State.DeleteTaskState.Del {
-		deleteCheck[k] = struct{}{}
-	}
+	deleteCheck := task.State.RetracePreviousDeletions()
 
 	rateLimiter := make(chan struct{}, MaxConcurrentRoutines)
 	dataChannel := make(chan int64, MaxConcurrentRoutines)
