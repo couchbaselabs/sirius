@@ -128,10 +128,7 @@ func upsertDocuments(task *UpsertTask) {
 		insertErrorCheck[k] = struct{}{}
 	}
 
-	deleteCheck := make(map[int64]struct{})
-	for _, k := range task.State.DeleteTaskState.Del {
-		deleteCheck[k] = struct{}{}
-	}
+	deleteCheck := task.State.RetracePreviousDeletions()
 
 	rateLimiter := make(chan struct{}, MaxConcurrentRoutines)
 	dataChannel := make(chan int64, MaxConcurrentRoutines)
