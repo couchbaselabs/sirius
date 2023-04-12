@@ -91,7 +91,7 @@ func (task *ValidateTask) Do() error {
 	}
 
 	// calculated result success here to prevent late update in failure due to locking.
-	task.Result.Success = task.State.SeedEnd - task.State.Seed - task.Result.Failure - int64(len(task.State.InsertTaskState.Err)) - int64(len(task.State.DeleteTaskState.Del))
+	task.Result.Success = task.State.SeedEnd - task.State.Seed - task.Result.Failure - int64(len(task.State.InsertTaskState.Err)) - int64(len(task.State.RetracePreviousDeletions()))
 
 	// save the result into a file
 	if err := task.Result.SaveResultIntoFile(); err != nil {
@@ -114,10 +114,7 @@ func validateDocuments(task *ValidateTask) {
 		insertErrorCheck[k] = struct{}{}
 	}
 
-	deleteCheck := make(map[int64]struct{})
-	for _, k := range task.State.DeleteTaskState.Del {
-		deleteCheck[k] = struct{}{}
-	}
+	deleteCheck := task.State.RetracePreviousDeletions()
 
 	rateLimiter := make(chan struct{}, MaxConcurrentRoutines)
 	dataChannel := make(chan int64, MaxConcurrentRoutines)
