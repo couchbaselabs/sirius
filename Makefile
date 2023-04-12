@@ -9,6 +9,13 @@ deploy: build_sirius_for_docker
 	@echo "Stopping docker images (if running...)"
 	docker-compose down
 	@echo "Building (when required) and starting docker images..."
+	docker-compose up --no-build -d
+	@echo "Docker images built and started!"
+
+fresh_deploy: build_sirius_for_docker
+	@echo "Stopping docker images (if running...)"
+	docker-compose down
+	@echo "Building (when required) and starting docker images..."
 	docker-compose up --build -d
 	@echo "Docker images built and started!"
 
@@ -36,4 +43,4 @@ build_sirius_for_docker:
 
 clean_run: clean_dir run
 
-clean_deploy: clean_dir build_dir deploy
+clean_deploy: clean_dir build_dir fresh_deploy
