@@ -23,9 +23,6 @@ func main() {
 		taskManager: tasks_manager.NewTasKManager(TaskQueueSize),
 	}
 
-	//start the Task Manager
-	app.taskManager.StartTaskManager()
-
 	//define the server
 	log.Printf("Starting Document Loading Service at port %s\n", webPort)
 	srv := http.Server{
