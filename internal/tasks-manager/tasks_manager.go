@@ -19,11 +19,13 @@ func NewTasKManager(size int) *TaskManager {
 	taskQueue := make(chan tasks.Task, size)
 	ctx, cancel := context.WithCancel(context.Background())
 
-	return &TaskManager{
+	tm := &TaskManager{
 		taskQueue: taskQueue,
 		ctx:       ctx,
 		cancel:    cancel,
 	}
+	go tm.StartTaskManager()
+	return tm
 }
 
 // AddTask will add task in the taskQueue for scheduling. it returns no error on
