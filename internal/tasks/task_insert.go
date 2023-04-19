@@ -1,6 +1,7 @@
 package tasks
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
@@ -179,14 +180,42 @@ func insertDocuments(task *InsertTask) {
 				ReplicateTo:     task.ReplicateTo,
 				Timeout:         time.Duration(task.Timeout) * time.Second,
 			})
-
-			if err != nil {
-				task.Result.IncrementFailure(docId, err.Error())
-				l.Lock()
-				task.State.InsertTaskState.Err = append(task.State.InsertTaskState.Err, key)
-				l.Unlock()
-				<-rateLimiter
-				return err
+			if task.ReadYourOwnWrite {
+				var resultFromHost map[string]interface{}
+				documentFromHost := template.InitialiseTemplate(task.State.TemplateName)
+				result, err := task.connection.Collection.Get(docId, nil)
+				if err != nil {
+					task.Result.IncrementFailure(docId, err.Error())
+					<-rateLimiter
+					return err
+				}
+				if err := result.Content(&resultFromHost); err != nil {
+					task.Result.IncrementFailure(docId, err.Error())
+					<-rateLimiter
+					return err
+				}
+				resultBytes, err := json.Marshal(resultFromHost)
+				err = json.Unmarshal(resultBytes, &documentFromHost)
+				if err != nil {
+					task.Result.ValidationFailures(docId)
+					<-rateLimiter
+					return err
+				}
+				ok, err := task.gen.Template.Compare(documentFromHost, doc)
+				if err != nil || !ok {
+					task.Result.ValidationFailures(docId)
+					<-rateLimiter
+					return err
+				}
+			} else {
+				if err != nil {
+					task.Result.IncrementFailure(docId, err.Error())
+					l.Lock()
+					task.State.InsertTaskState.Err = append(task.State.InsertTaskState.Err, key)
+					l.Unlock()
+					<-rateLimiter
+					return err
+				}
 			}
 			<-rateLimiter
 			return nil
