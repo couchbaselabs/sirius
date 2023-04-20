@@ -5,11 +5,9 @@ Each task can be executed using REST endpoints. All tasks tags to provide additi
 configuration that is also available on a per-task basis:
 
  * [/delete](#delete)
- * [/flush](#flush)
  * [/insert](#insert)
  * [/result](#result)
  * [/upsert](#upsert)
- * [/validate](#validate)
 
 ---
 #### /delete
@@ -30,25 +28,6 @@ The task will delete documents from [start,end] inclusive.
 | `Collection` | `string` | `json:collection,omitempty`  |
 | `Start` | `int64` | `json:start`  |
 | `End` | `int64` | `json:end`  |
-
----
-#### /flush
-
- REST : POST
-
-Description : Flush task tries to clear a bucket by deleting all documents in a bucket.
-The current state of that bucket would be lost. Hence, we need to initiate insert task again
-for creating a state of a bucket.
-
-| Name | Type | JSON Tag |
-| ---- | ---- | -------- |
-| `ConnectionString` | `string` | `json:connectionString`  |
-| `Username` | `string` | `json:username`  |
-| `Password` | `string` | `json:password`  |
-| `Host` | `string` | `json:host`  |
-| `Bucket` | `string` | `json:bucket`  |
-| `Scope` | `string` | `json:scope,omitempty`  |
-| `Collection` | `string` | `json:collection,omitempty`  |
 
 ---
 #### /insert
@@ -84,7 +63,7 @@ The durability while inserting a document can be set using following values in t
 | `Durability` | `string` | `json:durability,omitempty`  |
 | `Timeout` | `int` | `json:timeout,omitempty`  |
 | `ReadYourOwnWrite` | `bool` | `json:readYourOwnWrite,omitempty`  |
-| `TemplateName` | `string` | `json:template,omitempty`  |
+| `TemplateName` | `string` | `json:template`  |
 
 ---
 #### /result
@@ -106,7 +85,7 @@ Description :  Task result is retrieved via this endpoint.
 
 Description : Upsert task mutates documents in bulk into a bucket.
 The task will update the fields in a documents ranging from [start,end] inclusive.
-We need to share the fields we want to update in a json document using SQL++ sytax.
+We need to share the fields we want to update in a json document using SQL++ syntax.
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
@@ -119,22 +98,10 @@ We need to share the fields we want to update in a json document using SQL++ syt
 | `Start` | `int64` | `json:start`  |
 | `End` | `int64` | `json:end`  |
 | `FieldsToChange` | `slice` | `json:fieldsToChange,omitempty`  |
-
----
-#### /validate
-
- REST : POST
-
-Description : validate every document in the cluster's bucket
-
-| Name | Type | JSON Tag |
-| ---- | ---- | -------- |
-| `ConnectionString` | `string` | `json:connectionString`  |
-| `Username` | `string` | `json:username`  |
-| `Password` | `string` | `json:password`  |
-| `Bucket` | `string` | `json:bucket`  |
-| `Scope` | `string` | `json:scope,omitempty`  |
-| `Collection` | `string` | `json:collection,omitempty`  |
+| `TemplateName` | `string` | `json:template,omitempty`  |
+| `DocSize` | `int64` | `json:docSize,omitempty`  |
+| `KeyPrefix` | `string` | `json:keyPrefix,omitempty`  |
+| `KeySuffix` | `string` | `json:keySuffix,omitempty`  |
 
 ---
 **API's Response Description**.

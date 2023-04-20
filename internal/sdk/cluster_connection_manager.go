@@ -36,7 +36,7 @@ func (c *ConnectionManager) Connect() error {
 			Password: c.password,
 		},
 		CircuitBreakerConfig: gocb.CircuitBreakerConfig{
-			Disabled: true,
+			Disabled: false,
 		},
 	})
 

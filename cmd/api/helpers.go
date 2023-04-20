@@ -1,7 +1,13 @@
 package main
 
 import (
+	"encoding/gob"
 	"encoding/json"
+	"github.com/couchbaselabs/sirius/internal/server_requests"
+	"github.com/couchbaselabs/sirius/internal/task_result"
+	"github.com/couchbaselabs/sirius/internal/task_state"
+	"github.com/couchbaselabs/sirius/internal/tasks"
+	"github.com/couchbaselabs/sirius/internal/template"
 	"net/http"
 )
 
@@ -54,4 +60,18 @@ func (app *Config) errorJSON(w http.ResponseWriter, err error, status ...int) er
 	payload.Error = true
 	payload.Message = err.Error()
 	return app.writeJSON(w, statusCode, payload)
+}
+
+func registerInterfaces() {
+	gob.Register(&tasks.Request{})
+	gob.Register(&template.Person{})
+	gob.Register(&template.SmallTemplate{})
+	gob.Register(&server_requests.ServerRequests{})
+	gob.Register(&tasks.InsertTask{})
+	gob.Register(&tasks.UpsertTask{})
+	gob.Register(&tasks.TaskResult{})
+	gob.Register(&tasks.DeleteTask{})
+	gob.Register(&task_result.TaskResult{})
+	gob.Register(&task_state.TaskState{})
+
 }

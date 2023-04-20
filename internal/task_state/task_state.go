@@ -1,197 +1,158 @@
 package task_state
 
 import (
-	"encoding/gob"
-	"fmt"
-	"github.com/couchbaselabs/sirius/internal/docgenerator"
-	"github.com/jaswdr/faker"
-	"os"
-	"path/filepath"
-	"strings"
+	"context"
+	"sync"
+	"time"
 )
 
-const TaskStatePath = "./internal/task_state/task_state_logs"
+const (
+	COMPLETED         = 1
+	ERR               = 0
+	StateChannelLimit = 100000
+)
 
-type InsertTaskState struct {
-	Err []int64
+type StateHelper struct {
+	Status int
+	Offset int64
 }
 
-type DeleteTaskState struct {
-	Start int64
-	End   int64
-	Err   []int64
-}
-
-type UpsertTaskState struct {
-	Start          int64
-	End            int64
-	FieldsToChange []string
-	Err            []int64
+type KeyStates struct {
+	Completed []int64
+	Err       []int64
 }
 
 type TaskState struct {
-	Host            string
-	BUCKET          string
-	SCOPE           string
-	Collection      string
-	TemplateName    string
-	DocumentSize    int64
-	Seed            int64
-	SeedEnd         int64
-	KeyPrefix       string
-	KeySuffix       string
-	InsertTaskState InsertTaskState
-	DeleteTaskState []DeleteTaskState
-	UpsertTaskState []UpsertTaskState
+	Operation    string
+	User         string
+	Host         string
+	BUCKET       string
+	SCOPE        string
+	Collection   string
+	TemplateName string
+	DocumentSize int64
+	SeedStart    int64
+	SeedEnd      int64
+	ResultSeed   int64
+	KeyPrefix    string
+	KeySuffix    string
+	KeyStates    KeyStates
+	StateChannel chan StateHelper
+	ctx          context.Context
+	cancel       context.CancelFunc
+	lock         sync.Mutex
 }
 
-func ConfigTaskState(host, bucket, scope, collection, templateName, keyPrefix, keySuffix string, docSize, seed, seedEnd int64) (*TaskState, bool) {
-
-	state := &TaskState{
-		Host:         host,
-		BUCKET:       bucket,
-		SCOPE:        scope,
-		Collection:   collection,
+func ConfigTaskState(templateName, keyPrefix, keySuffix string, docSize, seed, seedEnd, resultSeed int64) *TaskState {
+	ctx, cancel := context.WithCancel(context.Background())
+	ts := &TaskState{
 		TemplateName: templateName,
 		DocumentSize: docSize,
-		Seed:         seed,
+		SeedStart:    seed,
 		SeedEnd:      seedEnd,
+		ResultSeed:   resultSeed,
 		KeyPrefix:    keyPrefix,
 		KeySuffix:    keySuffix,
+		StateChannel: make(chan StateHelper, StateChannelLimit),
+		ctx:          ctx,
+		cancel:       cancel,
+		lock:         sync.Mutex{},
 	}
-
-	if statExisting, err := state.ReadTaskStateFromFile(); err == nil {
-		return statExisting, true
-	}
-	return state, false
-
+	defer func() {
+		ts.StoreState()
+	}()
+	return ts
 }
 
-// RetracePreviousMutations retraces all previous mutation from the saved sequences of upsert operations.
-func (t *TaskState) RetracePreviousMutations(key int64, doc interface{}, gen docgenerator.Generator, fake *faker.Faker) (interface{}, error) {
-	for _, u := range t.UpsertTaskState {
-		if key >= (u.Start+t.Seed-1) && (key <= u.End+t.Seed-1) {
-			flag := true
-			for _, e := range u.Err {
-				if e == key {
-					flag = false
-					break
+func (t *TaskState) SetupStoringKeys() {
+	ctx, cancel := context.WithCancel(context.Background())
+	t.StateChannel = make(chan StateHelper, StateChannelLimit)
+	t.ctx = ctx
+	t.cancel = cancel
+}
+
+func (t *TaskState) AddOffsetToCompleteSet(offset int64) {
+	t.KeyStates.Completed = append(t.KeyStates.Completed, offset)
+}
+
+func (t *TaskState) AddOffsetToErrSet(offset int64) {
+	t.KeyStates.Completed = append(t.KeyStates.Err, offset)
+}
+
+func (t *TaskState) ReturnCompletedOffset() map[int64]struct{} {
+	defer t.lock.Unlock()
+	t.lock.Lock()
+	completed := make(map[int64]struct{})
+	for _, v := range t.KeyStates.Completed {
+		completed[v] = struct{}{}
+	}
+	return completed
+}
+
+func (t *TaskState) ErrOffset() map[int64]struct{} {
+	defer t.lock.Unlock()
+	t.lock.Lock()
+	err := make(map[int64]struct{})
+	for _, v := range t.KeyStates.Err {
+		err[v] = struct{}{}
+	}
+	return err
+}
+
+func (t *TaskState) StoreState() {
+
+	go func() {
+		var completed []int64
+		var err []int64
+		d := time.NewTicker(30 * time.Second)
+		for {
+			select {
+			case <-t.ctx.Done():
+				{
+					t.storeCompleted(completed)
+					t.storeError(err)
+					err = err[:0]
+					completed = completed[:0]
+					return
+				}
+			case s := <-t.StateChannel:
+				{
+					if s.Status == COMPLETED {
+						completed = append(completed, s.Offset)
+					}
+					if s.Status == ERR {
+						err = append(err, s.Offset)
+					}
+				}
+			case <-d.C:
+				{
+					t.storeCompleted(completed)
+					t.storeError(err)
+					err = err[:0]
+					completed = completed[:0]
 				}
 			}
-			if flag {
-				doc, _ = gen.Template.UpdateDocument(u.FieldsToChange, doc, fake)
-			}
 		}
-	}
-	return doc, nil
+	}()
+
 }
 
-// RetracePreviousDeletions return the previously deleted elements
-func (t *TaskState) RetracePreviousDeletions() map[int64]struct{} {
-	notDelete := make(map[int64]struct{})
-	deleted := make(map[int64]struct{})
-	for _, d := range t.DeleteTaskState {
-		for _, k := range d.Err {
-			notDelete[k+t.Seed-1] = struct{}{}
-		}
+func (t *TaskState) storeCompleted(completed []int64) {
+	t.lock.Lock()
+	for _, offset := range completed {
+		t.AddOffsetToCompleteSet(offset)
 	}
-
-	for _, d := range t.DeleteTaskState {
-		for k := d.Start; k <= d.End; k++ {
-			if _, ok := notDelete[k+t.Seed-1]; ok {
-				continue
-			}
-			deleted[k+t.Seed-1] = struct{}{}
-		}
-	}
-	return deleted
+	t.lock.Unlock()
 }
 
-// buildTaskName returns the name of the TaskState meta-data file.
-func buildTaskName(host, bucket, scope, collection string) string {
-	if strings.Contains(host, "couchbase://") {
-		host = strings.ReplaceAll(host, "couchbase://", "")
+func (t *TaskState) storeError(err []int64) {
+	t.lock.Lock()
+	for _, offset := range err {
+		t.AddOffsetToCompleteSet(offset)
 	}
-	if strings.Contains(host, "couchbases://") {
-		host = strings.ReplaceAll(host, "couchbases://", "")
-	}
-
-	return fmt.Sprintf("%s_%s_%s_%s", host, bucket, scope, collection)
+	t.lock.Unlock()
 }
 
-// ReadTaskStateFromFile restores  the TaskState as a meta-data of a cluster into a file
-func (t *TaskState) ReadTaskStateFromFile() (*TaskState, error) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil, err
-	}
-	// For testing purpose
-	//fileName := filepath.Join(cwd, "task_state_logs", buildTaskName(t.TaskState.Host, t.TaskState.BUCKET, t.TaskState.SCOPE, t.TaskState.Collection))
-
-	fileName := filepath.Join(cwd, TaskStatePath, buildTaskName(t.Host, t.BUCKET, t.SCOPE, t.Collection))
-	taskState := &TaskState{}
-	file, err := os.Open(fileName)
-	if err != nil {
-		return nil, fmt.Errorf("no such result found, reasons:[No such Task, In process, Record Deleted]")
-	}
-	decoder := gob.NewDecoder(file)
-	if err := decoder.Decode(taskState); err != nil {
-		return nil, err
-	}
-	if err := file.Close(); err != nil {
-		return nil, err
-	}
-	return taskState, nil
-}
-
-// SaveTaskStateToFile stores the TaskState as a meta-data of a cluster into a file
-func (t *TaskState) SaveTaskStateToFile() error {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-	// For testing purpose
-	//fileName := filepath.Join(cwd, "task_state_logs", buildTaskName(t.TaskState.Host, t.TaskState.BUCKET, t.TaskState.SCOPE, t.TaskState.Collection))
-
-	fileName := filepath.Join(cwd, TaskStatePath, buildTaskName(t.Host, t.BUCKET, t.SCOPE, t.Collection))
-	file, err := os.Create(fileName)
-	if err != nil {
-		return err
-	}
-	encoder := gob.NewEncoder(file)
-	if err := encoder.Encode(t); err != nil {
-		return err
-	}
-	if err := file.Close(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (t *TaskState) DeleteTaskStateFromFile() error {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-	// For testing purpose
-	//fileName := filepath.Join(cwd, "task_state_logs", buildTaskName(t.TaskState.Host, t.TaskState.BUCKET, t.TaskState.SCOPE, t.TaskState.Collection))
-
-	fileName := filepath.Join(cwd, TaskStatePath, buildTaskName(t.Host, t.BUCKET, t.SCOPE, t.Collection))
-	if err := os.Remove(fileName); err != nil {
-		return err
-	}
-	return nil
-}
-
-// CheckForTaskValidity returns if a meta-data for cluster even exists or not.
-func (t *TaskState) CheckForTaskValidity() error {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-	fileName := filepath.Join(cwd, TaskStatePath, buildTaskName(t.Host, t.BUCKET, t.SCOPE, t.Collection))
-	if _, err := os.Stat(fileName); err != nil {
-		return err
-	}
-	return nil
+func (t *TaskState) StopStoringState() {
+	t.cancel()
 }
