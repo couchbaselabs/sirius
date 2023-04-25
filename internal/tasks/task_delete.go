@@ -31,6 +31,7 @@ type DeleteTask struct {
 	connection       *sdk.ConnectionManager
 	gen              *docgenerator.Generator
 	req              *Request
+	index            int
 }
 
 func (task *DeleteTask) BuildIdentifier() string {
@@ -55,12 +56,13 @@ func (task *DeleteTask) CheckIfPending() bool {
 }
 
 // Config checks the validity of DeleteTask
-func (task *DeleteTask) Config(req *Request, seed int64, seedEnd int64, reRun bool) (int64, error) {
+func (task *DeleteTask) Config(req *Request, seed int64, seedEnd int64, index int, reRun bool) (int64, error) {
 	task.TaskPending = true
 	task.req = req
 	if task.req == nil {
 		return 0, fmt.Errorf("request.Request struct is nil")
 	}
+	task.index = index
 	if !reRun {
 		if task.ConnectionString == "" {
 			return 0, fmt.Errorf("empty connection string")
@@ -94,7 +96,8 @@ func (task *DeleteTask) Config(req *Request, seed int64, seedEnd int64, reRun bo
 			task.State.SetupStoringKeys()
 			task.State.StoreState()
 		}
-		log.Println("Retrying " + task.Operation + " " + task.req.Identifier + " " + string(task.ResultSeed))
+		log.Println("retrying :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
+
 	}
 
 	return task.ResultSeed, nil
@@ -182,7 +185,7 @@ func deleteDocuments(task *DeleteTask) error {
 				<-routineLimiter
 				return fmt.Errorf("alreday performed operation on " + docId)
 			}
-			if _, ok := deletedOffset[offset+1]; ok {
+			if _, ok := deletedOffset[offset]; ok {
 				<-routineLimiter
 				return fmt.Errorf("alreday deleted docID on " + docId)
 			}
@@ -207,6 +210,6 @@ func deleteDocuments(task *DeleteTask) error {
 	_ = group.Wait()
 	close(routineLimiter)
 	close(dataChannel)
-	log.Println(task.Operation, task.Bucket, task.Scope, task.Collection, task.ResultSeed)
+	log.Println("completed :- ", task.Operation, task.BuildIdentifier())
 	return task.tearUp()
 }

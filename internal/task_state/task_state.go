@@ -2,6 +2,7 @@ package task_state
 
 import (
 	"context"
+	"log"
 	"sync"
 	"time"
 )
@@ -105,6 +106,10 @@ func (t *TaskState) StoreState() {
 		var completed []int64
 		var err []int64
 		d := time.NewTicker(30 * time.Second)
+		if t.ctx.Err() != nil {
+			log.Print("Ctx closed for StoreState()")
+			return
+		}
 		for {
 			select {
 			case <-t.ctx.Done():
@@ -113,6 +118,7 @@ func (t *TaskState) StoreState() {
 					t.storeError(err)
 					err = err[:0]
 					completed = completed[:0]
+					close(t.StateChannel)
 					return
 				}
 			case s := <-t.StateChannel:
@@ -155,4 +161,9 @@ func (t *TaskState) storeError(err []int64) {
 
 func (t *TaskState) StopStoringState() {
 	t.cancel()
+}
+
+func (t *TaskState) ClearKeyStates() {
+	t.KeyStates.Completed = t.KeyStates.Completed[:0]
+	t.KeyStates.Err = t.KeyStates.Err[:0]
 }

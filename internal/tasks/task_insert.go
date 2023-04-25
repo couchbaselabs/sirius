@@ -2,6 +2,7 @@ package tasks
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
@@ -49,6 +50,7 @@ type InsertTask struct {
 	connection       *sdk.ConnectionManager
 	gen              *docgenerator.Generator
 	req              *Request
+	index            int
 }
 
 func (task *InsertTask) BuildIdentifier() string {
@@ -73,12 +75,13 @@ func (task *InsertTask) CheckIfPending() bool {
 }
 
 // Config configures  the insert task
-func (task *InsertTask) Config(req *Request, seed int64, seedEnd int64, reRun bool) (int64, error) {
+func (task *InsertTask) Config(req *Request, seed int64, seedEnd int64, index int, reRun bool) (int64, error) {
 	task.TaskPending = true
 	task.req = req
 	if task.req == nil {
 		return 0, fmt.Errorf("request.Request struct is nil")
 	}
+	task.index = index
 	if !reRun {
 		if task.ConnectionString == "" {
 			return 0, fmt.Errorf("empty connection string")
@@ -135,7 +138,7 @@ func (task *InsertTask) Config(req *Request, seed int64, seedEnd int64, reRun bo
 			task.State.SetupStoringKeys()
 			task.State.StoreState()
 		}
-		log.Println("Retrying " + task.Operation + " " + task.req.Identifier + " " + fmt.Sprintf("%d", task.ResultSeed))
+		log.Println("retrying :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 	}
 	log.Println(task.req.Seed, task.req.SeedEnd)
 	return task.ResultSeed, nil
@@ -190,7 +193,8 @@ func (task *InsertTask) Do() error {
 		log.Println("not able to save result into ", task.ResultSeed)
 		return task.tearUp()
 	}
-
+	// Inserted Has been completed, We can remove it from the task list of req
+	task.State.ClearKeyStates()
 	return task.tearUp()
 }
 
@@ -262,10 +266,16 @@ func insertDocuments(task *InsertTask) error {
 				}
 			} else {
 				if err != nil {
-					task.result.IncrementFailure(docId, err.Error())
-					task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
-					<-routineLimiter
-					return err
+					if errors.Is(err, gocb.ErrDocumentExists) {
+						task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
+						<-routineLimiter
+						return nil
+					} else {
+						task.result.IncrementFailure(docId, err.Error())
+						task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
+						<-routineLimiter
+						return err
+					}
 				}
 			}
 
@@ -278,6 +288,6 @@ func insertDocuments(task *InsertTask) error {
 	_ = group.Wait()
 	close(routineLimiter)
 	close(dataChannel)
-	log.Println(task.Operation, task.Bucket, task.Scope, task.Collection, task.ResultSeed)
+	log.Println("completed :- ", task.Operation, task.BuildIdentifier())
 	return task.tearUp()
 }

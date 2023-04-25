@@ -50,7 +50,7 @@ func (app *Config) insertTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Print(task, "insert")
-	err, _ := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.InsertOperation, task)
+	err, index := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.InsertOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -60,7 +60,7 @@ func (app *Config) insertTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	seed, err := task.Config(req, req.Seed, req.SeedEnd, false)
+	seed, err := task.Config(req, req.Seed, req.SeedEnd, index, false)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -88,7 +88,7 @@ func (app *Config) deleteTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Print(task, "delete")
-	err, _ := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.DeleteOperation, task)
+	err, index := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.DeleteOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -98,7 +98,7 @@ func (app *Config) deleteTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	seed, err := task.Config(req, req.Seed, req.SeedEnd, false)
+	seed, err := task.Config(req, req.Seed, req.SeedEnd, index, false)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -125,7 +125,7 @@ func (app *Config) upsertTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Print(task, "upsert")
-	err, _ := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.UpsertOperation, task)
+	err, index := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.UpsertOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -135,7 +135,7 @@ func (app *Config) upsertTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	seed, err := task.Config(req, req.Seed, req.SeedEnd, false)
+	seed, err := task.Config(req, req.Seed, req.SeedEnd, index, false)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return

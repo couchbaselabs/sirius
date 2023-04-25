@@ -124,18 +124,6 @@ func (r *Request) checkAndUpdateSeedEnd(key int64) {
 	}
 }
 
-func (r *Request) SaveRequestIntoFile() error {
-	defer r.lock.Unlock()
-	r.lock.Lock()
-	return r.saveRequestIntoFile()
-}
-
-func (r *Request) RemoveRequestFromFile(identifier string) error {
-	defer r.lock.Unlock()
-	r.lock.Lock()
-	return r.removeRequestFromFile(identifier)
-}
-
 // SendOverIndexChannel  :-> Future proof
 func (r *Request) SendOverIndexChannel(index int) error {
 	defer r.lock.Unlock()
@@ -162,6 +150,12 @@ func (r *Request) removeRequestFromFile(identifier string) error {
 	return os.Remove(fileName)
 }
 
+func (r *Request) RemoveRequestFromFile(identifier string) error {
+	defer r.lock.Unlock()
+	r.lock.Lock()
+	return r.removeRequestFromFile(identifier)
+}
+
 func (r *Request) saveRequestIntoFile() error {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -180,6 +174,12 @@ func (r *Request) saveRequestIntoFile() error {
 		return err
 	}
 	return nil
+}
+
+func (r *Request) SaveRequestIntoFile() error {
+	defer r.lock.Unlock()
+	r.lock.Lock()
+	return r.saveRequestIntoFile()
 }
 
 func ReadRequestFromFile(identifier string) (*Request, error) {

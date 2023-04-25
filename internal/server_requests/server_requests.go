@@ -28,9 +28,9 @@ func NewServerRequests() *ServerRequests {
 			r, err := tasks.ReadRequestFromFile(identifier)
 			if r != nil && err == nil {
 				_ = sr.add(identifier, r, false)
-				for _, t := range r.Tasks {
+				for index, t := range r.Tasks {
 					if t.Task.CheckIfPending() {
-						if _, err := t.Task.Config(r, r.Seed, r.SeedEnd, true); err == nil {
+						if _, err := t.Task.Config(r, r.Seed, r.SeedEnd, index, true); err == nil {
 							go t.Task.Do()
 						}
 					}

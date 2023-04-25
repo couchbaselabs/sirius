@@ -39,6 +39,7 @@ type UpsertTask struct {
 	connection       *sdk.ConnectionManager
 	gen              *docgenerator.Generator
 	req              *Request
+	index            int
 }
 
 func (task *UpsertTask) BuildIdentifier() string {
@@ -62,12 +63,13 @@ func (task *UpsertTask) CheckIfPending() bool {
 	return task.TaskPending
 }
 
-func (task *UpsertTask) Config(req *Request, seed int64, seedEnd int64, reRun bool) (int64, error) {
+func (task *UpsertTask) Config(req *Request, seed int64, seedEnd int64, index int, reRun bool) (int64, error) {
 	task.TaskPending = true
 	task.req = req
 	if task.req == nil {
 		return 0, fmt.Errorf("request.Request struct is nil")
 	}
+	task.index = index
 	if !reRun {
 		if task.ConnectionString == "" {
 			return 0, fmt.Errorf("empty connection string")
@@ -104,7 +106,7 @@ func (task *UpsertTask) Config(req *Request, seed int64, seedEnd int64, reRun bo
 			task.State.SetupStoringKeys()
 			task.State.StoreState()
 		}
-		log.Println("Retrying " + task.Operation + " " + task.req.Identifier + " " + fmt.Sprintf("%d", task.ResultSeed))
+		log.Println("retrying :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 	}
 	return task.ResultSeed, nil
 }
@@ -228,6 +230,6 @@ func upsertDocuments(task *UpsertTask) error {
 	close(routineLimiter)
 	close(dataChannel)
 	task.req.checkAndUpdateSeedEnd(maxKey)
-	log.Println(task.Operation, task.Bucket, task.Scope, task.Collection, task.ResultSeed)
+	log.Println("completed :- ", task.Operation, task.BuildIdentifier())
 	return task.tearUp()
 }
