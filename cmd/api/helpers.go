@@ -71,6 +71,7 @@ func registerInterfaces() {
 	gob.Register(&tasks.UpsertTask{})
 	gob.Register(&tasks.TaskResult{})
 	gob.Register(&tasks.DeleteTask{})
+	gob.Register(&tasks.ValidateTask{})
 	gob.Register(&task_result.TaskResult{})
 	gob.Register(&task_state.TaskState{})
 

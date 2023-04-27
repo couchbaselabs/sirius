@@ -26,11 +26,11 @@ type InsertTask struct {
 	Scope            string        `json:"scope,omitempty"`
 	Collection       string        `json:"collection,omitempty"`
 	Count            int64         `json:"count,omitempty"`
-	DocSize          int64         `json:"docSize,omitempty"`
+	DocSize          int64         `json:"docSize"`
 	DocType          string        `json:"docType,omitempty"`
 	KeySize          int           `json:"keySize,omitempty"`
-	KeyPrefix        string        `json:"keyPrefix,omitempty"`
-	KeySuffix        string        `json:"keySuffix,omitempty"`
+	KeyPrefix        string        `json:"keyPrefix"`
+	KeySuffix        string        `json:"keySuffix"`
 	RandomDocSize    bool          `json:"randomDocSize,omitempty"`
 	RandomKeySize    bool          `json:"randomKeySize,omitempty"`
 	Expiry           time.Duration `json:"expiry,omitempty"`
@@ -171,6 +171,7 @@ func (task *InsertTask) Do() error {
 			log.Println("not able to save result into ", task.ResultSeed)
 			return err
 		}
+		_ = task.req.RemoveFromSeedEnd(task.Count)
 		return task.tearUp()
 	}
 
@@ -267,7 +268,7 @@ func insertDocuments(task *InsertTask) error {
 			} else {
 				if err != nil {
 					if errors.Is(err, gocb.ErrDocumentExists) {
-						task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
+						task.State.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
 						<-routineLimiter
 						return nil
 					} else {
@@ -288,6 +289,6 @@ func insertDocuments(task *InsertTask) error {
 	_ = group.Wait()
 	close(routineLimiter)
 	close(dataChannel)
-	log.Println("completed :- ", task.Operation, task.BuildIdentifier())
+	log.Println("completed :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 	return task.tearUp()
 }

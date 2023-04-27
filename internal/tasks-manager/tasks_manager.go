@@ -45,7 +45,6 @@ func (tm *TaskManager) AddTask(task tasks.Task) error {
 // StartTaskManager will initiate a scheduling job that will listen for taskQueue until
 // TaskManager is closed.
 func (tm *TaskManager) StartTaskManager() {
-	// TODO : Need to sleep incoming task from same host.bucket.scope.collection if such task from same host exists.
 	if tm.ctx.Err() != nil {
 		return
 	}

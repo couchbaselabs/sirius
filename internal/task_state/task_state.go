@@ -76,8 +76,20 @@ func (t *TaskState) AddOffsetToCompleteSet(offset int64) {
 	t.KeyStates.Completed = append(t.KeyStates.Completed, offset)
 }
 
+func (t *TaskState) AddRangeToCompleteSet(start, end int64) {
+	for i := start; i <= end; i++ {
+		t.KeyStates.Completed = append(t.KeyStates.Completed, i)
+	}
+}
+
 func (t *TaskState) AddOffsetToErrSet(offset int64) {
 	t.KeyStates.Completed = append(t.KeyStates.Err, offset)
+}
+
+func (t *TaskState) AddRangeToErrSet(start, end int64) {
+	for i := start; i <= end; i++ {
+		t.KeyStates.Err = append(t.KeyStates.Err, i)
+	}
 }
 
 func (t *TaskState) ReturnCompletedOffset() map[int64]struct{} {
@@ -90,7 +102,7 @@ func (t *TaskState) ReturnCompletedOffset() map[int64]struct{} {
 	return completed
 }
 
-func (t *TaskState) ErrOffset() map[int64]struct{} {
+func (t *TaskState) ReturnErrOffset() map[int64]struct{} {
 	defer t.lock.Unlock()
 	t.lock.Lock()
 	err := make(map[int64]struct{})

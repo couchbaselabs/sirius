@@ -62,7 +62,7 @@ func (r *Request) retracePreviousMutations(offset int64, doc interface{}, gen do
 				return nil, fmt.Errorf("unable to decode upsert task from backlog")
 			} else {
 				if offset >= (u.Start-1) && (offset <= u.End-1) && resultSeed != u.ResultSeed {
-					errOffset := u.State.ErrOffset()
+					errOffset := u.State.ReturnErrOffset()
 					if _, ok := errOffset[offset]; ok {
 						continue
 					} else {
@@ -97,6 +97,28 @@ func (r *Request) retracePreviousDeletions(resultSeed int64) (map[int64]struct{}
 	return result, nil
 }
 
+func (r *Request) retracePreviousFailedInsertions(resultSeed int64) (map[int64]struct{}, error) {
+	defer r.lock.Unlock()
+	r.lock.Lock()
+	result := make(map[int64]struct{})
+	for _, td := range r.Tasks {
+		if td.Operation == InsertOperation {
+			u, ok := td.Task.(*InsertTask)
+			if !ok {
+				return map[int64]struct{}{}, fmt.Errorf("unable to decode delete task from backlog")
+			} else {
+				if resultSeed != u.ResultSeed {
+					errorOffSet := u.State.ReturnErrOffset()
+					for offSet, _ := range errorOffSet {
+						result[offSet] = struct{}{}
+					}
+				}
+			}
+		}
+	}
+	return result, nil
+}
+
 func (r *Request) AddTask(o string, t Task) (error, int) {
 	defer r.lock.Unlock()
 	r.lock.Lock()
@@ -112,6 +134,14 @@ func (r *Request) AddToSeedEnd(count int64) error {
 	defer r.lock.Unlock()
 	r.lock.Lock()
 	r.SeedEnd += count
+	err := r.saveRequestIntoFile()
+	return err
+}
+
+func (r *Request) RemoveFromSeedEnd(count int64) error {
+	defer r.lock.Unlock()
+	r.lock.Lock()
+	r.SeedEnd -= count
 	err := r.saveRequestIntoFile()
 	return err
 }

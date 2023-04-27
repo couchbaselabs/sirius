@@ -25,11 +25,11 @@ type UpsertTask struct {
 	Collection       string   `json:"collection,omitempty"`
 	Start            int64    `json:"start"`
 	End              int64    `json:"end"`
-	FieldsToChange   []string `json:"fieldsToChange,omitempty"`
-	TemplateName     string   `json:"template,omitempty"`
-	DocSize          int64    `json:"docSize,omitempty"`
-	KeyPrefix        string   `json:"keyPrefix,omitempty"`
-	KeySuffix        string   `json:"keySuffix,omitempty"`
+	FieldsToChange   []string `json:"fieldsToChange"`
+	TemplateName     string   `json:"template"`
+	DocSize          int64    `json:"docSize"`
+	KeyPrefix        string   `json:"keyPrefix"`
+	KeySuffix        string   `json:"keySuffix"`
 	ResultSeed       int64
 	DurabilityLevel  gocb.DurabilityLevel
 	Operation        string
@@ -108,6 +108,7 @@ func (task *UpsertTask) Config(req *Request, seed int64, seedEnd int64, index in
 		}
 		log.Println("retrying :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 	}
+	log.Println(task.req.Seed, task.req.SeedEnd)
 	return task.ResultSeed, nil
 }
 
@@ -146,6 +147,7 @@ func (task *UpsertTask) Do() error {
 		if err := task.result.SaveResultIntoFile(); err != nil {
 			log.Println("not able to save result into ", task.ResultSeed)
 		}
+		task.State.AddRangeToErrSet(task.Start, task.End)
 		return task.tearUp()
 	}
 
@@ -195,8 +197,6 @@ func upsertDocuments(task *UpsertTask) error {
 				<-routineLimiter
 				return fmt.Errorf("alreday deleted docID on " + docId)
 			}
-
-			// TODO have to skip deleted keys
 			fake := faker.NewWithSeed(rand.NewSource(key))
 			originalDoc, err := task.gen.Template.GenerateDocument(&fake, task.State.DocumentSize)
 			if err != nil {
@@ -230,6 +230,6 @@ func upsertDocuments(task *UpsertTask) error {
 	close(routineLimiter)
 	close(dataChannel)
 	task.req.checkAndUpdateSeedEnd(maxKey)
-	log.Println("completed :- ", task.Operation, task.BuildIdentifier())
+	log.Println("completed :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 	return task.tearUp()
 }

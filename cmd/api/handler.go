@@ -154,57 +154,39 @@ func (app *Config) upsertTask(w http.ResponseWriter, r *http.Request) {
 	_ = app.writeJSON(w, http.StatusOK, resPayload)
 }
 
-//// validateTask is validating the cluster's current state.
-//func (app *Config) validateTask(w http.ResponseWriter, r *http.Request) {
-//	request := &tasks.ValidateTask{}
-//	if err := app.readJSON(w, r, request); err != nil {
-//		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-//		return
-//	}
-//	log.Print(request, "validate")
-//	seed, err := request.Config()
-//	if err != nil {
-//		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-//		return
-//	}
-//
-//	if err := app.taskManager.AddTask(request); err != nil {
-//		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-//	}
-//	respPayload := tasks.TaskResponse{
-//		SeedStart: fmt.Sprintf("%d", seed),
-//	}
-//	resPayload := jsonResponse{
-//		Error:   false,
-//		Message: "Successfully started requested doc loading",
-//		Data:    respPayload,
-//	}
-//	_ = app.writeJSON(w, http.StatusOK, resPayload)
-//}
-//
-//// flushTask is used to flush a bucket and delete the bucket state
-//func (app *Config) flushTask(w http.ResponseWriter, r *http.Request) {
-//	request := &tasks.FlushTask{}
-//	if err := app.readJSON(w, r, request); err != nil {
-//		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-//		return
-//	}
-//	log.Println(request, "flush")
-//	seed, err := request.Config()
-//	if err != nil {
-//		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-//		return
-//	}
-//	if err := app.taskManager.AddTask(request); err != nil {
-//		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-//	}
-//	respPayload := tasks.TaskResponse{
-//		SeedStart: fmt.Sprintf("%d", seed),
-//	}
-//	resPayload := jsonResponse{
-//		Error:   false,
-//		Message: "Successfully started requested doc loading",
-//		Data:    respPayload,
-//	}
-//	_ = app.writeJSON(w, http.StatusOK, resPayload)
-//}
+// validateTask is validating the cluster's current state.
+func (app *Config) validateTask(w http.ResponseWriter, r *http.Request) {
+	task := &tasks.ValidateTask{}
+	if err := app.readJSON(w, r, task); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	log.Print(task, "validate")
+	err, index := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.ValidateOperation, task)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	seed, err := task.Config(req, req.Seed, req.SeedEnd, index, false)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	if err := app.taskManager.AddTask(task); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+	}
+	respPayload := tasks.TaskResponse{
+		Seed: fmt.Sprintf("%d", seed),
+	}
+	resPayload := jsonResponse{
+		Error:   false,
+		Message: "Successfully started requested doc loading",
+		Data:    respPayload,
+	}
+	_ = app.writeJSON(w, http.StatusOK, resPayload)
+}

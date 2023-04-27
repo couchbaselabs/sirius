@@ -97,9 +97,8 @@ func (task *DeleteTask) Config(req *Request, seed int64, seedEnd int64, index in
 			task.State.StoreState()
 		}
 		log.Println("retrying :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
-
 	}
-
+	log.Println(task.req.Seed, task.req.SeedEnd)
 	return task.ResultSeed, nil
 }
 
@@ -114,18 +113,17 @@ func (task *DeleteTask) tearUp() error {
 	return task.req.SaveRequestIntoFile()
 }
 func (task *DeleteTask) Do() error {
-	// prepare a result for the task
 	task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
-	// establish a connection
 	task.connection = sdk.ConfigConnectionManager(task.ConnectionString, task.Username, task.Password,
 		task.Bucket, task.Scope, task.Collection)
 
 	if err := task.connection.Connect(); err != nil {
 		task.result.ErrorOther = err.Error()
 		if err := task.result.SaveResultIntoFile(); err != nil {
-			log.Println("not able to save result into ", task.State.SeedStart)
+			log.Println("not able to save result into ", task.ResultSeed)
 		}
+		task.State.AddRangeToErrSet(task.Start, task.End)
 		task.tearUp()
 	}
 
@@ -210,6 +208,6 @@ func deleteDocuments(task *DeleteTask) error {
 	_ = group.Wait()
 	close(routineLimiter)
 	close(dataChannel)
-	log.Println("completed :- ", task.Operation, task.BuildIdentifier())
+	log.Println("completed :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 	return task.tearUp()
 }

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/couchbaselabs/sirius/internal/tasks"
 	"log"
-	os "os"
+	"os"
 	"path/filepath"
 	"sync"
 	"time"

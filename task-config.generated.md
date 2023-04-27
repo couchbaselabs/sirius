@@ -8,6 +8,7 @@ configuration that is also available on a per-task basis:
  * [/insert](#insert)
  * [/result](#result)
  * [/upsert](#upsert)
+ * [/validate](#validate)
 
 ---
 #### /delete
@@ -50,11 +51,11 @@ The durability while inserting a document can be set using following values in t
 | `Scope` | `string` | `json:scope,omitempty`  |
 | `Collection` | `string` | `json:collection,omitempty`  |
 | `Count` | `int64` | `json:count,omitempty`  |
-| `DocSize` | `int64` | `json:docSize,omitempty`  |
+| `DocSize` | `int64` | `json:docSize`  |
 | `DocType` | `string` | `json:docType,omitempty`  |
 | `KeySize` | `int` | `json:keySize,omitempty`  |
-| `KeyPrefix` | `string` | `json:keyPrefix,omitempty`  |
-| `KeySuffix` | `string` | `json:keySuffix,omitempty`  |
+| `KeyPrefix` | `string` | `json:keyPrefix`  |
+| `KeySuffix` | `string` | `json:keySuffix`  |
 | `RandomDocSize` | `bool` | `json:randomDocSize,omitempty`  |
 | `RandomKeySize` | `bool` | `json:randomKeySize,omitempty`  |
 | `Expiry` | `int64` | `json:expiry,omitempty`  |
@@ -97,11 +98,31 @@ We need to share the fields we want to update in a json document using SQL++ syn
 | `Collection` | `string` | `json:collection,omitempty`  |
 | `Start` | `int64` | `json:start`  |
 | `End` | `int64` | `json:end`  |
-| `FieldsToChange` | `slice` | `json:fieldsToChange,omitempty`  |
-| `TemplateName` | `string` | `json:template,omitempty`  |
-| `DocSize` | `int64` | `json:docSize,omitempty`  |
-| `KeyPrefix` | `string` | `json:keyPrefix,omitempty`  |
-| `KeySuffix` | `string` | `json:keySuffix,omitempty`  |
+| `FieldsToChange` | `slice` | `json:fieldsToChange`  |
+| `TemplateName` | `string` | `json:template`  |
+| `DocSize` | `int64` | `json:docSize`  |
+| `KeyPrefix` | `string` | `json:keyPrefix`  |
+| `KeySuffix` | `string` | `json:keySuffix`  |
+
+---
+#### /validate
+
+ REST : POST
+
+Description : validate every document in the cluster's bucket
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `ConnectionString` | `string` | `json:connectionString`  |
+| `Username` | `string` | `json:username`  |
+| `Password` | `string` | `json:password`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `TemplateName` | `string` | `json:template`  |
+| `DocSize` | `int64` | `json:docSize`  |
+| `KeyPrefix` | `string` | `json:keyPrefix`  |
+| `KeySuffix` | `string` | `json:keySuffix`  |
 
 ---
 **API's Response Description**.
