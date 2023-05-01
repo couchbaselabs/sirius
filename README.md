@@ -45,7 +45,7 @@ make clean_run
 ```
 Run
 ```shell
-make clean_run
+make run
 ```
 
 ### Deploying the Application with Docker
