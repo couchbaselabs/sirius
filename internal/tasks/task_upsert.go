@@ -2,6 +2,7 @@ package tasks
 
 import (
 	"fmt"
+	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
 	"github.com/couchbaselabs/sirius/internal/sdk"
 	"github.com/couchbaselabs/sirius/internal/task_result"
@@ -11,7 +12,8 @@ import (
 	"golang.org/x/sync/errgroup"
 	"log"
 	"math/rand"
-	"sync"
+	"strings"
+	"time"
 )
 
 type UpsertTask struct {
@@ -23,170 +25,211 @@ type UpsertTask struct {
 	Collection       string   `json:"collection,omitempty"`
 	Start            int64    `json:"start"`
 	End              int64    `json:"end"`
-	FieldsToChange   []string `json:"fieldsToChange,omitempty"`
+	FieldsToChange   []string `json:"fieldsToChange"`
+	TemplateName     string   `json:"template"`
+	DocSize          int64    `json:"docSize"`
+	KeyPrefix        string   `json:"keyPrefix"`
+	KeySuffix        string   `json:"keySuffix"`
+	ResultSeed       int64
+	DurabilityLevel  gocb.DurabilityLevel
 	Operation        string
+	TaskPending      bool
 	State            *task_state.TaskState
-	Result           *task_result.TaskResult
+	result           *task_result.TaskResult
 	connection       *sdk.ConnectionManager
 	gen              *docgenerator.Generator
+	req              *Request
+	index            int
 }
 
-func (task *UpsertTask) Config() (int64, error) {
-	if task.ConnectionString == "" {
-		return 0, fmt.Errorf("empty connection string")
-	}
-	if task.Username == "" || task.Password == "" {
-		return 0, fmt.Errorf("cluster's credentials are missing ")
-	}
-	if task.Bucket == "" {
-		return 0, fmt.Errorf("bucker is missing")
-	}
+func (task *UpsertTask) BuildIdentifier() string {
 	if task.Scope == "" {
 		task.Scope = DefaultScope
 	}
 	if task.Collection == "" {
 		task.Collection = DefaultCollection
 	}
-	if task.Start == 0 {
-		task.Start = 1
-		task.End = 1
+	var host string
+	if strings.Contains(task.ConnectionString, "couchbase://") {
+		host = strings.ReplaceAll(task.ConnectionString, "couchbase://", "")
 	}
-	if task.Start > task.End {
-		return 0, fmt.Errorf("delete operation start to end range is malformed")
+	if strings.Contains(task.ConnectionString, "couchbases://") {
+		host = strings.ReplaceAll(task.ConnectionString, "couchbases://", "")
 	}
-	task.Operation = UpsertOperation
+	return fmt.Sprintf("%s-%s-%s-%s-%s", task.Username, host, task.Bucket, task.Scope, task.Collection)
+}
 
-	// restore the original cluster state which should exist for operation, returns an error if task state don't exist else returns nil
-	state, ok := task_state.ConfigTaskState(task.ConnectionString, task.Bucket, task.Scope, task.Collection, "", "", "",
-		0, 0, 0)
-	if !ok {
-		return 0, fmt.Errorf("no such cluster's state exists for validation")
+func (task *UpsertTask) CheckIfPending() bool {
+	return task.TaskPending
+}
+
+func (task *UpsertTask) Config(req *Request, seed int64, seedEnd int64, index int, reRun bool) (int64, error) {
+	task.TaskPending = true
+	task.req = req
+	if task.req == nil {
+		return 0, fmt.Errorf("request.Request struct is nil")
 	}
-	task.State = state
-	return task.State.Seed, nil
+	task.index = index
+	if !reRun {
+		if task.ConnectionString == "" {
+			return 0, fmt.Errorf("empty connection string")
+		}
+		if task.Username == "" || task.Password == "" {
+			return 0, fmt.Errorf("cluster's credentials are missing ")
+		}
+		if task.Bucket == "" {
+			return 0, fmt.Errorf("bucket is missing")
+		}
+		if task.Scope == "" {
+			task.Scope = DefaultScope
+		}
+		if task.Collection == "" {
+			task.Collection = DefaultCollection
+		}
+		if task.Start == 0 {
+			task.Start = 1
+			task.End = 1
+		}
+		if task.DocSize == 0 {
+			task.DocSize = docgenerator.DefaultDocSize
+		}
+		if task.Start > task.End {
+			return 0, fmt.Errorf("delete operation start to end range is malformed")
+		}
+		task.Operation = UpsertOperation
+		time.Sleep(1 * time.Microsecond)
+		task.ResultSeed = time.Now().UnixNano()
+		task.State = task_state.ConfigTaskState(task.TemplateName, task.KeyPrefix, task.KeySuffix, task.DocSize, seed,
+			seedEnd, task.ResultSeed)
+	} else {
+		if task.State != nil {
+			task.State.SetupStoringKeys()
+			task.State.StoreState()
+		}
+		log.Println("retrying :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
+	}
+	log.Println(task.req.Seed, task.req.SeedEnd)
+	return task.ResultSeed, nil
 }
 
 func (task *UpsertTask) Describe() string {
 	return `Upsert task mutates documents in bulk into a bucket.
 The task will update the fields in a documents ranging from [start,end] inclusive.
-We need to share the fields we want to update in a json document using SQL++ sytax.`
+We need to share the fields we want to update in a json document using SQL++ syntax.`
+}
+
+func (task *UpsertTask) tearUp() error {
+	task.State.StopStoringState()
+	task.TaskPending = false
+	return task.req.SaveRequestIntoFile()
 }
 
 func (task *UpsertTask) Do() error {
-	// prepare a result for the task
-	task.Result = task_result.ConfigTaskResult(task.Operation, task.State.Seed)
 
-	// establish a connection
+	task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+
 	task.connection = sdk.ConfigConnectionManager(task.ConnectionString, task.Username, task.Password,
 		task.Bucket, task.Scope, task.Collection)
 
 	if err := task.connection.Connect(); err != nil {
-		task.Result.ErrorOther = err.Error()
-		if err := task.Result.SaveResultIntoFile(); err != nil {
-			log.Println("not able to save result into ", task.State.Seed)
-			return err
+		task.result.ErrorOther = err.Error()
+		if err := task.result.SaveResultIntoFile(); err != nil {
+			log.Println("not able to save result into ", task.ResultSeed)
 		}
-		return err
+		return task.tearUp()
 	}
 
-	// Prepare generator
 	task.gen = docgenerator.ConfigGenerator("", task.State.KeyPrefix, task.State.KeySuffix,
-		task.State.Seed, task.State.SeedEnd, template.InitialiseTemplate(task.State.TemplateName))
+		task.State.SeedStart, task.State.SeedEnd, template.InitialiseTemplate(task.State.TemplateName))
 
-	// do bulk loading
-	upsertDocuments(task)
+	if err := upsertDocuments(task); err != nil {
+		task.result.ErrorOther = err.Error()
+		if err := task.result.SaveResultIntoFile(); err != nil {
+			log.Println("not able to save result into ", task.ResultSeed)
+		}
+		task.State.AddRangeToErrSet(task.Start, task.End)
+		return task.tearUp()
+	}
 
-	// close the sdk connection
 	_ = task.connection.Close()
 
-	// save the cluster result into the file
-	if err := task.State.SaveTaskStateToFile(); err != nil {
-		task.Result.ErrorOther = err.Error()
+	task.result.Success = task.End - task.Start - task.result.Failure + 1
+
+	if err := task.result.SaveResultIntoFile(); err != nil {
+		log.Println("not able to save result into ", task.ResultSeed)
+		return task.tearUp()
 	}
 
-	// calculated result success here to prevent late update in failure due to locking.
-	task.Result.Success = task.End - task.Start - task.Result.Failure + 1
-
-	// save the result into a file
-	if err := task.Result.SaveResultIntoFile(); err != nil {
-		log.Println("not able to save result into ", task.State.Seed)
-		return err
-	}
-	return nil
+	return task.tearUp()
 }
 
-func upsertDocuments(task *UpsertTask) {
-	var l sync.Mutex
-	u := task_state.UpsertTaskState{
-		Start:          task.Start,
-		End:            task.End,
-		FieldsToChange: task.FieldsToChange,
-	}
-
-	insertErrorCheck := make(map[int64]struct{})
-	for _, k := range task.State.InsertTaskState.Err {
-		insertErrorCheck[k] = struct{}{}
-	}
-
-	deleteCheck := task.State.RetracePreviousDeletions()
-
-	rateLimiter := make(chan struct{}, MaxConcurrentRoutines)
+func upsertDocuments(task *UpsertTask) error {
+	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
 	dataChannel := make(chan int64, MaxConcurrentRoutines)
-	group := errgroup.Group{}
+	maxKey := int64(-1)
+	skip := make(map[int64]struct{})
+	for _, offset := range task.State.KeyStates.Completed {
+		skip[offset] = struct{}{}
+	}
+	for _, offset := range task.State.KeyStates.Err {
+		skip[offset] = struct{}{}
+	}
+	deletedOffset, err := task.req.retracePreviousDeletions(task.ResultSeed)
+	if err != nil {
+		return nil
+	}
 
+	group := errgroup.Group{}
 	for i := task.Start; i <= task.End; i++ {
-		rateLimiter <- struct{}{}
+		routineLimiter <- struct{}{}
 		dataChannel <- i
 
 		group.Go(func() error {
 			var err error
 			offset := (<-dataChannel) - 1
-			key := task.gen.Seed + offset
-			if _, ok := insertErrorCheck[key]; ok {
-				<-rateLimiter
-				return fmt.Errorf("key is in InsertErrorCheck")
-			}
-			if _, ok := deleteCheck[key]; ok {
-				<-rateLimiter
-				return fmt.Errorf("key is delete from the server")
-			}
+			key := task.req.Seed + offset
 			docId := task.gen.BuildKey(key)
-
+			if _, ok := skip[offset]; ok {
+				<-routineLimiter
+				return fmt.Errorf("alreday performed operation on " + docId)
+			}
+			if _, ok := deletedOffset[offset]; ok {
+				<-routineLimiter
+				return fmt.Errorf("alreday deleted docID on " + docId)
+			}
 			fake := faker.NewWithSeed(rand.NewSource(key))
 			originalDoc, err := task.gen.Template.GenerateDocument(&fake, task.State.DocumentSize)
 			if err != nil {
-				<-rateLimiter
-				task.Result.IncrementFailure(docId, err.Error())
+				<-routineLimiter
+				task.result.IncrementFailure(docId, err.Error())
 				return err
 			}
-			originalDoc, err = task.State.RetracePreviousMutations(key, originalDoc, *task.gen, &fake)
+			originalDoc, err = task.req.retracePreviousMutations(offset, originalDoc, *task.gen, &fake, task.ResultSeed)
 			if err != nil {
-				<-rateLimiter
+				<-routineLimiter
 				return err
 			}
 			docUpdated, err := task.gen.Template.UpdateDocument(task.FieldsToChange, originalDoc, &fake)
 			_, err = task.connection.Collection.Upsert(docId, docUpdated, nil)
 			if err != nil {
-				task.Result.IncrementFailure(docId, err.Error())
-				l.Lock()
-				u.Err = append(u.Err, offset+1)
-				l.Unlock()
-				<-rateLimiter
+				task.result.IncrementFailure(docId, err.Error())
+				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
+				<-routineLimiter
 				return err
 			}
-			if key > task.State.SeedEnd {
-				l.Lock()
-				task.State.SeedEnd = key
-				l.Unlock()
-			}
 
-			<-rateLimiter
+			task.State.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
+			if offset > maxKey {
+				maxKey = offset
+			}
+			<-routineLimiter
 			return nil
 		})
 	}
 	_ = group.Wait()
-	close(rateLimiter)
+	close(routineLimiter)
 	close(dataChannel)
-	task.State.UpsertTaskState = append(task.State.UpsertTaskState, u)
-	log.Println(task.Operation, task.Bucket, task.Scope, task.Collection)
+	task.req.checkAndUpdateSeedEnd(maxKey)
+	log.Println("completed :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
+	return task.tearUp()
 }

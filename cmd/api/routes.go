@@ -31,7 +31,6 @@ func (app *Config) routes() http.Handler {
 	mux.Post("/delete", app.deleteTask)
 	mux.Post("/upsert", app.upsertTask)
 	mux.Post("/validate", app.validateTask)
-	mux.Post("/flush", app.flushTask)
 
 	return mux
 }
