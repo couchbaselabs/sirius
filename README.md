@@ -3,7 +3,7 @@
 This Readme file provides instructions for building and running a Go application named Sirius. The Sirius 
 application is designed to load data into a Couchbase server and store task metadata and results in directories.
 
-Doc loader different capabilities are  described using  [**REST ENDPOINT**](task-config.generated.md).
+Doc loader different capabilities are  described using  [**Rest Endpoints**](task-config.generated.md).
 
 ## Requirements
 

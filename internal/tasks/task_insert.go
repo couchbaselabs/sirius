@@ -134,11 +134,11 @@ func (task *InsertTask) Config(req *Request, seed int64, seedEnd int64, index in
 			return 0, err
 		}
 	} else {
-		if task.State != nil {
-			task.State.SetupStoringKeys()
-			task.State.StoreState()
-		}
 		log.Println("retrying :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
+		if task.State == nil {
+			return task.ResultSeed, fmt.Errorf("task State is nil")
+		}
+		task.State.SetupStoringKeys()
 	}
 	log.Println(task.req.Seed, task.req.SeedEnd)
 	return task.ResultSeed, nil
@@ -153,6 +153,7 @@ func (task *InsertTask) Describe() string {
 }
 
 func (task *InsertTask) tearUp() error {
+	_ = task.connection.Close()
 	task.State.StopStoringState()
 	task.TaskPending = false
 	return task.req.SaveRequestIntoFile()
@@ -178,29 +179,19 @@ func (task *InsertTask) Do() error {
 	task.gen = docgenerator.ConfigGenerator(task.DocType, task.KeyPrefix, task.KeySuffix, task.State.SeedStart,
 		task.State.SeedEnd, template.InitialiseTemplate(task.TemplateName))
 
-	if err := insertDocuments(task); err != nil {
-		task.result.ErrorOther = err.Error()
-		if err := task.result.SaveResultIntoFile(); err != nil {
-			log.Println("not able to save result into ", task.ResultSeed)
-		}
-		return task.tearUp()
-	}
-
-	_ = task.connection.Close()
-
+	insertDocuments(task)
 	task.result.Success = task.Count - task.result.Failure
 
 	if err := task.result.SaveResultIntoFile(); err != nil {
 		log.Println("not able to save result into ", task.ResultSeed)
-		return task.tearUp()
 	}
-	// Inserted Has been completed, We can remove it from the task list of req
-	task.State.ClearKeyStates()
+	// Inserted Has been completed, We can remove successful completions.
+	task.State.ClearCompletedKeyStates()
 	return task.tearUp()
 }
 
 // insertDocuments uploads new documents in a bucket.scope.collection in a defined batch size at multiple iterations.
-func insertDocuments(task *InsertTask) error {
+func insertDocuments(task *InsertTask) {
 
 	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
 	dataChannel := make(chan int64, MaxConcurrentRoutines)
@@ -290,5 +281,4 @@ func insertDocuments(task *InsertTask) error {
 	close(routineLimiter)
 	close(dataChannel)
 	log.Println("completed :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
-	return task.tearUp()
 }

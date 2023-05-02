@@ -17,6 +17,7 @@ type ConnectionManager struct {
 	Collection       *gocb.Collection
 }
 
+// ConfigConnectionManager returns an instance of ConnectionManager.
 func ConfigConnectionManager(connectionString, username, password, bucket, scope, collection string) *ConnectionManager {
 	return &ConnectionManager{
 		connectionString: connectionString,
@@ -28,6 +29,8 @@ func ConfigConnectionManager(connectionString, username, password, bucket, scope
 	}
 }
 
+// Connect will authenticate a user to connect with cluster. After successful
+// connection it setups scope and collection.
 func (c *ConnectionManager) Connect() error {
 	var err error
 	c.Cluster, err = gocb.Connect(c.connectionString, gocb.ClusterOptions{
@@ -36,7 +39,7 @@ func (c *ConnectionManager) Connect() error {
 			Password: c.password,
 		},
 		CircuitBreakerConfig: gocb.CircuitBreakerConfig{
-			Disabled: false,
+			Disabled: true,
 		},
 	})
 
@@ -53,6 +56,7 @@ func (c *ConnectionManager) Connect() error {
 	return nil
 }
 
+// Close will close the connection to cluster.
 func (c *ConnectionManager) Close() error {
 	if err := c.Cluster.Close(nil); err != nil {
 		return err
