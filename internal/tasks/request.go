@@ -34,6 +34,7 @@ type Request struct {
 	IndexCompleted int                  `json:"indexCompleted"`
 }
 
+// NewRequest return  a instance of Request
 func NewRequest(identifier string) *Request {
 	ctx, cancel := context.WithCancel(context.Background())
 	seed := time.Now().UnixNano()
@@ -51,6 +52,7 @@ func NewRequest(identifier string) *Request {
 	}
 }
 
+// retracePreviousMutations returns a updated document after mutating the original documents.
 func (r *Request) retracePreviousMutations(offset int64, doc interface{}, gen docgenerator.Generator,
 	fake *faker.Faker, resultSeed int64) (interface{}, error) {
 	defer r.lock.Unlock()
@@ -75,6 +77,7 @@ func (r *Request) retracePreviousMutations(offset int64, doc interface{}, gen do
 	return doc, nil
 }
 
+// retracePreviousDeletions returns a lookup table representing the offsets which are successfully deleted.
 func (r *Request) retracePreviousDeletions(resultSeed int64) (map[int64]struct{}, error) {
 	defer r.lock.Unlock()
 	r.lock.Lock()
@@ -97,6 +100,7 @@ func (r *Request) retracePreviousDeletions(resultSeed int64) (map[int64]struct{}
 	return result, nil
 }
 
+// returns a lookup table representing the offsets which are not inserted properly..
 func (r *Request) retracePreviousFailedInsertions(resultSeed int64) (map[int64]struct{}, error) {
 	defer r.lock.Unlock()
 	r.lock.Lock()
@@ -119,6 +123,7 @@ func (r *Request) retracePreviousFailedInsertions(resultSeed int64) (map[int64]s
 	return result, nil
 }
 
+// AddTask will add tasks.Task with operation type.
 func (r *Request) AddTask(o string, t Task) (error, int) {
 	defer r.lock.Unlock()
 	r.lock.Lock()
@@ -130,6 +135,7 @@ func (r *Request) AddTask(o string, t Task) (error, int) {
 	return err, len(r.Tasks) - 1
 }
 
+// AddToSeedEnd will update the Request.SeedEnd by  adding count into it.
 func (r *Request) AddToSeedEnd(count int64) error {
 	defer r.lock.Unlock()
 	r.lock.Lock()
@@ -138,6 +144,7 @@ func (r *Request) AddToSeedEnd(count int64) error {
 	return err
 }
 
+// RemoveFromSeedEnd will update the Request.SeedEnd by  subtracting count into it.
 func (r *Request) RemoveFromSeedEnd(count int64) error {
 	defer r.lock.Unlock()
 	r.lock.Lock()
@@ -146,6 +153,7 @@ func (r *Request) RemoveFromSeedEnd(count int64) error {
 	return err
 }
 
+// checkAndUpdateSeedEnd will store the max seed value that may occur in upsert operations.
 func (r *Request) checkAndUpdateSeedEnd(key int64) {
 	defer r.lock.Unlock()
 	r.lock.Lock()
@@ -180,6 +188,7 @@ func (r *Request) removeRequestFromFile(identifier string) error {
 	return os.Remove(fileName)
 }
 
+// RemoveRequestFromFile will remove Request from the disk.
 func (r *Request) RemoveRequestFromFile(identifier string) error {
 	defer r.lock.Unlock()
 	r.lock.Lock()
@@ -206,12 +215,14 @@ func (r *Request) saveRequestIntoFile() error {
 	return nil
 }
 
+// SaveRequestIntoFile will save request into disk
 func (r *Request) SaveRequestIntoFile() error {
 	defer r.lock.Unlock()
 	r.lock.Lock()
 	return r.saveRequestIntoFile()
 }
 
+// ReadRequestFromFile will return Request from the disk.
 func ReadRequestFromFile(identifier string) (*Request, error) {
 	cwd, err := os.Getwd()
 	if err != nil {

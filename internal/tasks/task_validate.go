@@ -60,6 +60,7 @@ func (task *ValidateTask) CheckIfPending() bool {
 }
 
 func (task *ValidateTask) tearUp() error {
+	_ = task.connection.Close()
 	task.State.StopStoringState()
 	task.TaskPending = false
 	return task.req.SaveRequestIntoFile()
@@ -94,11 +95,11 @@ func (task *ValidateTask) Config(req *Request, seed int64, seedEnd int64, index 
 		task.State = task_state.ConfigTaskState(task.TemplateName, task.KeyPrefix, task.KeySuffix, task.DocSize, seed,
 			seedEnd, task.ResultSeed)
 	} else {
-		if task.State != nil {
-			task.State.SetupStoringKeys()
-			task.State.StoreState()
-		}
 		log.Println("retrying :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
+		if task.State == nil {
+			return task.ResultSeed, fmt.Errorf("task State is nil")
+		}
+		task.State.SetupStoringKeys()
 	}
 	log.Println(task.req.Seed, task.req.SeedEnd)
 	return task.ResultSeed, nil
@@ -124,28 +125,20 @@ func (task *ValidateTask) Do() error {
 	task.gen = docgenerator.ConfigGenerator("", task.State.KeyPrefix, task.State.KeySuffix,
 		task.State.SeedStart, task.State.SeedEnd, template.InitialiseTemplate(task.State.TemplateName))
 
-	if err := validateDocuments(task); err != nil {
-		task.result.ErrorOther = err.Error()
-		if err := task.result.SaveResultIntoFile(); err != nil {
-			log.Println("not able to save result into ", task.ResultSeed)
-		}
-		return task.tearUp()
-	}
-
-	_ = task.connection.Close()
+	validateDocuments(task)
 
 	task.result.Success = task.State.SeedEnd - task.State.SeedStart - task.result.Failure
 
 	if err := task.result.SaveResultIntoFile(); err != nil {
 		log.Println("not able to save result into ", task.ResultSeed)
-		return task.tearUp()
 	}
-
+	task.State.ClearErrorKeyStates()
+	task.State.ClearCompletedKeyStates()
 	return task.tearUp()
 }
 
 // ValidateDocuments return the validity of the collection using TaskState
-func validateDocuments(task *ValidateTask) error {
+func validateDocuments(task *ValidateTask) {
 	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
 	dataChannel := make(chan int64, MaxConcurrentRoutines)
 	skip := make(map[int64]struct{})
@@ -157,11 +150,11 @@ func validateDocuments(task *ValidateTask) error {
 	}
 	deletedOffset, err1 := task.req.retracePreviousDeletions(task.ResultSeed)
 	if err1 != nil {
-		return nil
+		return
 	}
 	insertErrorOffset, err2 := task.req.retracePreviousFailedInsertions(task.ResultSeed)
 	if err2 != nil {
-		return nil
+		return
 	}
 
 	group := errgroup.Group{}
@@ -241,5 +234,4 @@ func validateDocuments(task *ValidateTask) error {
 	close(routineLimiter)
 	close(dataChannel)
 	log.Println("completed :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
-	return task.tearUp()
 }

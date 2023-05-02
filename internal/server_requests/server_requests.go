@@ -15,12 +15,16 @@ const ServerRequestsPath = "./internal/server_requests/server_requests_logs"
 const ServerRequestFileName = "server_requests"
 const SnapShortTime = 10
 
+// ServerRequests will have a lookup of unique identifier of a cluster which contains requests for different operation
+// for that particular cluster.
 type ServerRequests struct {
 	RequestLookup sync.Map            `json:"-"`
 	Lock          sync.Mutex          `json:"-"`
 	Identifiers   map[string]struct{} `json:"identifiers"`
 }
 
+// NewServerRequests will return an instance of ServerRequests.
+// The instance will retry the pending tasks for a unique cluster.
 func NewServerRequests() *ServerRequests {
 	sr, err := ReadServerRequestsFromFile()
 	if err == nil {
@@ -51,6 +55,8 @@ func NewServerRequests() *ServerRequests {
 	return sr
 }
 
+// saveRequestsIntoFilePeriodically stores the current state of tasks.Request associated with the identifier for an
+// cluster.
 func (sr *ServerRequests) saveRequestsIntoFilePeriodically() {
 	d := time.NewTicker(SnapShortTime * time.Second)
 	for {
@@ -69,6 +75,7 @@ func (sr *ServerRequests) saveRequestsIntoFilePeriodically() {
 	}
 }
 
+// ReadServerRequestsFromFile will try to read identifiers from disk pointing towards tasks.Request
 func ReadServerRequestsFromFile() (*ServerRequests, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -86,6 +93,7 @@ func ReadServerRequestsFromFile() (*ServerRequests, error) {
 	return r, nil
 }
 
+// deleteIdentifiersToFile will try to delete identifiers from disk pointing towards tasks.Request
 func (sr *ServerRequests) deleteIdentifiersToFile(identifier string) error {
 	defer sr.Lock.Unlock()
 	sr.Lock.Lock()
@@ -106,6 +114,7 @@ func (sr *ServerRequests) deleteIdentifiersToFile(identifier string) error {
 	return nil
 }
 
+// saveIdentifiersToFile will try to store identifiers into disk pointing towards tasks.Request
 func (sr *ServerRequests) saveIdentifiersToFile(identifier string) error {
 	defer sr.Lock.Unlock()
 	sr.Lock.Lock()
@@ -126,6 +135,7 @@ func (sr *ServerRequests) saveIdentifiersToFile(identifier string) error {
 	return nil
 }
 
+// remove will remove the identifier pointing towards tasks.Request from the lookup table.
 func (sr *ServerRequests) remove(identifier string, saveToFile bool) error {
 	sr.RequestLookup.Delete(identifier)
 	if saveToFile {
@@ -134,6 +144,7 @@ func (sr *ServerRequests) remove(identifier string, saveToFile bool) error {
 	return nil
 }
 
+// add will add identifier representing a tasks.Request in the lookup table.
 func (sr *ServerRequests) add(identifier string, request *tasks.Request, saveToFile bool) error {
 	_, ok := sr.RequestLookup.Load(identifier)
 	if !ok {
@@ -145,13 +156,15 @@ func (sr *ServerRequests) add(identifier string, request *tasks.Request, saveToF
 	return nil
 }
 
+// checkIfExists will return true/false if identifier exists in the lookup table.
 func (sr *ServerRequests) checkIfExists(identifier string) bool {
 	_, ok := sr.RequestLookup.Load(identifier)
 	return ok
 }
 
+// GetRequestOfIdentifier returns a tasks.Request if already exists in the lookup table.
+// If not then initialise a new tasks.Request and return it.
 func (sr *ServerRequests) GetRequestOfIdentifier(identifier string) (*tasks.Request, error) {
-
 	if sr.checkIfExists(identifier) {
 		r, _ := sr.RequestLookup.Load(identifier)
 		req, ok := r.(*tasks.Request)
@@ -188,6 +201,7 @@ func (sr *ServerRequests) GetRequestOfIdentifier(identifier string) (*tasks.Requ
 	return nil, fmt.Errorf("unknown identifer or request")
 }
 
+// AddTask add a tasks.Task to the lookup table with search key as identifier.
 func (sr *ServerRequests) AddTask(identifier string, o string, t tasks.Task) (error, int) {
 	r, err := sr.GetRequestOfIdentifier(identifier)
 	if r == nil {

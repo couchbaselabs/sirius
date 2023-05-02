@@ -92,13 +92,12 @@ func (task *DeleteTask) Config(req *Request, seed int64, seedEnd int64, index in
 		task.State = task_state.ConfigTaskState("", "", "", 0, seed,
 			seedEnd, task.ResultSeed)
 	} else {
-		if task.State != nil {
-			task.State.SetupStoringKeys()
-			task.State.StoreState()
-		}
 		log.Println("retrying :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
+		if task.State == nil {
+			return task.ResultSeed, fmt.Errorf("task State is nil")
+		}
+		task.State.SetupStoringKeys()
 	}
-	log.Println(task.req.Seed, task.req.SeedEnd)
 	return task.ResultSeed, nil
 }
 
@@ -108,6 +107,7 @@ The task will delete documents from [start,end] inclusive.`
 }
 
 func (task *DeleteTask) tearUp() error {
+	_ = task.connection.Close()
 	task.State.StopStoringState()
 	task.TaskPending = false
 	return task.req.SaveRequestIntoFile()
@@ -124,24 +124,14 @@ func (task *DeleteTask) Do() error {
 			log.Println("not able to save result into ", task.ResultSeed)
 		}
 		task.State.AddRangeToErrSet(task.Start, task.End)
-		task.tearUp()
+		return task.tearUp()
 	}
 
 	// Prepare generator
 	task.gen = docgenerator.ConfigGenerator("", task.State.KeyPrefix, task.State.KeySuffix,
 		task.State.SeedStart, task.State.SeedEnd, template.InitialiseTemplate(task.State.TemplateName))
 
-	// do bulk loading
-	if err := deleteDocuments(task); err != nil {
-		task.result.ErrorOther = err.Error()
-		if err := task.result.SaveResultIntoFile(); err != nil {
-			log.Println("not able to save result into ", task.ResultSeed)
-		}
-		task.tearUp()
-	}
-
-	// close the sdk connection
-	_ = task.connection.Close()
+	deleteDocuments(task)
 
 	// calculated result success here to prevent late update in failure due to locking.
 	task.result.Success = task.End - task.Start - task.result.Failure + 1
@@ -149,13 +139,13 @@ func (task *DeleteTask) Do() error {
 	// save the result into a file
 	if err := task.result.SaveResultIntoFile(); err != nil {
 		log.Println("not able to save result into ", task.ResultSeed)
-		return task.tearUp()
 	}
+	task.State.ClearErrorKeyStates()
 	return task.tearUp()
 }
 
 // deleteDocuments delete the document stored on a host from start to end.
-func deleteDocuments(task *DeleteTask) error {
+func deleteDocuments(task *DeleteTask) {
 	skip := make(map[int64]struct{})
 	for _, offset := range task.State.KeyStates.Completed {
 		skip[offset] = struct{}{}
@@ -165,7 +155,7 @@ func deleteDocuments(task *DeleteTask) error {
 	}
 	deletedOffset, err := task.req.retracePreviousDeletions(task.ResultSeed)
 	if err != nil {
-		return nil
+		return
 	}
 	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
 	dataChannel := make(chan int64, MaxConcurrentRoutines)
@@ -209,5 +199,4 @@ func deleteDocuments(task *DeleteTask) error {
 	close(routineLimiter)
 	close(dataChannel)
 	log.Println("completed :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
-	return task.tearUp()
 }
