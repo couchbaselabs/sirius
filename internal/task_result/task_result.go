@@ -1,7 +1,7 @@
 package task_result
 
 import (
-	"encoding/gob"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -61,15 +61,12 @@ func (t *TaskResult) SaveResultIntoFile() error {
 		return err
 	}
 	fileName := filepath.Join(cwd, ResultPath, fmt.Sprintf("%d", t.Seed))
-	file, err := os.Create(fileName)
+	content, err := json.Marshal(t)
 	if err != nil {
 		return err
 	}
-	encoder := gob.NewEncoder(file)
-	if err := encoder.Encode(t); err != nil {
-		return err
-	}
-	if err := file.Close(); err != nil {
+	err = os.WriteFile(fileName, content, 0644)
+	if err != nil {
 		return err
 	}
 	return nil
@@ -83,17 +80,12 @@ func ReadResultFromFile(seed string, deleteRecord bool) (*TaskResult, error) {
 		return nil, err
 	}
 	fileName := filepath.Join(cwd, ResultPath, seed)
-	// preparing the task_result_logs to be added into the type TaskResult
 	result := &TaskResult{}
-	file, err := os.Open(fileName)
+	content, err := os.ReadFile(fileName)
 	if err != nil {
 		return nil, fmt.Errorf("no such result found, reasons:[No such Task, In process, Record Deleted]")
 	}
-	decoder := gob.NewDecoder(file)
-	if err := decoder.Decode(result); err != nil {
-		return nil, err
-	}
-	if err := file.Close(); err != nil {
+	if err := json.Unmarshal(content, result); err != nil {
 		return nil, err
 	}
 	// deleting the file after reading it to save disk space.
