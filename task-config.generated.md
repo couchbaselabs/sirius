@@ -4,11 +4,29 @@
 Each task can be executed using REST endpoints. All tasks tags to provide additional
 configuration that is also available on a per-task basis:
 
+ * [/clear_data](#clear_data)
  * [/delete](#delete)
  * [/insert](#insert)
  * [/result](#result)
  * [/upsert](#upsert)
  * [/validate](#validate)
+
+---
+#### /clear_data
+
+ REST : POST
+
+Description : The Task clear operation will remove the metadata from the bucket on the specific Couchbase server where
+the test was executed \n
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `ConnectionString` | `string` | `json:connectionString`  |
+| `Username` | `string` | `json:username`  |
+| `Password` | `string` | `json:password`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
 
 ---
 #### /delete

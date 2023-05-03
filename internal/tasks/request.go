@@ -179,20 +179,14 @@ func (r *Request) UpdateIndexCompleted(index int) error {
 	return err
 }
 
-func (r *Request) removeRequestFromFile(identifier string) error {
+// RemoveRequestFromFile will remove Request from the disk.
+func RemoveRequestFromFile(identifier string) error {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return err
 	}
 	fileName := filepath.Join(cwd, RequestPath, identifier)
 	return os.Remove(fileName)
-}
-
-// RemoveRequestFromFile will remove Request from the disk.
-func (r *Request) RemoveRequestFromFile(identifier string) error {
-	defer r.lock.Unlock()
-	r.lock.Lock()
-	return r.removeRequestFromFile(identifier)
 }
 
 func (r *Request) saveRequestIntoFile() error {

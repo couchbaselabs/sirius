@@ -190,3 +190,22 @@ func (app *Config) validateTask(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = app.writeJSON(w, http.StatusOK, resPayload)
 }
+
+func (app *Config) clearRequestFromServer(w http.ResponseWriter, r *http.Request) {
+	task := &tasks.ClearTask{}
+	if err := app.readJSON(w, r, task); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	log.Print(task, "clear")
+	if err := app.serverRequests.ClearIdentifierAndRequest(task.BuildIdentifier()); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	resPayload := jsonResponse{
+		Error:   false,
+		Message: "Successfully cleared the meta-data",
+		Data:    task.BuildIdentifier(),
+	}
+	_ = app.writeJSON(w, http.StatusOK, resPayload)
+}
