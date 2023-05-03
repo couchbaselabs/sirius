@@ -42,7 +42,7 @@ func NewServerRequests() *ServerRequests {
 			} else {
 				_ = sr.remove(identifier, true)
 				if r != nil {
-					if err := r.RemoveRequestFromFile(identifier); err != nil {
+					if err := tasks.RemoveRequestFromFile(identifier); err != nil {
 						log.Print(err.Error())
 					}
 				}
@@ -55,7 +55,7 @@ func NewServerRequests() *ServerRequests {
 	return sr
 }
 
-// saveRequestsIntoFilePeriodically stores the current state of tasks.Request associated with the identifier for an
+// saveRequestsIntoFilePeriodically stores the current state of tasks.Request associated with the identifier for a
 // cluster.
 func (sr *ServerRequests) saveRequestsIntoFilePeriodically() {
 	d := time.NewTicker(SnapShortTime * time.Second)
@@ -184,7 +184,7 @@ func (sr *ServerRequests) GetRequestOfIdentifier(identifier string) (*tasks.Requ
 				fileSaveCheck = sr.add(identifier, requestFromFile, true)
 			} else {
 				if requestFromFile != nil {
-					if err := requestFromFile.RemoveRequestFromFile(identifier); err != nil {
+					if err := tasks.RemoveRequestFromFile(identifier); err != nil {
 						log.Println(err.Error())
 					}
 				}
@@ -199,6 +199,13 @@ func (sr *ServerRequests) GetRequestOfIdentifier(identifier string) (*tasks.Requ
 		}
 	}
 	return nil, fmt.Errorf("unknown identifer or request")
+}
+
+func (sr *ServerRequests) ClearIdentifierAndRequest(identifier string) error {
+	if sr.checkIfExists(identifier) {
+		sr.remove(identifier, true)
+	}
+	return tasks.RemoveRequestFromFile(identifier)
 }
 
 // AddTask add a tasks.Task to the lookup table with search key as identifier.
