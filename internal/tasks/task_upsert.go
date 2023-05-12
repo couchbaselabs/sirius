@@ -43,6 +43,9 @@ type UpsertTask struct {
 }
 
 func (task *UpsertTask) BuildIdentifier() string {
+	if task.Bucket == "" {
+		task.Bucket = DefaultBucket
+	}
 	if task.Scope == "" {
 		task.Scope = DefaultScope
 	}
@@ -78,7 +81,7 @@ func (task *UpsertTask) Config(req *Request, seed int64, seedEnd int64, index in
 			return 0, fmt.Errorf("cluster's credentials are missing ")
 		}
 		if task.Bucket == "" {
-			return 0, fmt.Errorf("bucket is missing")
+			task.Bucket = DefaultBucket
 		}
 		if task.Scope == "" {
 			task.Scope = DefaultScope
@@ -86,9 +89,9 @@ func (task *UpsertTask) Config(req *Request, seed int64, seedEnd int64, index in
 		if task.Collection == "" {
 			task.Collection = DefaultCollection
 		}
-		if task.Start == 0 {
-			task.Start = 1
-			task.End = 1
+		if task.Start < 0 {
+			task.Start = 0
+			task.End = 0
 		}
 		if task.DocSize == 0 {
 			task.DocSize = docgenerator.DefaultDocSize
@@ -145,7 +148,7 @@ func (task *UpsertTask) Do() error {
 
 	upsertDocuments(task)
 
-	task.result.Success = task.End - task.Start - task.result.Failure + 1
+	task.result.Success = task.End - task.Start - task.result.Failure
 
 	if err := task.result.SaveResultIntoFile(); err != nil {
 		log.Println("not able to save result into ", task.ResultSeed)
@@ -171,13 +174,13 @@ func upsertDocuments(task *UpsertTask) {
 	}
 
 	group := errgroup.Group{}
-	for i := task.Start; i <= task.End; i++ {
+	for i := task.Start; i < task.End; i++ {
 		routineLimiter <- struct{}{}
 		dataChannel <- i
 
 		group.Go(func() error {
 			var err error
-			offset := (<-dataChannel) - 1
+			offset := <-dataChannel
 			key := task.req.Seed + offset
 			docId := task.gen.BuildKey(key)
 			if _, ok := skip[offset]; ok {

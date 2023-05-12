@@ -36,6 +36,9 @@ func (task *ClearTask) Config(req *Request, seed int64, seedEnd int64, index int
 }
 
 func (task *ClearTask) BuildIdentifier() string {
+	if task.Bucket == "" {
+		task.Bucket = DefaultBucket
+	}
 	if task.Scope == "" {
 		task.Scope = DefaultScope
 	}

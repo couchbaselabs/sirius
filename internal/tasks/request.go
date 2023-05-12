@@ -63,7 +63,7 @@ func (r *Request) retracePreviousMutations(offset int64, doc interface{}, gen do
 			if !ok {
 				return nil, fmt.Errorf("unable to decode upsert task from backlog")
 			} else {
-				if offset >= (u.Start-1) && (offset <= u.End-1) && resultSeed != u.ResultSeed {
+				if offset >= (u.Start) && (offset < u.End) && resultSeed != u.ResultSeed {
 					errOffset := u.State.ReturnErrOffset()
 					if _, ok := errOffset[offset]; ok {
 						continue

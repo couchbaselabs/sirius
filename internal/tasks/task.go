@@ -14,6 +14,7 @@ const (
 	DurabilityLevelPersistToMajority          string = "PERSIST_TO_MAJORITY"
 	DefaultScope                              string = "_default"
 	DefaultCollection                         string = "_default"
+	DefaultBucket                             string = "default"
 )
 
 type Task interface {

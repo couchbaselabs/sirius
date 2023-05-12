@@ -17,7 +17,7 @@ configuration that is also available on a per-task basis:
  REST : POST
 
 Description : The Task clear operation will remove the metadata from the bucket on the specific Couchbase server where
-the test was executed \n
+the test was executed.
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |

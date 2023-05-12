@@ -39,6 +39,9 @@ type ValidateTask struct {
 }
 
 func (task *ValidateTask) BuildIdentifier() string {
+	if task.Bucket == "" {
+		task.Bucket = DefaultBucket
+	}
 	if task.Scope == "" {
 		task.Scope = DefaultScope
 	}
@@ -81,7 +84,7 @@ func (task *ValidateTask) Config(req *Request, seed int64, seedEnd int64, index 
 			return 0, fmt.Errorf("cluster's credentials are missing ")
 		}
 		if task.Bucket == "" {
-			return 0, fmt.Errorf("bucker is missing")
+			task.Bucket = DefaultBucket
 		}
 		if task.Scope == "" {
 			task.Scope = DefaultScope
@@ -101,7 +104,6 @@ func (task *ValidateTask) Config(req *Request, seed int64, seedEnd int64, index 
 		}
 		task.State.SetupStoringKeys()
 	}
-	log.Println(task.req.Seed, task.req.SeedEnd)
 	return task.ResultSeed, nil
 }
 
@@ -127,7 +129,8 @@ func (task *ValidateTask) Do() error {
 
 	validateDocuments(task)
 
-	task.result.Success = task.State.SeedEnd - task.State.SeedStart - task.result.Failure
+	task.result.Success = task.State.SeedEnd - task.State.SeedStart - task.result.Failure - int64(len(task.result.
+		ValidationError))
 
 	if err := task.result.SaveResultIntoFile(); err != nil {
 		log.Println("not able to save result into ", task.ResultSeed)
