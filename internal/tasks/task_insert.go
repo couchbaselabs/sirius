@@ -54,6 +54,9 @@ type InsertTask struct {
 }
 
 func (task *InsertTask) BuildIdentifier() string {
+	if task.Bucket == "" {
+		task.Bucket = DefaultBucket
+	}
 	if task.Scope == "" {
 		task.Scope = DefaultScope
 	}
@@ -90,7 +93,7 @@ func (task *InsertTask) Config(req *Request, seed int64, seedEnd int64, index in
 			return 0, fmt.Errorf("cluster's credentials are missing ")
 		}
 		if task.Bucket == "" {
-			return 0, fmt.Errorf("bucket is missing")
+			task.Bucket = DefaultBucket
 		}
 		if task.Scope == "" {
 			task.Scope = DefaultScope

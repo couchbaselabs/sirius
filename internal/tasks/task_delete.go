@@ -35,6 +35,9 @@ type DeleteTask struct {
 }
 
 func (task *DeleteTask) BuildIdentifier() string {
+	if task.Bucket == "" {
+		task.Bucket = DefaultBucket
+	}
 	if task.Scope == "" {
 		task.Scope = DefaultScope
 	}
@@ -71,7 +74,7 @@ func (task *DeleteTask) Config(req *Request, seed int64, seedEnd int64, index in
 			return 0, fmt.Errorf("cluster's credentials are missing ")
 		}
 		if task.Bucket == "" {
-			return 0, fmt.Errorf("bucker is missing")
+			task.Bucket = DefaultBucket
 		}
 		if task.Scope == "" {
 			task.Scope = DefaultScope
@@ -79,9 +82,9 @@ func (task *DeleteTask) Config(req *Request, seed int64, seedEnd int64, index in
 		if task.Collection == "" {
 			task.Collection = DefaultCollection
 		}
-		if task.Start == 0 {
-			task.Start = 1
-			task.End = 1
+		if task.Start < 0 {
+			task.Start = 0
+			task.End = 0
 		}
 		if task.Start > task.End {
 			return 0, fmt.Errorf("delete operation start to end range is malformed")
@@ -134,7 +137,7 @@ func (task *DeleteTask) Do() error {
 	deleteDocuments(task)
 
 	// calculated result success here to prevent late update in failure due to locking.
-	task.result.Success = task.End - task.Start - task.result.Failure + 1
+	task.result.Success = task.End - task.Start - task.result.Failure
 
 	// save the result into a file
 	if err := task.result.SaveResultIntoFile(); err != nil {
@@ -161,12 +164,12 @@ func deleteDocuments(task *DeleteTask) {
 	dataChannel := make(chan int64, MaxConcurrentRoutines)
 	group := errgroup.Group{}
 
-	for i := task.Start; i <= task.End; i++ {
+	for i := task.Start; i < task.End; i++ {
 		routineLimiter <- struct{}{}
 		dataChannel <- i
 
 		group.Go(func() error {
-			offset := (<-dataChannel) - 1
+			offset := <-dataChannel
 			key := task.req.Seed + offset
 			docId := task.gen.BuildKey(key)
 			if _, ok := skip[offset]; ok {
