@@ -117,6 +117,11 @@ We need to share the fields we want to update in a json document using SQL++ syn
 | `Start` | `int64` | `json:start`  |
 | `End` | `int64` | `json:end`  |
 | `FieldsToChange` | `slice` | `json:fieldsToChange`  |
+| `Expiry` | `int64` | `json:expiry,omitempty`  |
+| `PersistTo` | `uint` | `json:persistTo,omitempty`  |
+| `ReplicateTo` | `uint` | `json:replicateTo,omitempty`  |
+| `Durability` | `string` | `json:durability,omitempty`  |
+| `Timeout` | `int` | `json:timeout,omitempty`  |
 | `TemplateName` | `string` | `json:template`  |
 | `DocSize` | `int64` | `json:docSize`  |
 | `KeyPrefix` | `string` | `json:keyPrefix`  |
