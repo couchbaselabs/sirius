@@ -17,19 +17,24 @@ import (
 )
 
 type UpsertTask struct {
-	ConnectionString string   `json:"connectionString"`
-	Username         string   `json:"username"`
-	Password         string   `json:"password"`
-	Bucket           string   `json:"bucket"`
-	Scope            string   `json:"scope,omitempty"`
-	Collection       string   `json:"collection,omitempty"`
-	Start            int64    `json:"start"`
-	End              int64    `json:"end"`
-	FieldsToChange   []string `json:"fieldsToChange"`
-	TemplateName     string   `json:"template"`
-	DocSize          int64    `json:"docSize"`
-	KeyPrefix        string   `json:"keyPrefix"`
-	KeySuffix        string   `json:"keySuffix"`
+	ConnectionString string        `json:"connectionString"`
+	Username         string        `json:"username"`
+	Password         string        `json:"password"`
+	Bucket           string        `json:"bucket"`
+	Scope            string        `json:"scope,omitempty"`
+	Collection       string        `json:"collection,omitempty"`
+	Start            int64         `json:"start"`
+	End              int64         `json:"end"`
+	FieldsToChange   []string      `json:"fieldsToChange"`
+	Expiry           time.Duration `json:"expiry,omitempty"`
+	PersistTo        uint          `json:"persistTo,omitempty"`
+	ReplicateTo      uint          `json:"replicateTo,omitempty"`
+	Durability       string        `json:"durability,omitempty"`
+	Timeout          int           `json:"timeout,omitempty"`
+	TemplateName     string        `json:"template"`
+	DocSize          int64         `json:"docSize"`
+	KeyPrefix        string        `json:"keyPrefix"`
+	KeySuffix        string        `json:"keySuffix"`
 	ResultSeed       int64
 	DurabilityLevel  gocb.DurabilityLevel
 	Operation        string
@@ -98,6 +103,16 @@ func (task *UpsertTask) Config(req *Request, seed int64, seedEnd int64, index in
 		}
 		if task.Start > task.End {
 			return 0, fmt.Errorf("delete operation start to end range is malformed")
+		}
+		switch task.Durability {
+		case DurabilityLevelMajority:
+			task.DurabilityLevel = gocb.DurabilityLevelMajority
+		case DurabilityLevelMajorityAndPersistToActive:
+			task.DurabilityLevel = gocb.DurabilityLevelMajorityAndPersistOnMaster
+		case DurabilityLevelPersistToMajority:
+			task.DurabilityLevel = gocb.DurabilityLevelPersistToMajority
+		default:
+			task.DurabilityLevel = gocb.DurabilityLevelNone
 		}
 		task.Operation = UpsertOperation
 		time.Sleep(1 * time.Microsecond)
@@ -204,7 +219,13 @@ func upsertDocuments(task *UpsertTask) {
 				return err
 			}
 			docUpdated, err := task.gen.Template.UpdateDocument(task.FieldsToChange, originalDoc, &fake)
-			_, err = task.connection.Collection.Upsert(docId, docUpdated, nil)
+			_, err = task.connection.Collection.Upsert(docId, docUpdated, &gocb.UpsertOptions{
+				Expiry:          task.Expiry,
+				PersistTo:       task.PersistTo,
+				ReplicateTo:     task.ReplicateTo,
+				DurabilityLevel: task.DurabilityLevel,
+				Timeout:         time.Duration(task.Timeout) * time.Second,
+			})
 			if err != nil {
 				task.result.IncrementFailure(docId, err.Error())
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
