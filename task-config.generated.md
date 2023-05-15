@@ -47,6 +47,10 @@ The task will delete documents from [start,end] inclusive.
 | `Collection` | `string` | `json:collection,omitempty`  |
 | `Start` | `int64` | `json:start`  |
 | `End` | `int64` | `json:end`  |
+| `PersistTo` | `uint` | `json:persistTo,omitempty`  |
+| `ReplicateTo` | `uint` | `json:replicateTo,omitempty`  |
+| `Durability` | `string` | `json:durability,omitempty`  |
+| `Timeout` | `int` | `json:timeout,omitempty`  |
 
 ---
 #### /insert
