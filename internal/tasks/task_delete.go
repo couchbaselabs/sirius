@@ -2,6 +2,7 @@ package tasks
 
 import (
 	"fmt"
+	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
 	"github.com/couchbaselabs/sirius/internal/sdk"
 	"github.com/couchbaselabs/sirius/internal/task_result"
@@ -23,8 +24,13 @@ type DeleteTask struct {
 	Collection       string `json:"collection,omitempty"`
 	Start            int64  `json:"start"`
 	End              int64  `json:"end"`
+	PersistTo        uint   `json:"persistTo,omitempty"`
+	ReplicateTo      uint   `json:"replicateTo,omitempty"`
+	Durability       string `json:"durability,omitempty"`
+	Timeout          int    `json:"timeout,omitempty"`
 	ResultSeed       int64
 	Operation        string
+	DurabilityLevel  gocb.DurabilityLevel
 	TaskPending      bool
 	State            *task_state.TaskState
 	result           *task_result.TaskResult
@@ -90,6 +96,19 @@ func (task *DeleteTask) Config(req *Request, seed int64, seedEnd int64, index in
 			return 0, fmt.Errorf("delete operation start to end range is malformed")
 		}
 		task.Operation = DeleteOperation
+		if task.Timeout == 0 {
+			task.Timeout = 10
+		}
+		switch task.Durability {
+		case DurabilityLevelMajority:
+			task.DurabilityLevel = gocb.DurabilityLevelMajority
+		case DurabilityLevelMajorityAndPersistToActive:
+			task.DurabilityLevel = gocb.DurabilityLevelMajorityAndPersistOnMaster
+		case DurabilityLevelPersistToMajority:
+			task.DurabilityLevel = gocb.DurabilityLevelPersistToMajority
+		default:
+			task.DurabilityLevel = gocb.DurabilityLevelNone
+		}
 		time.Sleep(1 * time.Microsecond)
 		task.ResultSeed = time.Now().UnixNano()
 		task.State = task_state.ConfigTaskState("", "", "", 0, seed,
@@ -185,7 +204,12 @@ func deleteDocuments(task *DeleteTask) {
 				<-routineLimiter
 				return fmt.Errorf("docId out of bound")
 			}
-			_, err := task.connection.Collection.Remove(docId, nil)
+			_, err := task.connection.Collection.Remove(docId, &gocb.RemoveOptions{
+				PersistTo:       task.PersistTo,
+				ReplicateTo:     task.ReplicateTo,
+				DurabilityLevel: task.DurabilityLevel,
+				Timeout:         time.Duration(task.Timeout) * time.Second,
+			})
 			if err != nil {
 				task.result.IncrementFailure(docId, err.Error())
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}

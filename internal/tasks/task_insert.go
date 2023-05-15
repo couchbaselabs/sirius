@@ -41,9 +41,9 @@ type InsertTask struct {
 	ReadYourOwnWrite bool          `json:"readYourOwnWrite,omitempty"`
 	TemplateName     string        `json:"template"`
 	Template         interface{}
-	ResultSeed       int64
 	DurabilityLevel  gocb.DurabilityLevel
 	Operation        string
+	ResultSeed       int64
 	TaskPending      bool
 	State            *task_state.TaskState
 	result           *task_result.TaskResult

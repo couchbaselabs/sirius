@@ -114,6 +114,9 @@ func (task *UpsertTask) Config(req *Request, seed int64, seedEnd int64, index in
 		default:
 			task.DurabilityLevel = gocb.DurabilityLevelNone
 		}
+		if task.Timeout == 0 {
+			task.Timeout = 10
+		}
 		task.Operation = UpsertOperation
 		time.Sleep(1 * time.Microsecond)
 		task.ResultSeed = time.Now().UnixNano()
