@@ -75,5 +75,6 @@ func registerInterfaces() {
 	gob.Register(&tasks.ValidateTask{})
 	gob.Register(&task_result.TaskResult{})
 	gob.Register(&task_state.TaskState{})
+	gob.Register(&tasks.ReadTask{})
 
 }

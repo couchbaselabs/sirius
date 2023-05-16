@@ -19,5 +19,6 @@ func (r *Register) RegisteredTasks() map[string]TaskRegister {
 		"/validate":    {"POST", &tasks.ValidateTask{}},
 		"/result":      {"POST", &tasks.TaskResult{}},
 		"/clear_data":  {"POST", &tasks.ClearTask{}},
+		"/read":        {"POST", &tasks.ReadTask{}},
 	}
 }
