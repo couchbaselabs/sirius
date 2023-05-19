@@ -6,6 +6,7 @@ configuration that is also available on a per-task basis:
 
  * [/clear_data](#clear_data)
  * [/delete](#delete)
+ * [/fast-insert](#fast-insert)
  * [/insert](#insert)
  * [/result](#result)
  * [/upsert](#upsert)
@@ -51,6 +52,39 @@ The task will delete documents from [start,end] inclusive.
 | `ReplicateTo` | `uint` | `json:replicateTo,omitempty`  |
 | `Durability` | `string` | `json:durability,omitempty`  |
 | `Timeout` | `int` | `json:timeout,omitempty`  |
+
+---
+#### /fast-insert
+
+ REST : Post
+
+Description : Fast Insert task uploads documents in bulk into a bucket without maintaining intermediate state of task 
+During fast operations, An incomplete task will be retied as whole if server dies in between of the operation.
+ 
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `ConnectionString` | `string` | `json:connectionString`  |
+| `Username` | `string` | `json:username`  |
+| `Password` | `string` | `json:password`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `Count` | `int64` | `json:count,omitempty`  |
+| `DocSize` | `int64` | `json:docSize`  |
+| `DocType` | `string` | `json:docType,omitempty`  |
+| `KeySize` | `int` | `json:keySize,omitempty`  |
+| `KeyPrefix` | `string` | `json:keyPrefix`  |
+| `KeySuffix` | `string` | `json:keySuffix`  |
+| `RandomDocSize` | `bool` | `json:randomDocSize,omitempty`  |
+| `RandomKeySize` | `bool` | `json:randomKeySize,omitempty`  |
+| `Expiry` | `int64` | `json:expiry,omitempty`  |
+| `PersistTo` | `uint` | `json:persistTo,omitempty`  |
+| `ReplicateTo` | `uint` | `json:replicateTo,omitempty`  |
+| `Durability` | `string` | `json:durability,omitempty`  |
+| `Timeout` | `int` | `json:timeout,omitempty`  |
+| `ReadYourOwnWrite` | `bool` | `json:readYourOwnWrite,omitempty`  |
+| `TemplateName` | `string` | `json:template`  |
 
 ---
 #### /insert

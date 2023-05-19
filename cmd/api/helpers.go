@@ -68,6 +68,7 @@ func registerInterfaces() {
 	gob.Register(&template.SmallTemplate{})
 	gob.Register(&server_requests.ServerRequests{})
 	gob.Register(&tasks.InsertTask{})
+	gob.Register(&tasks.FastInsertTask{})
 	gob.Register(&tasks.UpsertTask{})
 	gob.Register(&tasks.TaskResult{})
 	gob.Register(&tasks.DeleteTask{})
