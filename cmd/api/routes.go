@@ -33,6 +33,7 @@ func (app *Config) routes() http.Handler {
 	mux.Post("/upsert", app.upsertTask)
 	mux.Post("/validate", app.validateTask)
 	mux.Post("/clear_data", app.clearRequestFromServer)
+	mux.Post("/read", app.readTask)
 
 	return mux
 }

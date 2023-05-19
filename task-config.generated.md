@@ -8,6 +8,7 @@ configuration that is also available on a per-task basis:
  * [/delete](#delete)
  * [/fast-insert](#fast-insert)
  * [/insert](#insert)
+ * [/read](#read)
  * [/result](#result)
  * [/upsert](#upsert)
  * [/validate](#validate)
@@ -121,6 +122,29 @@ The durability while inserting a document can be set using following values in t
 | `Timeout` | `int` | `json:timeout,omitempty`  |
 | `ReadYourOwnWrite` | `bool` | `json:readYourOwnWrite,omitempty`  |
 | `TemplateName` | `string` | `json:template`  |
+
+---
+#### /read
+
+ REST : POST
+
+Description : validate every document in the cluster's bucket
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `ConnectionString` | `string` | `json:connectionString`  |
+| `Username` | `string` | `json:username`  |
+| `Password` | `string` | `json:password`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `Start` | `int64` | `json:start`  |
+| `End` | `int64` | `json:end`  |
+| `Timeout` | `int` | `json:timeout,omitempty`  |
+| `TemplateName` | `string` | `json:template`  |
+| `DocSize` | `int64` | `json:docSize`  |
+| `KeyPrefix` | `string` | `json:keyPrefix`  |
+| `KeySuffix` | `string` | `json:keySuffix`  |
 
 ---
 #### /result

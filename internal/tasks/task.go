@@ -6,6 +6,7 @@ const (
 	DeleteOperation       string = "delete"
 	UpsertOperation       string = "upsert"
 	ValidateOperation     string = "validate"
+	ReadOperation         string = "read"
 )
 
 const (
