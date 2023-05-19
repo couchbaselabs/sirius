@@ -28,6 +28,7 @@ func (app *Config) routes() http.Handler {
 	mux.Get("/", app.testServer)
 	mux.Post("/result", app.taskResult)
 	mux.Post("/insert", app.insertTask)
+	mux.Post("/fast-insert", app.fastInsertTask)
 	mux.Post("/delete", app.deleteTask)
 	mux.Post("/upsert", app.upsertTask)
 	mux.Post("/validate", app.validateTask)
