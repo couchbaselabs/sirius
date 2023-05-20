@@ -15,3 +15,4 @@ services:
       - ./internal/tasks/request_logs:/internal/tasks/request_logs
       - ./internal/task_result/task_result_logs:/internal/task_result/task_result_logs
       - ./internal/server_requests/server_requests_logs:/internal/server_requests/server_requests_logs
+      - ./internal/task_state/task_state_logs:/internal/task_state/task_state_logs

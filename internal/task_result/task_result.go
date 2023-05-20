@@ -61,7 +61,7 @@ func (t *TaskResult) SaveResultIntoFile() error {
 		return err
 	}
 	fileName := filepath.Join(cwd, ResultPath, fmt.Sprintf("%d", t.Seed))
-	content, err := json.Marshal(t)
+	content, err := json.MarshalIndent(t, "", "\t")
 	if err != nil {
 		return err
 	}
