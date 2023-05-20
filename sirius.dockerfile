@@ -8,6 +8,9 @@ RUN mkdir /internal/server_requests
 RUN mkdir /internal/server_requests/server_requests_logs
 RUN mkdir /internal/tasks
 RUN mkdir /internal/tasks/request_logs
+RUN mkdir /internal/task_state
+RUN mkdir /internal/task_state/task_state_logs
+
 
 
 # COPY --from=builder /app/brokerApp /app

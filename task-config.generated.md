@@ -128,7 +128,7 @@ The durability while inserting a document can be set using following values in t
 
  REST : POST
 
-Description : validate every document in the cluster's bucket
+Description : Read Task get documents from bucket and validate them with the expected ones
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |

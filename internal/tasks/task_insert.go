@@ -189,6 +189,9 @@ func (task *InsertTask) Do() error {
 		log.Println("not able to save result into ", task.ResultSeed)
 	}
 	// Inserted Has been completed, We can remove successful completions.
+	if err := task.State.SaveTaskSateOnDisk(); err != nil {
+		log.Println("Error in storing TASK state on DISK")
+	}
 	task.State.ClearCompletedKeyStates()
 	return task.tearUp()
 }

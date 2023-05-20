@@ -2,7 +2,11 @@ package task_state
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 )
@@ -11,37 +15,38 @@ const (
 	COMPLETED         = 1
 	ERR               = 0
 	StateChannelLimit = 100000
+	TASKSTATELOGS     = "./internal/task_state/task_state_logs"
 )
 
 type StateHelper struct {
-	Status int
-	Offset int64
+	Status int   `json:"-"`
+	Offset int64 `json:"-"`
 }
 
 type KeyStates struct {
-	Completed []int64
-	Err       []int64
+	Completed []int64 `json:"completed"`
+	Err       []int64 `json:"err"`
 }
 
 type TaskState struct {
-	Operation    string
-	User         string
-	Host         string
-	BUCKET       string
-	SCOPE        string
-	Collection   string
-	TemplateName string
-	DocumentSize int64
-	SeedStart    int64
-	SeedEnd      int64
-	ResultSeed   int64
-	KeyPrefix    string
-	KeySuffix    string
-	KeyStates    KeyStates
-	StateChannel chan StateHelper
-	ctx          context.Context
-	cancel       context.CancelFunc
-	lock         sync.Mutex
+	Operation    string             `json:"operation"`
+	User         string             `json:"user,omitempty"`
+	Host         string             `json:"host,omitempty"`
+	BUCKET       string             `json:"BUCKET,omitempty"`
+	SCOPE        string             `json:"scope,omitempty"`
+	Collection   string             `json:"collection,omitempty"`
+	TemplateName string             `json:"templateName"`
+	DocumentSize int64              `json:"documentSize"`
+	SeedStart    int64              `json:"seedStart"`
+	SeedEnd      int64              `json:"seedEnd"`
+	ResultSeed   int64              `json:"resultSeed"`
+	KeyPrefix    string             `json:"keyPrefix"`
+	KeySuffix    string             `json:"keySuffix"`
+	KeyStates    KeyStates          `json:"keyStates"`
+	StateChannel chan StateHelper   `json:"-"`
+	ctx          context.Context    `json:"-"`
+	cancel       context.CancelFunc `json:"-"`
+	lock         sync.Mutex         `json:"-"`
 }
 
 // ConfigTaskState returns a instance of TaskState
@@ -199,4 +204,23 @@ func (t *TaskState) ClearCompletedKeyStates() {
 // ClearErrorKeyStates clears the Error key state
 func (t *TaskState) ClearErrorKeyStates() {
 	t.KeyStates.Err = t.KeyStates.Err[:0]
+}
+
+func (t *TaskState) SaveTaskSateOnDisk() error {
+	t.cancel()
+	time.Sleep(time.Second * 2)
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	fileName := filepath.Join(cwd, TASKSTATELOGS, fmt.Sprintf("%d", t.ResultSeed))
+	content, err := json.MarshalIndent(t, "", "\t")
+	if err != nil {
+		return err
+	}
+	err = os.WriteFile(fileName, content, 0644)
+	if err != nil {
+		return err
+	}
+	return nil
 }

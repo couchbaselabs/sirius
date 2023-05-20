@@ -118,8 +118,9 @@ func (task *ReadTask) Config(req *Request, seed int64, seedEnd int64, index int,
 }
 
 func (task *ReadTask) Describe() string {
-	return "Read Task get documents and read them from the "
+	return "Read Task get documents from bucket and validate them with the expected ones"
 }
+
 func (task *ReadTask) Do() error {
 	task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 

@@ -1,7 +1,8 @@
 DOC_LOADER_SERVER=sirius
 TASK_RESULT_PATH=./internal/task_result/task_result_logs
-SERVER_REQUESTS=./internal/server_requests/server_requests_logs
-TASK_REQUEST=./internal/tasks/request_logs
+TASK_STATE_PATH=./internal/task_state/task_state_logs
+SERVER_REQUESTS_PATH=./internal/server_requests/server_requests_logs
+TASK_REQUEST_PATH=./internal/tasks/request_logs
 
 run: build_dir build_sirius
 	./${DOC_LOADER_SERVER}
@@ -32,14 +33,18 @@ build_sirius:
 build_dir:
 	@echo "Building directory to store task's meta-data and results"
 	mkdir -p ${TASK_RESULT_PATH}
-	mkdir -p ${SERVER_REQUESTS}
-	mkdir -p ${TASK_REQUEST}
+	mkdir -p ${TASK_STATE_PATH}
+	mkdir -p ${SERVER_REQUESTS_PATH}
+	mkdir -p ${TASK_REQUEST_PATH}
+
 
 clean_dir:
 	@echo "Clean meta-data of task state and task results"
 	if [ -d ${TASK_RESULT_PATH} ]; then rm -Rf ${TASK_RESULT_PATH}; fi
-	if [ -d ${TASK_REQUEST} ]; then rm -Rf ${TASK_REQUEST}; fi
-	if [ -d ${SERVER_REQUESTS} ]; then rm -Rf ${SERVER_REQUESTS}; fi
+	if [ -d ${TASK_STATE_PATH} ]; then rm -Rf ${TASK_STATE_PATH}; fi
+	if [ -d ${TASK_REQUEST_PATH} ]; then rm -Rf ${TASK_REQUEST_PATH}; fi
+	if [ -d ${SERVER_REQUESTS_PATH} ]; then rm -Rf ${SERVER_REQUESTS_PATH}; fi
+
 
 build_sirius_for_docker:
 	env GOOS=linux CGO_ENABLED=0 go build -o ${DOC_LOADER_SERVER} ./cmd/api
