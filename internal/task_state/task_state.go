@@ -95,7 +95,7 @@ func (t *TaskState) AddRangeToCompleteSet(start, end int64) {
 
 // AddOffsetToErrSet will add offset to Error set
 func (t *TaskState) AddOffsetToErrSet(offset int64) {
-	t.KeyStates.Completed = append(t.KeyStates.Err, offset)
+	t.KeyStates.Err = append(t.KeyStates.Err, offset)
 }
 
 // AddRangeToErrSet will add a range of offset to Error set
