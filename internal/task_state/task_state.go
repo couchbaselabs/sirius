@@ -185,7 +185,7 @@ func (t *TaskState) storeCompleted(completed []int64) {
 func (t *TaskState) storeError(err []int64) {
 	t.lock.Lock()
 	for _, offset := range err {
-		t.AddOffsetToCompleteSet(offset)
+		t.AddOffsetToErrSet(offset)
 	}
 	t.lock.Unlock()
 }
