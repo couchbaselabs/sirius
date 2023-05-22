@@ -191,17 +191,34 @@ func getDocuments(task *ReadTask) {
 				return fmt.Errorf("error in insertion of docID on " + docId)
 			}
 
+			fake := faker.NewWithSeed(rand.NewSource(key))
+			originalDocument, err := task.gen.Template.GenerateDocument(&fake, task.State.DocumentSize)
+			if err != nil {
+				task.result.IncrementFailure(docId, originalDocument, err)
+				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
+				<-routineLimiter
+				return err
+			}
+			originalDocument, err = task.req.retracePreviousMutations(offset, originalDocument, *task.gen, &fake,
+				task.ResultSeed)
+			if err != nil {
+				task.result.IncrementFailure(docId, originalDocument, err)
+				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
+				<-routineLimiter
+				return err
+			}
+
 			var resultFromHost map[string]interface{}
 			documentFromHost := template.InitialiseTemplate(task.State.TemplateName)
 			result, err := task.connection.Collection.Get(docId, nil)
 			if err != nil {
-				task.result.IncrementFailure(docId, err.Error())
+				task.result.IncrementFailure(docId, originalDocument, err)
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 				<-routineLimiter
 				return err
 			}
 			if err := result.Content(&resultFromHost); err != nil {
-				task.result.ValidationFailures(docId)
+				task.result.IncrementFailure(docId, originalDocument, err)
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 				<-routineLimiter
 				return err
@@ -210,29 +227,14 @@ func getDocuments(task *ReadTask) {
 			err = json.Unmarshal(resultBytes, &documentFromHost)
 			if err != nil {
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
-				task.result.ValidationFailures(docId)
+				task.result.IncrementFailure(docId, originalDocument, err)
 				<-routineLimiter
 				return err
 			}
-			fake := faker.NewWithSeed(rand.NewSource(key))
-			originalDocument, err := task.gen.Template.GenerateDocument(&fake, task.State.DocumentSize)
-			if err != nil {
-				task.result.IncrementFailure(docId, err.Error())
-				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
-				<-routineLimiter
-				return err
-			}
-			originalDocument, err = task.req.retracePreviousMutations(offset, originalDocument, *task.gen, &fake,
-				task.ResultSeed)
-			if err != nil {
-				task.result.IncrementFailure(docId, err.Error())
-				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
-				<-routineLimiter
-				return err
-			}
+
 			ok, err := task.gen.Template.Compare(documentFromHost, originalDocument)
 			if err != nil || !ok {
-				task.result.ValidationFailures(docId)
+				task.result.IncrementFailure(docId, originalDocument, err)
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 				<-routineLimiter
 				return err

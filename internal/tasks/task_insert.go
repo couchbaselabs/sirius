@@ -225,7 +225,7 @@ func insertDocuments(task *InsertTask) {
 			fake := faker.NewWithSeed(rand.NewSource(key))
 			doc, err := task.gen.Template.GenerateDocument(&fake, task.State.DocumentSize)
 			if err != nil {
-				task.result.IncrementFailure(docId, err.Error())
+				task.result.IncrementFailure(docId, doc, err)
 				<-routineLimiter
 				return err
 			}
@@ -240,12 +240,12 @@ func insertDocuments(task *InsertTask) {
 				documentFromHost := template.InitialiseTemplate(task.TemplateName)
 				result, err := task.connection.Collection.Get(docId, nil)
 				if err != nil {
-					task.result.IncrementFailure(docId, err.Error())
+					task.result.IncrementFailure(docId, doc, err)
 					<-routineLimiter
 					return err
 				}
 				if err := result.Content(&resultFromHost); err != nil {
-					task.result.IncrementFailure(docId, err.Error())
+					task.result.IncrementFailure(docId, doc, err)
 					<-routineLimiter
 					return err
 				}
@@ -269,7 +269,7 @@ func insertDocuments(task *InsertTask) {
 						<-routineLimiter
 						return nil
 					} else {
-						task.result.IncrementFailure(docId, err.Error())
+						task.result.IncrementFailure(docId, doc, err)
 						task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 						<-routineLimiter
 						return err

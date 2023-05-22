@@ -1,6 +1,7 @@
 package tasks
 
 import (
+	"errors"
 	"fmt"
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
@@ -200,7 +201,7 @@ func deleteDocuments(task *DeleteTask) {
 				return fmt.Errorf("alreday deleted docID on " + docId)
 			}
 			if key > task.req.SeedEnd || key < task.req.Seed {
-				task.result.IncrementFailure(docId, "docId out of bound")
+				task.result.IncrementFailure(docId, nil, errors.New("docId out of bound"))
 				<-routineLimiter
 				return fmt.Errorf("docId out of bound")
 			}
@@ -211,7 +212,7 @@ func deleteDocuments(task *DeleteTask) {
 				Timeout:         time.Duration(task.Timeout) * time.Second,
 			})
 			if err != nil {
-				task.result.IncrementFailure(docId, err.Error())
+				task.result.IncrementFailure(docId, nil, err)
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 				<-routineLimiter
 				return err

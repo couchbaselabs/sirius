@@ -2,6 +2,7 @@ package tasks
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
@@ -202,7 +203,7 @@ func fastInsertDocuments(task *FastInsertTask) {
 			fake := faker.NewWithSeed(rand.NewSource(key))
 			doc, err := task.gen.Template.GenerateDocument(&fake, task.DocSize)
 			if err != nil {
-				task.result.IncrementFailure(docId, err.Error())
+				task.result.IncrementFailure(docId, doc, err)
 				<-routineLimiter
 				return err
 			}
@@ -217,31 +218,31 @@ func fastInsertDocuments(task *FastInsertTask) {
 				documentFromHost := template.InitialiseTemplate(task.TemplateName)
 				result, err := task.connection.Collection.Get(docId, nil)
 				if err != nil {
-					task.result.IncrementFailure(docId, err.Error())
+					task.result.IncrementFailure(docId, doc, err)
 					<-routineLimiter
 					return err
 				}
 				if err := result.Content(&resultFromHost); err != nil {
-					task.result.IncrementFailure(docId, err.Error())
+					task.result.IncrementFailure(docId, doc, err)
 					<-routineLimiter
 					return err
 				}
 				resultBytes, err := json.Marshal(resultFromHost)
 				err = json.Unmarshal(resultBytes, &documentFromHost)
 				if err != nil {
-					task.result.IncrementFailure(docId, err.Error())
+					task.result.IncrementFailure(docId, doc, err)
 					<-routineLimiter
 					return err
 				}
 				ok, err := task.gen.Template.Compare(documentFromHost, doc)
 				if err != nil || !ok {
-					task.result.IncrementFailure(docId, "Read Your Write Failure")
+					task.result.IncrementFailure(docId, doc, errors.New("read your own write failure"))
 					<-routineLimiter
 					return err
 				}
 			} else {
 				if err != nil {
-					task.result.IncrementFailure(docId, err.Error())
+					task.result.IncrementFailure(docId, doc, err)
 					<-routineLimiter
 					return err
 				}

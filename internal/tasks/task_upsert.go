@@ -213,11 +213,12 @@ func upsertDocuments(task *UpsertTask) {
 			originalDoc, err := task.gen.Template.GenerateDocument(&fake, task.State.DocumentSize)
 			if err != nil {
 				<-routineLimiter
-				task.result.IncrementFailure(docId, err.Error())
+
 				return err
 			}
 			originalDoc, err = task.req.retracePreviousMutations(offset, originalDoc, *task.gen, &fake, task.ResultSeed)
 			if err != nil {
+				task.result.IncrementFailure(docId, originalDoc, err)
 				<-routineLimiter
 				return err
 			}
@@ -230,7 +231,7 @@ func upsertDocuments(task *UpsertTask) {
 				Timeout:         time.Duration(task.Timeout) * time.Second,
 			})
 			if err != nil {
-				task.result.IncrementFailure(docId, err.Error())
+				task.result.IncrementFailure(docId, docUpdated, err)
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 				<-routineLimiter
 				return err
