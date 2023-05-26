@@ -2,18 +2,17 @@ package tasks
 
 import (
 	"fmt"
-	"strings"
 )
 
 // ClearTask represents a request structure for retrieving result of the task.
 type ClearTask struct {
-	ConnectionString string `json:"connectionString"`
-	Username         string `json:"username"`
-	Password         string `json:"password"`
-	Bucket           string `json:"bucket"`
-	Scope            string `json:"scope,omitempty"`
-	Collection       string `json:"collection,omitempty"`
-	TaskPending      bool
+	IdentifierToken string `json:"identifierToken"`
+	Username        string `json:"username"`
+	Password        string `json:"password"`
+	Bucket          string `json:"bucket"`
+	Scope           string `json:"scope,omitempty"`
+	Collection      string `json:"collection,omitempty"`
+	TaskPending     bool
 }
 
 func (task *ClearTask) Describe() string {
@@ -45,14 +44,7 @@ func (task *ClearTask) BuildIdentifier() string {
 	if task.Collection == "" {
 		task.Collection = DefaultCollection
 	}
-	var host string
-	if strings.Contains(task.ConnectionString, "couchbase://") {
-		host = strings.ReplaceAll(task.ConnectionString, "couchbase://", "")
-	}
-	if strings.Contains(task.ConnectionString, "couchbases://") {
-		host = strings.ReplaceAll(task.ConnectionString, "couchbases://", "")
-	}
-	return fmt.Sprintf("%s-%s-%s-%s-%s", task.Username, host, task.Bucket, task.Scope, task.Collection)
+	return fmt.Sprintf("%s-%s-%s-%s-%s", task.Username, task.IdentifierToken, task.Bucket, task.Scope, task.Collection)
 }
 
 func (task *ClearTask) CheckIfPending() bool {

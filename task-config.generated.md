@@ -23,7 +23,7 @@ the test was executed.
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
-| `ConnectionString` | `string` | `json:connectionString`  |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
 | `Username` | `string` | `json:username`  |
 | `Password` | `string` | `json:password`  |
 | `Bucket` | `string` | `json:bucket`  |
@@ -40,6 +40,7 @@ The task will delete documents from [start,end] inclusive.
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
 | `ConnectionString` | `string` | `json:connectionString`  |
 | `Username` | `string` | `json:username`  |
 | `Password` | `string` | `json:password`  |
@@ -65,6 +66,7 @@ During fast operations, An incomplete task will be retied as whole if server die
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
 | `ConnectionString` | `string` | `json:connectionString`  |
 | `Username` | `string` | `json:username`  |
 | `Password` | `string` | `json:password`  |
@@ -101,6 +103,7 @@ The durability while inserting a document can be set using following values in t
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
 | `ConnectionString` | `string` | `json:connectionString`  |
 | `Username` | `string` | `json:username`  |
 | `Password` | `string` | `json:password`  |
@@ -132,6 +135,7 @@ Description : Read Task get documents from bucket and validate them with the exp
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
 | `ConnectionString` | `string` | `json:connectionString`  |
 | `Username` | `string` | `json:username`  |
 | `Password` | `string` | `json:password`  |
@@ -170,6 +174,7 @@ We need to share the fields we want to update in a json document using SQL++ syn
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
 | `ConnectionString` | `string` | `json:connectionString`  |
 | `Username` | `string` | `json:username`  |
 | `Password` | `string` | `json:password`  |
@@ -198,6 +203,7 @@ Description : validate every document in the cluster's bucket
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
 | `ConnectionString` | `string` | `json:connectionString`  |
 | `Username` | `string` | `json:username`  |
 | `Password` | `string` | `json:password`  |

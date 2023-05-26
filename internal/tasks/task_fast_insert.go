@@ -13,11 +13,11 @@ import (
 	"golang.org/x/sync/errgroup"
 	"log"
 	"math/rand"
-	"strings"
 	"time"
 )
 
 type FastInsertTask struct {
+	IdentifierToken  string        `json:"identifierToken"`
 	ConnectionString string        `json:"connectionString"`
 	Username         string        `json:"username"`
 	Password         string        `json:"password"`
@@ -63,14 +63,7 @@ func (task *FastInsertTask) BuildIdentifier() string {
 	if task.Collection == "" {
 		task.Collection = DefaultCollection
 	}
-	var host string
-	if strings.Contains(task.ConnectionString, "couchbase://") {
-		host = strings.ReplaceAll(task.ConnectionString, "couchbase://", "")
-	}
-	if strings.Contains(task.ConnectionString, "couchbases://") {
-		host = strings.ReplaceAll(task.ConnectionString, "couchbases://", "")
-	}
-	return fmt.Sprintf("%s-%s-%s-%s-%s", task.Username, host, task.Bucket, task.Scope, task.Collection)
+	return fmt.Sprintf("%s-%s-%s-%s-%s", task.Username, task.IdentifierToken, task.Bucket, task.Scope, task.Collection)
 }
 
 func (task *FastInsertTask) CheckIfPending() bool {
@@ -86,6 +79,9 @@ func (task *FastInsertTask) Config(req *Request, seed int64, seedEnd int64, inde
 	}
 	task.index = index
 	if !reRun {
+		if task.IdentifierToken == "" {
+			return 0, fmt.Errorf("identifier token is missing")
+		}
 		if task.ConnectionString == "" {
 			return 0, fmt.Errorf("empty connection string")
 		}
