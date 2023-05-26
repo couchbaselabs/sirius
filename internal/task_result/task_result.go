@@ -3,6 +3,7 @@ package task_result
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/couchbaselabs/sirius/internal/sdk"
 	"log"
 	"os"
 	"path/filepath"
@@ -13,15 +14,21 @@ import (
 const ResultPath = "./internal/task_result/task_result_logs"
 
 // TaskResult defines the type of result stored in a response after an operation.
+
+type FailedDocument struct {
+	DocId string      `json:"key"`
+	Doc   interface{} `json:"value"`
+}
+
 type TaskResult struct {
-	Seed            int64               `json:"seed"`
-	Operation       string              `json:"operation"`
-	ErrorOther      string              `json:"other-errors,omitempty"`
-	Success         int64               `json:"success"`
-	Failure         int64               `json:"failure"`
-	ValidationError []string            `json:"validation-errors,omitempty"`
-	Error           map[string][]string `json:"errors"`
-	lock            sync.Mutex          `json:"-"`
+	Seed            int64                       `json:"seed"`
+	Operation       string                      `json:"operation"`
+	ErrorOther      string                      `json:"other-errors,omitempty"`
+	Success         int64                       `json:"success"`
+	Failure         int64                       `json:"failure"`
+	ValidationError []string                    `json:"validation-errors,omitempty"`
+	Error           map[string][]FailedDocument `json:"errors"`
+	lock            sync.Mutex                  `json:"-"`
 }
 
 // ConfigTaskResult returns a new instance of TaskResult
@@ -29,21 +36,32 @@ func ConfigTaskResult(operation string, seed int64) *TaskResult {
 	return &TaskResult{
 		Seed:      seed,
 		Operation: operation,
-		Error:     make(map[string][]string),
+		Error:     make(map[string][]FailedDocument),
 		lock:      sync.Mutex{},
 	}
 }
 
 // IncrementFailure saves the failure count of doc loading operation.
-func (t *TaskResult) IncrementFailure(docId string, errorStr string) {
+func (t *TaskResult) IncrementFailure(docId string, doc interface{}, err error) {
 	t.lock.Lock()
 	t.Failure++
-	errorIndex := strings.IndexByte(errorStr, '|')
-	err := errorStr
-	if errorIndex != -1 {
-		err = errorStr[:errorIndex]
+	if v, e := sdk.CheckSDKException(err); e == nil {
+		t.Error[v] = append(t.Error[v], FailedDocument{
+			DocId: docId,
+			Doc:   doc,
+		})
+	} else {
+		errorStr := err.Error()
+		errorIndex := strings.IndexByte(errorStr, '|')
+		errStrUpdated := errorStr
+		if errorIndex != -1 {
+			errStrUpdated = errorStr[:errorIndex]
+		}
+		t.Error[errStrUpdated] = append(t.Error[errStrUpdated], FailedDocument{
+			DocId: docId,
+			Doc:   doc,
+		})
 	}
-	t.Error[err] = append(t.Error[err], docId)
 	t.lock.Unlock()
 }
 
