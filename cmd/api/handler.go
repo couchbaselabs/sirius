@@ -50,7 +50,7 @@ func (app *Config) insertTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Print(task, "insert")
-	err, index := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.InsertOperation, task)
+	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.InsertOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -60,7 +60,7 @@ func (app *Config) insertTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	seed, err := task.Config(req, req.Seed, req.SeedEnd, index, false)
+	seed, err := task.Config(req, req.Seed, req.SeedEnd, false)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -87,7 +87,7 @@ func (app *Config) fastInsertTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Print(task, "insert")
-	err, index := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.InsertOperation, task)
+	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.InsertOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -97,7 +97,7 @@ func (app *Config) fastInsertTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	seed, err := task.Config(req, req.Seed, req.SeedEnd, index, false)
+	seed, err := task.Config(req, req.Seed, req.SeedEnd, false)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -117,7 +117,6 @@ func (app *Config) fastInsertTask(w http.ResponseWriter, r *http.Request) {
 }
 
 // deleteTask is used to delete documents in bulk of a bucket.
-
 func (app *Config) deleteTask(w http.ResponseWriter, r *http.Request) {
 	task := &tasks.DeleteTask{}
 	if err := app.readJSON(w, r, task); err != nil {
@@ -125,7 +124,7 @@ func (app *Config) deleteTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Print(task, "delete")
-	err, index := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.DeleteOperation, task)
+	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.DeleteOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -135,7 +134,7 @@ func (app *Config) deleteTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	seed, err := task.Config(req, req.Seed, req.SeedEnd, index, false)
+	seed, err := task.Config(req, req.Seed, req.SeedEnd, false)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -162,7 +161,7 @@ func (app *Config) upsertTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Print(task, "upsert")
-	err, index := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.UpsertOperation, task)
+	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.UpsertOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -172,7 +171,7 @@ func (app *Config) upsertTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	seed, err := task.Config(req, req.Seed, req.SeedEnd, index, false)
+	seed, err := task.Config(req, req.Seed, req.SeedEnd, false)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -199,7 +198,7 @@ func (app *Config) validateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Print(task, "validate")
-	err, index := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.ValidateOperation, task)
+	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.ValidateOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -209,7 +208,7 @@ func (app *Config) validateTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	seed, err := task.Config(req, req.Seed, req.SeedEnd, index, false)
+	seed, err := task.Config(req, req.Seed, req.SeedEnd, false)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -228,6 +227,7 @@ func (app *Config) validateTask(w http.ResponseWriter, r *http.Request) {
 	_ = app.writeJSON(w, http.StatusOK, resPayload)
 }
 
+// clearRequestFromServer clears a test's request from the server.
 func (app *Config) clearRequestFromServer(w http.ResponseWriter, r *http.Request) {
 	task := &tasks.ClearTask{}
 	if err := app.readJSON(w, r, task); err != nil {
@@ -247,7 +247,7 @@ func (app *Config) clearRequestFromServer(w http.ResponseWriter, r *http.Request
 	_ = app.writeJSON(w, http.StatusOK, resPayload)
 }
 
-// validateTask is validating the cluster's current state.
+// readTask is validating the cluster's current state.
 func (app *Config) readTask(w http.ResponseWriter, r *http.Request) {
 	task := &tasks.ReadTask{}
 	if err := app.readJSON(w, r, task); err != nil {
@@ -255,7 +255,7 @@ func (app *Config) readTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Print(task, "validate")
-	err, index := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.ReadOperation, task)
+	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.ReadOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -265,7 +265,7 @@ func (app *Config) readTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	seed, err := task.Config(req, req.Seed, req.SeedEnd, index, false)
+	seed, err := task.Config(req, req.Seed, req.SeedEnd, false)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return

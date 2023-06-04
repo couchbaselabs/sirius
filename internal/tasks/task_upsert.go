@@ -16,38 +16,28 @@ import (
 )
 
 type UpsertTask struct {
-	IdentifierToken  string        `json:"identifierToken"`
-	ConnectionString string        `json:"connectionString"`
-	Username         string        `json:"username"`
-	Password         string        `json:"password"`
-	Bucket           string        `json:"bucket"`
-	Scope            string        `json:"scope,omitempty"`
-	Collection       string        `json:"collection,omitempty"`
-	Start            int64         `json:"start"`
-	End              int64         `json:"end"`
-	FieldsToChange   []string      `json:"fieldsToChange"`
-	Expiry           time.Duration `json:"expiry,omitempty"`
-	PersistTo        uint          `json:"persistTo,omitempty"`
-	ReplicateTo      uint          `json:"replicateTo,omitempty"`
-	Durability       string        `json:"durability,omitempty"`
-	Timeout          int           `json:"timeout,omitempty"`
-	TemplateName     string        `json:"template"`
-	DocSize          int64         `json:"docSize"`
-	KeyPrefix        string        `json:"keyPrefix"`
-	KeySuffix        string        `json:"keySuffix"`
-	ResultSeed       int64
-	DurabilityLevel  gocb.DurabilityLevel
-	Operation        string
-	TaskPending      bool
-	State            *task_state.TaskState
-	result           *task_result.TaskResult
-	connection       *sdk.ConnectionManager
-	gen              *docgenerator.Generator
-	req              *Request
-	index            int
+	IdentifierToken string                  `json:"identifierToken" doc:"true"`
+	ClusterConfig   *sdk.ClusterConfig      `json:"clusterConfig" doc:"true"`
+	Bucket          string                  `json:"bucket" doc:"true"`
+	Scope           string                  `json:"scope,omitempty" doc:"true"`
+	Collection      string                  `json:"collection,omitempty" doc:"true"`
+	InsertOptions   *InsertOptions          `json:"insertOptions,omitempty" doc:"true"`
+	OperationConfig *OperationConfig        `json:"operationConfig,omitempty" doc:"true"`
+	Template        interface{}             `json:"-" doc:"false"`
+	Operation       string                  `json:"operation" doc:"false"`
+	ResultSeed      int64                   `json:"resultSeed" doc:"false"`
+	TaskPending     bool                    `json:"taskPending" doc:"false"`
+	State           *task_state.TaskState   `json:"State" doc:"false"`
+	Result          *task_result.TaskResult `json:"Result" doc:"false"`
+	gen             *docgenerator.Generator `json:"-" doc:"false"`
+	req             *Request                `json:"-" doc:"false"`
 }
 
 func (task *UpsertTask) BuildIdentifier() string {
+	if task.ClusterConfig == nil {
+		task.ClusterConfig = &sdk.ClusterConfig{}
+		log.Println("build Identifier have received nil ClusterConfig")
+	}
 	if task.Bucket == "" {
 		task.Bucket = DefaultBucket
 	}
@@ -57,75 +47,8 @@ func (task *UpsertTask) BuildIdentifier() string {
 	if task.Collection == "" {
 		task.Collection = DefaultCollection
 	}
-	return fmt.Sprintf("%s-%s-%s-%s-%s", task.Username, task.IdentifierToken, task.Bucket, task.Scope, task.Collection)
-}
-
-func (task *UpsertTask) CheckIfPending() bool {
-	return task.TaskPending
-}
-
-func (task *UpsertTask) Config(req *Request, seed int64, seedEnd int64, index int, reRun bool) (int64, error) {
-	task.TaskPending = true
-	task.req = req
-	if task.req == nil {
-		return 0, fmt.Errorf("request.Request struct is nil")
-	}
-	task.index = index
-	if !reRun {
-		if task.IdentifierToken == "" {
-			return 0, fmt.Errorf("identifier token is missing")
-		}
-		if task.ConnectionString == "" {
-			return 0, fmt.Errorf("empty connection string")
-		}
-		if task.Username == "" || task.Password == "" {
-			return 0, fmt.Errorf("cluster's credentials are missing ")
-		}
-		if task.Bucket == "" {
-			task.Bucket = DefaultBucket
-		}
-		if task.Scope == "" {
-			task.Scope = DefaultScope
-		}
-		if task.Collection == "" {
-			task.Collection = DefaultCollection
-		}
-		if task.Start < 0 {
-			task.Start = 0
-			task.End = 0
-		}
-		if task.DocSize == 0 {
-			task.DocSize = docgenerator.DefaultDocSize
-		}
-		if task.Start > task.End {
-			return 0, fmt.Errorf("delete operation start to end range is malformed")
-		}
-		switch task.Durability {
-		case DurabilityLevelMajority:
-			task.DurabilityLevel = gocb.DurabilityLevelMajority
-		case DurabilityLevelMajorityAndPersistToActive:
-			task.DurabilityLevel = gocb.DurabilityLevelMajorityAndPersistOnMaster
-		case DurabilityLevelPersistToMajority:
-			task.DurabilityLevel = gocb.DurabilityLevelPersistToMajority
-		default:
-			task.DurabilityLevel = gocb.DurabilityLevelNone
-		}
-		if task.Timeout == 0 {
-			task.Timeout = 10
-		}
-		task.Operation = UpsertOperation
-		time.Sleep(1 * time.Microsecond)
-		task.ResultSeed = time.Now().UnixNano()
-		task.State = task_state.ConfigTaskState(task.TemplateName, task.KeyPrefix, task.KeySuffix, task.DocSize, seed,
-			seedEnd, task.ResultSeed)
-	} else {
-		log.Println("retrying :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
-		if task.State == nil {
-			return task.ResultSeed, fmt.Errorf("task State is nil")
-		}
-		task.State.SetupStoringKeys()
-	}
-	return task.ResultSeed, nil
+	return fmt.Sprintf("%s-%s-%s-%s-%s", task.ClusterConfig.Username, task.IdentifierToken, task.Bucket, task.Scope,
+		task.Collection)
 }
 
 func (task *UpsertTask) Describe() string {
@@ -134,8 +57,58 @@ The task will update the fields in a documents ranging from [start,end] inclusiv
 We need to share the fields we want to update in a json document using SQL++ syntax.`
 }
 
+func (task *UpsertTask) CheckIfPending() bool {
+	return task.TaskPending
+}
+
+func (task *UpsertTask) Config(req *Request, seed int64, seedEnd int64, reRun bool) (int64, error) {
+	task.TaskPending = true
+	task.req = req
+
+	if task.req == nil {
+		return 0, fmt.Errorf("request.Request struct is nil")
+	}
+
+	task.req.ReconnectionManager()
+	if _, err := task.req.connectionManager.GetCluster(task.ClusterConfig); err != nil {
+		return 0, err
+	}
+
+	if !reRun {
+		task.ResultSeed = time.Now().UnixNano()
+		task.Operation = UpsertOperation
+		task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+
+		if task.IdentifierToken == "" {
+			return 0, fmt.Errorf("identifier token is missing")
+		}
+
+		if err := configInsertOptions(task.InsertOptions); err != nil {
+			task.Result.ErrorOther = err.Error()
+		}
+
+		if err := configureOperationConfig(task.OperationConfig); err != nil {
+			task.Result.ErrorOther = err.Error()
+		}
+
+		task.Template = template.InitialiseTemplate(task.OperationConfig.TemplateName)
+
+		task.State = task_state.ConfigTaskState(task.OperationConfig.TemplateName, task.OperationConfig.KeyPrefix,
+			task.OperationConfig.KeySuffix, task.OperationConfig.DocSize, seed, seedEnd, task.ResultSeed)
+
+	} else {
+		if task.State == nil {
+			return task.ResultSeed, fmt.Errorf("task State is nil")
+		}
+
+		task.State.SetupStoringKeys()
+
+		log.Println("retrying :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
+	}
+	return task.ResultSeed, nil
+}
+
 func (task *UpsertTask) tearUp() error {
-	_ = task.connection.Close()
 	task.State.StopStoringState()
 	task.TaskPending = false
 	return task.req.SaveRequestIntoFile()
@@ -143,35 +116,46 @@ func (task *UpsertTask) tearUp() error {
 
 func (task *UpsertTask) Do() error {
 
-	task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
-
-	task.connection = sdk.ConfigConnectionManager(task.ConnectionString, task.Username, task.Password,
-		task.Bucket, task.Scope, task.Collection)
-
-	if err := task.connection.Connect(); err != nil {
-		task.result.ErrorOther = err.Error()
-		if err := task.result.SaveResultIntoFile(); err != nil {
-			log.Println("not able to save result into ", task.ResultSeed)
+	if task.Result != nil && task.Result.ErrorOther != "" {
+		log.Println(task.Result.ErrorOther)
+		if err := task.Result.SaveResultIntoFile(); err != nil {
+			log.Println("not able to save Result into ", task.ResultSeed)
+			return err
 		}
-		task.State.AddRangeToErrSet(task.Start, task.End)
+		return task.tearUp()
+	} else {
+		task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+	}
+
+	collection, err1 := task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
+		task.Collection)
+
+	if err1 != nil {
+		task.Result.ErrorOther = err1.Error()
+		if err := task.Result.SaveResultIntoFile(); err != nil {
+			log.Println("not able to save Result into ", task.ResultSeed)
+			return err
+		}
+		task.State.AddRangeToErrSet(task.OperationConfig.Start, task.OperationConfig.End)
 		return task.tearUp()
 	}
 
-	task.gen = docgenerator.ConfigGenerator("", task.State.KeyPrefix, task.State.KeySuffix,
-		task.State.SeedStart, task.State.SeedEnd, template.InitialiseTemplate(task.State.TemplateName))
+	task.gen = docgenerator.ConfigGenerator(task.OperationConfig.DocType, task.OperationConfig.KeyPrefix,
+		task.OperationConfig.KeySuffix, task.State.SeedStart, task.State.SeedEnd,
+		template.InitialiseTemplate(task.OperationConfig.TemplateName))
 
-	upsertDocuments(task)
+	upsertDocuments(task, collection)
 
-	task.result.Success = task.End - task.Start - task.result.Failure
+	task.Result.Success = task.OperationConfig.End - task.OperationConfig.Start - task.Result.Failure
 
-	if err := task.result.SaveResultIntoFile(); err != nil {
-		log.Println("not able to save result into ", task.ResultSeed)
+	if err := task.Result.SaveResultIntoFile(); err != nil {
+		log.Println("not able to save Result into ", task.ResultSeed)
 	}
 	task.State.ClearCompletedKeyStates()
 	return task.tearUp()
 }
 
-func upsertDocuments(task *UpsertTask) {
+func upsertDocuments(task *UpsertTask, collection *gocb.Collection) {
 	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
 	dataChannel := make(chan int64, MaxConcurrentRoutines)
 	maxKey := int64(-1)
@@ -188,7 +172,7 @@ func upsertDocuments(task *UpsertTask) {
 	}
 
 	group := errgroup.Group{}
-	for i := task.Start; i < task.End; i++ {
+	for i := task.OperationConfig.Start; i < task.OperationConfig.End; i++ {
 		routineLimiter <- struct{}{}
 		dataChannel <- i
 
@@ -214,20 +198,20 @@ func upsertDocuments(task *UpsertTask) {
 			}
 			originalDoc, err = task.req.retracePreviousMutations(offset, originalDoc, *task.gen, &fake, task.ResultSeed)
 			if err != nil {
-				task.result.IncrementFailure(docId, originalDoc, err)
+				task.Result.IncrementFailure(docId, originalDoc, err)
 				<-routineLimiter
 				return err
 			}
-			docUpdated, err := task.gen.Template.UpdateDocument(task.FieldsToChange, originalDoc, &fake)
-			_, err = task.connection.Collection.Upsert(docId, docUpdated, &gocb.UpsertOptions{
-				Expiry:          task.Expiry,
-				PersistTo:       task.PersistTo,
-				ReplicateTo:     task.ReplicateTo,
-				DurabilityLevel: task.DurabilityLevel,
-				Timeout:         time.Duration(task.Timeout) * time.Second,
+			docUpdated, err := task.gen.Template.UpdateDocument(task.OperationConfig.FieldsToChange, originalDoc, &fake)
+			_, err = collection.Upsert(docId, docUpdated, &gocb.UpsertOptions{
+				DurabilityLevel: getDurability(task.InsertOptions.Durability),
+				PersistTo:       task.InsertOptions.PersistTo,
+				ReplicateTo:     task.InsertOptions.ReplicateTo,
+				Timeout:         time.Duration(task.InsertOptions.Timeout) * time.Second,
+				Expiry:          time.Duration(task.InsertOptions.Expiry) * time.Second,
 			})
 			if err != nil {
-				task.result.IncrementFailure(docId, docUpdated, err)
+				task.Result.IncrementFailure(docId, docUpdated, err)
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 				<-routineLimiter
 				return err

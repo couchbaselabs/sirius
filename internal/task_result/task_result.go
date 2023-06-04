@@ -21,7 +21,7 @@ type FailedDocument struct {
 }
 
 type TaskResult struct {
-	Seed            int64                       `json:"seed"`
+	ResultSeed      int64                       `json:"resultSeed"`
 	Operation       string                      `json:"operation"`
 	ErrorOther      string                      `json:"other-errors,omitempty"`
 	Success         int64                       `json:"success"`
@@ -34,10 +34,10 @@ type TaskResult struct {
 // ConfigTaskResult returns a new instance of TaskResult
 func ConfigTaskResult(operation string, seed int64) *TaskResult {
 	return &TaskResult{
-		Seed:      seed,
-		Operation: operation,
-		Error:     make(map[string][]FailedDocument),
-		lock:      sync.Mutex{},
+		ResultSeed: seed,
+		Operation:  operation,
+		Error:      make(map[string][]FailedDocument),
+		lock:       sync.Mutex{},
 	}
 }
 
@@ -78,7 +78,7 @@ func (t *TaskResult) SaveResultIntoFile() error {
 	if err != nil {
 		return err
 	}
-	fileName := filepath.Join(cwd, ResultPath, fmt.Sprintf("%d", t.Seed))
+	fileName := filepath.Join(cwd, ResultPath, fmt.Sprintf("%d", t.ResultSeed))
 	content, err := json.MarshalIndent(t, "", "\t")
 	if err != nil {
 		return err

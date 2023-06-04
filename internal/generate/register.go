@@ -1,6 +1,9 @@
 package generate
 
-import "github.com/couchbaselabs/sirius/internal/tasks"
+import (
+	"github.com/couchbaselabs/sirius/internal/sdk"
+	"github.com/couchbaselabs/sirius/internal/tasks"
+)
 
 type TaskRegister struct {
 	httpMethod string
@@ -21,4 +24,16 @@ func (r *Register) RegisteredTasks() map[string]TaskRegister {
 		"/clear_data":  {"POST", &tasks.ClearTask{}},
 		"/read":        {"POST", &tasks.ReadTask{}},
 	}
+}
+
+func (r *Register) HelperStruct() map[string]any {
+	return map[string]any{
+		"clusterConfig":     &sdk.ClusterConfig{},
+		"compressionConfig": &sdk.CompressionConfig{},
+		"timeoutsConfig":    &sdk.TimeoutsConfig{},
+		"OperationConfig":   &tasks.OperationConfig{},
+		"insertOptions":     &tasks.InsertOptions{},
+		"removeOptions":     &tasks.RemoveOptions{},
+	}
+
 }

@@ -26,7 +26,7 @@ the test was executed.
 | `IdentifierToken` | `string` | `json:identifierToken`  |
 | `Username` | `string` | `json:username`  |
 | `Password` | `string` | `json:password`  |
-| `Bucket` | `string` | `json:bucket`  |
+| `Bucket` | `string` | `json:bucket,omitempty`  |
 | `Scope` | `string` | `json:scope,omitempty`  |
 | `Collection` | `string` | `json:collection,omitempty`  |
 
@@ -41,19 +41,12 @@ The task will delete documents from [start,end] inclusive.
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
 | `IdentifierToken` | `string` | `json:identifierToken`  |
-| `ConnectionString` | `string` | `json:connectionString`  |
-| `Username` | `string` | `json:username`  |
-| `Password` | `string` | `json:password`  |
-| `Host` | `string` | `json:host`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
 | `Bucket` | `string` | `json:bucket`  |
 | `Scope` | `string` | `json:scope,omitempty`  |
 | `Collection` | `string` | `json:collection,omitempty`  |
-| `Start` | `int64` | `json:start`  |
-| `End` | `int64` | `json:end`  |
-| `PersistTo` | `uint` | `json:persistTo,omitempty`  |
-| `ReplicateTo` | `uint` | `json:replicateTo,omitempty`  |
-| `Durability` | `string` | `json:durability,omitempty`  |
-| `Timeout` | `int` | `json:timeout,omitempty`  |
+| `RemoveOptions` | `ptr` | `json:removeOptions,omitempty`  |
+| `OperationConfig` | `ptr` | `json:operationConfig,omitempty`  |
 
 ---
 #### /fast-insert
@@ -67,27 +60,12 @@ During fast operations, An incomplete task will be retied as whole if server die
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
 | `IdentifierToken` | `string` | `json:identifierToken`  |
-| `ConnectionString` | `string` | `json:connectionString`  |
-| `Username` | `string` | `json:username`  |
-| `Password` | `string` | `json:password`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
 | `Bucket` | `string` | `json:bucket`  |
 | `Scope` | `string` | `json:scope,omitempty`  |
 | `Collection` | `string` | `json:collection,omitempty`  |
-| `Count` | `int64` | `json:count,omitempty`  |
-| `DocSize` | `int64` | `json:docSize`  |
-| `DocType` | `string` | `json:docType,omitempty`  |
-| `KeySize` | `int` | `json:keySize,omitempty`  |
-| `KeyPrefix` | `string` | `json:keyPrefix`  |
-| `KeySuffix` | `string` | `json:keySuffix`  |
-| `RandomDocSize` | `bool` | `json:randomDocSize,omitempty`  |
-| `RandomKeySize` | `bool` | `json:randomKeySize,omitempty`  |
-| `Expiry` | `int64` | `json:expiry,omitempty`  |
-| `PersistTo` | `uint` | `json:persistTo,omitempty`  |
-| `ReplicateTo` | `uint` | `json:replicateTo,omitempty`  |
-| `Durability` | `string` | `json:durability,omitempty`  |
-| `Timeout` | `int` | `json:timeout,omitempty`  |
-| `ReadYourOwnWrite` | `bool` | `json:readYourOwnWrite,omitempty`  |
-| `TemplateName` | `string` | `json:template`  |
+| `InsertOptions` | `ptr` | `json:insertOptions,omitempty`  |
+| `OperationConfig` | `ptr` | `json:operationConfig,omitempty`  |
 
 ---
 #### /insert
@@ -104,27 +82,12 @@ The durability while inserting a document can be set using following values in t
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
 | `IdentifierToken` | `string` | `json:identifierToken`  |
-| `ConnectionString` | `string` | `json:connectionString`  |
-| `Username` | `string` | `json:username`  |
-| `Password` | `string` | `json:password`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
 | `Bucket` | `string` | `json:bucket`  |
 | `Scope` | `string` | `json:scope,omitempty`  |
 | `Collection` | `string` | `json:collection,omitempty`  |
-| `Count` | `int64` | `json:count,omitempty`  |
-| `DocSize` | `int64` | `json:docSize`  |
-| `DocType` | `string` | `json:docType,omitempty`  |
-| `KeySize` | `int` | `json:keySize,omitempty`  |
-| `KeyPrefix` | `string` | `json:keyPrefix`  |
-| `KeySuffix` | `string` | `json:keySuffix`  |
-| `RandomDocSize` | `bool` | `json:randomDocSize,omitempty`  |
-| `RandomKeySize` | `bool` | `json:randomKeySize,omitempty`  |
-| `Expiry` | `int64` | `json:expiry,omitempty`  |
-| `PersistTo` | `uint` | `json:persistTo,omitempty`  |
-| `ReplicateTo` | `uint` | `json:replicateTo,omitempty`  |
-| `Durability` | `string` | `json:durability,omitempty`  |
-| `Timeout` | `int` | `json:timeout,omitempty`  |
-| `ReadYourOwnWrite` | `bool` | `json:readYourOwnWrite,omitempty`  |
-| `TemplateName` | `string` | `json:template`  |
+| `InsertOptions` | `ptr` | `json:insertOptions,omitempty`  |
+| `OperationConfig` | `ptr` | `json:operationConfig,omitempty`  |
 
 ---
 #### /read
@@ -136,19 +99,11 @@ Description : Read Task get documents from bucket and validate them with the exp
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
 | `IdentifierToken` | `string` | `json:identifierToken`  |
-| `ConnectionString` | `string` | `json:connectionString`  |
-| `Username` | `string` | `json:username`  |
-| `Password` | `string` | `json:password`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
 | `Bucket` | `string` | `json:bucket`  |
 | `Scope` | `string` | `json:scope,omitempty`  |
 | `Collection` | `string` | `json:collection,omitempty`  |
-| `Start` | `int64` | `json:start`  |
-| `End` | `int64` | `json:end`  |
-| `Timeout` | `int` | `json:timeout,omitempty`  |
-| `TemplateName` | `string` | `json:template`  |
-| `DocSize` | `int64` | `json:docSize`  |
-| `KeyPrefix` | `string` | `json:keyPrefix`  |
-| `KeySuffix` | `string` | `json:keySuffix`  |
+| `OperationConfig` | `ptr` | `json:operationConfig,omitempty`  |
 
 ---
 #### /result
@@ -175,48 +130,102 @@ We need to share the fields we want to update in a json document using SQL++ syn
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
 | `IdentifierToken` | `string` | `json:identifierToken`  |
-| `ConnectionString` | `string` | `json:connectionString`  |
-| `Username` | `string` | `json:username`  |
-| `Password` | `string` | `json:password`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
 | `Bucket` | `string` | `json:bucket`  |
 | `Scope` | `string` | `json:scope,omitempty`  |
 | `Collection` | `string` | `json:collection,omitempty`  |
-| `Start` | `int64` | `json:start`  |
-| `End` | `int64` | `json:end`  |
-| `FieldsToChange` | `slice` | `json:fieldsToChange`  |
-| `Expiry` | `int64` | `json:expiry,omitempty`  |
-| `PersistTo` | `uint` | `json:persistTo,omitempty`  |
-| `ReplicateTo` | `uint` | `json:replicateTo,omitempty`  |
-| `Durability` | `string` | `json:durability,omitempty`  |
-| `Timeout` | `int` | `json:timeout,omitempty`  |
-| `TemplateName` | `string` | `json:template`  |
-| `DocSize` | `int64` | `json:docSize`  |
-| `KeyPrefix` | `string` | `json:keyPrefix`  |
-| `KeySuffix` | `string` | `json:keySuffix`  |
+| `InsertOptions` | `ptr` | `json:insertOptions,omitempty`  |
+| `OperationConfig` | `ptr` | `json:operationConfig,omitempty`  |
 
 ---
 #### /validate
 
  REST : POST
 
-Description : validate every document in the cluster's bucket
+Description : Validates every document in the cluster's bucket
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
 | `IdentifierToken` | `string` | `json:identifierToken`  |
-| `ConnectionString` | `string` | `json:connectionString`  |
-| `Username` | `string` | `json:username`  |
-| `Password` | `string` | `json:password`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
 | `Bucket` | `string` | `json:bucket`  |
 | `Scope` | `string` | `json:scope,omitempty`  |
 | `Collection` | `string` | `json:collection,omitempty`  |
-| `TemplateName` | `string` | `json:template`  |
-| `DocSize` | `int64` | `json:docSize`  |
-| `KeyPrefix` | `string` | `json:keyPrefix`  |
-| `KeySuffix` | `string` | `json:keySuffix`  |
+| `OperationConfig` | `ptr` | `json:operationConfig,omitempty`  |
 
 ---
-**API's Response Description**.
+**Description of JSON tags used in routes**.
+
+ * [removeOptions](#removeoptions)
+ * [clusterConfig](#clusterconfig)
+ * [compressionConfig](#compressionconfig)
+ * [timeoutsConfig](#timeoutsconfig)
+ * [OperationConfig](#operationconfig)
+ * [insertOptions](#insertoptions)
+
+---
+#### timeoutsConfig
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `ConnectTimeout` | `int64` | `json:connectTimeout,omitempty`  |
+| `KVTimeout` | `int64` | `json:KVTimeout,omitempty`  |
+| `KVDurableTimeout` | `int64` | `json:KVDurableTimeout,omitempty`  |
+#### OperationConfig
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `Count` | `int64` | `json:count,omitempty`  |
+| `DocSize` | `int64` | `json:docSize`  |
+| `DocType` | `string` | `json:docType,omitempty`  |
+| `KeySize` | `int` | `json:keySize,omitempty`  |
+| `KeyPrefix` | `string` | `json:keyPrefix`  |
+| `KeySuffix` | `string` | `json:keySuffix`  |
+| `RandomDocSize` | `bool` | `json:randomDocSize,omitempty`  |
+| `RandomKeySize` | `bool` | `json:randomKeySize,omitempty`  |
+| `ReadYourOwnWrite` | `bool` | `json:readYourOwnWrite,omitempty`  |
+| `Durability` | `string` | `json:durability,omitempty`  |
+| `TemplateName` | `string` | `json:template`  |
+| `Start` | `int64` | `json:start`  |
+| `End` | `int64` | `json:end`  |
+| `FieldsToChange` | `slice` | `json:fieldsToChange`  |
+#### insertOptions
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `Expiry` | `int64` | `json:expiry,omitempty`  |
+| `PersistTo` | `uint` | `json:persistTo,omitempty`  |
+| `ReplicateTo` | `uint` | `json:replicateTo,omitempty`  |
+| `Durability` | `string` | `json:durability,omitempty`  |
+| `Timeout` | `int` | `json:timeout,omitempty`  |
+#### removeOptions
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `Cas` | `uint64` | `json:cas,omitempty`  |
+| `PersistTo` | `uint` | `json:persistTo,omitempty`  |
+| `ReplicateTo` | `uint` | `json:replicateTo,omitempty`  |
+| `Durability` | `string` | `json:durability,omitempty`  |
+| `Timeout` | `int` | `json:timeout,omitempty`  |
+#### clusterConfig
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `Username` | `string` | `json:username`  |
+| `Password` | `string` | `json:password`  |
+| `ConnectionString` | `string` | `json:connectionString`  |
+| `CompressionConfig` | `struct` | `json:compressionConfig,omitempty`  |
+| `TimeoutsConfig` | `struct` | `json:timeoutsConfig,omitempty`  |
+#### compressionConfig
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `Disabled` | `bool` | `json:disabled,omitempty`  |
+| `MinSize` | `uint32` | `json:minSize,omitempty`  |
+| `MinRatio` | `float64` | `json:minRatio,omitempty`  |
+
+---
+**APIs Response Description**.
 
 1. Response after initiating a TASK.
 
@@ -229,7 +238,7 @@ Description : validate every document in the cluster's bucket
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
-| `Seed` | `int64` | `json:seed`  |
+| `ResultSeed` | `int64` | `json:resultSeed`  |
 | `Operation` | `string` | `json:operation`  |
 | `ErrorOther` | `string` | `json:other-errors,omitempty`  |
 | `Success` | `int64` | `json:success`  |

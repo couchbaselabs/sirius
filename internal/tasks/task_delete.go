@@ -15,33 +15,33 @@ import (
 )
 
 type DeleteTask struct {
-	IdentifierToken  string `json:"identifierToken"`
-	ConnectionString string `json:"connectionString"`
-	Username         string `json:"username"`
-	Password         string `json:"password"`
-	Host             string `json:"host"`
-	Bucket           string `json:"bucket"`
-	Scope            string `json:"scope,omitempty"`
-	Collection       string `json:"collection,omitempty"`
-	Start            int64  `json:"start"`
-	End              int64  `json:"end"`
-	PersistTo        uint   `json:"persistTo,omitempty"`
-	ReplicateTo      uint   `json:"replicateTo,omitempty"`
-	Durability       string `json:"durability,omitempty"`
-	Timeout          int    `json:"timeout,omitempty"`
-	ResultSeed       int64
-	Operation        string
-	DurabilityLevel  gocb.DurabilityLevel
-	TaskPending      bool
-	State            *task_state.TaskState
-	result           *task_result.TaskResult
-	connection       *sdk.ConnectionManager
-	gen              *docgenerator.Generator
-	req              *Request
-	index            int
+	IdentifierToken string                  `json:"identifierToken" doc:"true"`
+	ClusterConfig   *sdk.ClusterConfig      `json:"clusterConfig" doc:"true"`
+	Bucket          string                  `json:"bucket" doc:"true"`
+	Scope           string                  `json:"scope,omitempty" doc:"true"`
+	Collection      string                  `json:"collection,omitempty" doc:"true"`
+	RemoveOptions   *RemoveOptions          `json:"removeOptions,omitempty" doc:"true"`
+	OperationConfig *OperationConfig        `json:"operationConfig,omitempty" doc:"true"`
+	Template        interface{}             `json:"-" doc:"false"`
+	Operation       string                  `json:"operation" doc:"false"`
+	ResultSeed      int64                   `json:"resultSeed" doc:"false"`
+	TaskPending     bool                    `json:"taskPending" doc:"false"`
+	State           *task_state.TaskState   `json:"State" doc:"false"`
+	Result          *task_result.TaskResult `json:"Result" doc:"false"`
+	gen             *docgenerator.Generator `json:"-" doc:"false"`
+	req             *Request                `json:"-" doc:"false"`
+}
+
+func (task *DeleteTask) Describe() string {
+	return `Delete task deletes documents in bulk into a bucket.
+The task will delete documents from [start,end] inclusive.`
 }
 
 func (task *DeleteTask) BuildIdentifier() string {
+	if task.ClusterConfig == nil {
+		task.ClusterConfig = &sdk.ClusterConfig{}
+		log.Println("build Identifier have received nil ClusterConfig")
+	}
 	if task.Bucket == "" {
 		task.Bucket = DefaultBucket
 	}
@@ -51,7 +51,8 @@ func (task *DeleteTask) BuildIdentifier() string {
 	if task.Collection == "" {
 		task.Collection = DefaultCollection
 	}
-	return fmt.Sprintf("%s-%s-%s-%s-%s", task.Username, task.IdentifierToken, task.Bucket, task.Scope, task.Collection)
+	return fmt.Sprintf("%s-%s-%s-%s-%s", task.ClusterConfig.Username, task.IdentifierToken, task.Bucket, task.Scope,
+		task.Collection)
 }
 
 func (task *DeleteTask) CheckIfPending() bool {
@@ -59,112 +60,100 @@ func (task *DeleteTask) CheckIfPending() bool {
 }
 
 // Config checks the validity of DeleteTask
-func (task *DeleteTask) Config(req *Request, seed int64, seedEnd int64, index int, reRun bool) (int64, error) {
+func (task *DeleteTask) Config(req *Request, seed int64, seedEnd int64, reRun bool) (int64, error) {
 	task.TaskPending = true
 	task.req = req
+
 	if task.req == nil {
 		return 0, fmt.Errorf("request.Request struct is nil")
 	}
-	task.index = index
+
+	task.req.ReconnectionManager()
+	if _, err := task.req.connectionManager.GetCluster(task.ClusterConfig); err != nil {
+		return 0, err
+	}
+
 	if !reRun {
-		if task.IdentifierToken == "" {
-			return 0, fmt.Errorf("identifier token is missing")
-		}
-		if task.ConnectionString == "" {
-			return 0, fmt.Errorf("empty connection string")
-		}
-		if task.Username == "" || task.Password == "" {
-			return 0, fmt.Errorf("cluster's credentials are missing ")
-		}
-		if task.Bucket == "" {
-			task.Bucket = DefaultBucket
-		}
-		if task.Scope == "" {
-			task.Scope = DefaultScope
-		}
-		if task.Collection == "" {
-			task.Collection = DefaultCollection
-		}
-		if task.Start < 0 {
-			task.Start = 0
-			task.End = 0
-		}
-		if task.Start > task.End {
-			return 0, fmt.Errorf("delete operation start to end range is malformed")
-		}
-		task.Operation = DeleteOperation
-		if task.Timeout == 0 {
-			task.Timeout = 10
-		}
-		switch task.Durability {
-		case DurabilityLevelMajority:
-			task.DurabilityLevel = gocb.DurabilityLevelMajority
-		case DurabilityLevelMajorityAndPersistToActive:
-			task.DurabilityLevel = gocb.DurabilityLevelMajorityAndPersistOnMaster
-		case DurabilityLevelPersistToMajority:
-			task.DurabilityLevel = gocb.DurabilityLevelPersistToMajority
-		default:
-			task.DurabilityLevel = gocb.DurabilityLevelNone
-		}
-		time.Sleep(1 * time.Microsecond)
 		task.ResultSeed = time.Now().UnixNano()
-		task.State = task_state.ConfigTaskState("", "", "", 0, seed,
-			seedEnd, task.ResultSeed)
+		task.Operation = DeleteOperation
+		task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+
+		if task.IdentifierToken == "" {
+			task.Result.ErrorOther = "identifier token is missing"
+		}
+
+		if err := configRemoveOptions(task.RemoveOptions); err != nil {
+			task.Result.ErrorOther = err.Error()
+		}
+
+		if err := configureOperationConfig(task.OperationConfig); err != nil {
+			task.Result.ErrorOther = err.Error()
+		}
+
+		task.Template = template.InitialiseTemplate(task.OperationConfig.TemplateName)
+
+		task.State = task_state.ConfigTaskState(task.OperationConfig.TemplateName, task.OperationConfig.KeyPrefix,
+			task.OperationConfig.KeySuffix, task.OperationConfig.DocSize, seed, seedEnd, task.ResultSeed)
+
 	} else {
-		log.Println("retrying :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 		if task.State == nil {
 			return task.ResultSeed, fmt.Errorf("task State is nil")
 		}
+
 		task.State.SetupStoringKeys()
+
+		log.Println("retrying :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 	}
 	return task.ResultSeed, nil
 }
 
-func (task *DeleteTask) Describe() string {
-	return `Delete task deletes documents in bulk into a bucket.
-The task will delete documents from [start,end] inclusive.`
-}
-
 func (task *DeleteTask) tearUp() error {
-	_ = task.connection.Close()
 	task.State.StopStoringState()
 	task.TaskPending = false
 	return task.req.SaveRequestIntoFile()
 }
+
 func (task *DeleteTask) Do() error {
-	task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
-	task.connection = sdk.ConfigConnectionManager(task.ConnectionString, task.Username, task.Password,
-		task.Bucket, task.Scope, task.Collection)
-
-	if err := task.connection.Connect(); err != nil {
-		task.result.ErrorOther = err.Error()
-		if err := task.result.SaveResultIntoFile(); err != nil {
-			log.Println("not able to save result into ", task.ResultSeed)
+	if task.Result != nil && task.Result.ErrorOther != "" {
+		log.Println(task.Result.ErrorOther)
+		if err := task.Result.SaveResultIntoFile(); err != nil {
+			log.Println("not able to save Result into ", task.ResultSeed)
+			return err
 		}
-		task.State.AddRangeToErrSet(task.Start, task.End)
+		return task.tearUp()
+	} else {
+		task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+	}
+
+	collection, err1 := task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
+		task.Collection)
+
+	if err1 != nil {
+		task.Result.ErrorOther = err1.Error()
+		if err := task.Result.SaveResultIntoFile(); err != nil {
+			log.Println("not able to save Result into ", task.ResultSeed)
+			return err
+		}
 		return task.tearUp()
 	}
 
-	// Prepare generator
 	task.gen = docgenerator.ConfigGenerator("", task.State.KeyPrefix, task.State.KeySuffix,
 		task.State.SeedStart, task.State.SeedEnd, template.InitialiseTemplate(task.State.TemplateName))
 
-	deleteDocuments(task)
+	deleteDocuments(task, collection)
+	task.Result.Success = task.OperationConfig.End - task.OperationConfig.Start - task.Result.Failure
 
-	// calculated result success here to prevent late update in failure due to locking.
-	task.result.Success = task.End - task.Start - task.result.Failure
-
-	// save the result into a file
-	if err := task.result.SaveResultIntoFile(); err != nil {
-		log.Println("not able to save result into ", task.ResultSeed)
+	if err := task.Result.SaveResultIntoFile(); err != nil {
+		log.Println("not able to save Result into ", task.ResultSeed)
 	}
+
 	task.State.ClearErrorKeyStates()
 	return task.tearUp()
 }
 
 // deleteDocuments delete the document stored on a host from start to end.
-func deleteDocuments(task *DeleteTask) {
+func deleteDocuments(task *DeleteTask, collection *gocb.Collection) {
 	skip := make(map[int64]struct{})
 	for _, offset := range task.State.KeyStates.Completed {
 		skip[offset] = struct{}{}
@@ -180,7 +169,7 @@ func deleteDocuments(task *DeleteTask) {
 	dataChannel := make(chan int64, MaxConcurrentRoutines)
 	group := errgroup.Group{}
 
-	for i := task.Start; i < task.End; i++ {
+	for i := task.OperationConfig.Start; i < task.OperationConfig.End; i++ {
 		routineLimiter <- struct{}{}
 		dataChannel <- i
 
@@ -197,18 +186,19 @@ func deleteDocuments(task *DeleteTask) {
 				return fmt.Errorf("alreday deleted docID on " + docId)
 			}
 			if key > task.req.SeedEnd || key < task.req.Seed {
-				task.result.IncrementFailure(docId, nil, errors.New("docId out of bound"))
+				task.Result.IncrementFailure(docId, nil, errors.New("docId out of bound"))
 				<-routineLimiter
 				return fmt.Errorf("docId out of bound")
 			}
-			_, err := task.connection.Collection.Remove(docId, &gocb.RemoveOptions{
-				PersistTo:       task.PersistTo,
-				ReplicateTo:     task.ReplicateTo,
-				DurabilityLevel: task.DurabilityLevel,
-				Timeout:         time.Duration(task.Timeout) * time.Second,
+			_, err := collection.Remove(docId, &gocb.RemoveOptions{
+				Cas:             gocb.Cas(task.RemoveOptions.Cas),
+				PersistTo:       task.RemoveOptions.PersistTo,
+				ReplicateTo:     task.RemoveOptions.ReplicateTo,
+				DurabilityLevel: getDurability(task.RemoveOptions.Durability),
+				Timeout:         time.Duration(task.RemoveOptions.Timeout) * time.Second,
 			})
 			if err != nil {
-				task.result.IncrementFailure(docId, nil, err)
+				task.Result.IncrementFailure(docId, nil, err)
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 				<-routineLimiter
 				return err

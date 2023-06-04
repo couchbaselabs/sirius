@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/gob"
 	"encoding/json"
+	"github.com/couchbaselabs/sirius/internal/generate"
 	"github.com/couchbaselabs/sirius/internal/server_requests"
 	"github.com/couchbaselabs/sirius/internal/task_result"
 	"github.com/couchbaselabs/sirius/internal/task_state"
@@ -76,5 +77,10 @@ func registerInterfaces() {
 	gob.Register(&task_result.TaskResult{})
 	gob.Register(&task_state.TaskState{})
 	gob.Register(&tasks.ReadTask{})
+
+	r := generate.Register{}
+	for _, i := range r.HelperStruct() {
+		gob.Register(i)
+	}
 
 }

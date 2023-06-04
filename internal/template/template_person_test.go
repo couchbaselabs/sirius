@@ -35,7 +35,7 @@ func TestGeneratePerson(t *testing.T) {
 	}
 
 	// test to update the document1 and comparing it with original document
-	document3, err := template.UpdateDocument([]string{"firstName", "lastName", "age"}, document1, &fake1)
+	document3, err := template.UpdateDocument([]string{}, document1, &fake1)
 	if err != nil {
 		log.Println(err)
 		t.Fail()
