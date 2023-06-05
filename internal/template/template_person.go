@@ -59,31 +59,32 @@ func (p *Person) UpdateDocument(fieldsToChange []string, lastUpdatedDocument int
 	for _, s := range fieldsToChange {
 		checkFields[s] = struct{}{}
 	}
-	if _, ok := checkFields["firstName"]; ok {
+
+	if _, ok := checkFields["firstName"]; ok || (len(checkFields) == 0) {
 		person.FirstName = fake.Person().FirstName()
 	}
-	if _, ok := checkFields["lastName"]; ok {
+	if _, ok := checkFields["lastName"]; ok || (len(checkFields) == 0) {
 		person.Lastname = fake.Person().LastName()
 	}
-	if _, ok := checkFields["age"]; ok {
+	if _, ok := checkFields["age"]; ok || (len(checkFields) == 0) {
 		person.Age = fake.IntBetween(0, 100)
 	}
-	if _, ok := checkFields["email"]; ok {
+	if _, ok := checkFields["email"]; ok || (len(checkFields) == 0) {
 		person.Email = fake.Internet().CompanyEmail()
 	}
-	if _, ok := checkFields["address.State"]; ok {
+	if _, ok := checkFields["address.state"]; ok || (len(checkFields) == 0) {
 		person.Address.State = fake.Address().State()
 	}
-	if _, ok := checkFields["address.city"]; ok {
+	if _, ok := checkFields["address.city"]; ok || (len(checkFields) == 0) {
 		person.Address.City = fake.Address().City()
 	}
-	if _, ok := checkFields["address.street"]; ok {
+	if _, ok := checkFields["address.street"]; ok || (len(checkFields) == 0) {
 		person.Address.Street = fake.Address().StreetName()
 	}
-	if _, ok := checkFields["address.zipcode"]; ok {
+	if _, ok := checkFields["address.zipcode"]; ok || (len(checkFields) == 0) {
 		person.Address.Zipcode = fake.Address().PostCode()
 	}
-	if _, ok := checkFields["address.country"]; ok {
+	if _, ok := checkFields["address.country"]; ok || (len(checkFields) == 0) {
 		person.Address.Country = fake.Address().Country()
 	}
 	return person, nil

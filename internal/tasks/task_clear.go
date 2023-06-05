@@ -4,14 +4,14 @@ import (
 	"fmt"
 )
 
-// ClearTask represents a request structure for retrieving result of the task.
+// ClearTask represents a request structure for clearing everything.
 type ClearTask struct {
-	IdentifierToken string `json:"identifierToken"`
-	Username        string `json:"username"`
-	Password        string `json:"password"`
-	Bucket          string `json:"bucket"`
-	Scope           string `json:"scope,omitempty"`
-	Collection      string `json:"collection,omitempty"`
+	IdentifierToken string `json:"identifierToken" doc:"true"`
+	Username        string `json:"username" doc:"true"`
+	Password        string `json:"password" doc:"true"`
+	Bucket          string `json:"bucket,omitempty" doc:"true"`
+	Scope           string `json:"scope,omitempty" doc:"true"`
+	Collection      string `json:"collection,omitempty" doc:"true"`
 	TaskPending     bool
 }
 
@@ -29,7 +29,7 @@ func (task *ClearTask) Do() error {
 	return nil
 }
 
-func (task *ClearTask) Config(req *Request, seed int64, seedEnd int64, index int, rerun bool) (int64, error) {
+func (task *ClearTask) Config(req *Request, seed int64, seedEnd int64, rerun bool) (int64, error) {
 	task.TaskPending = false
 	return 0, nil
 }

@@ -32,10 +32,12 @@ func NewServerRequests() *ServerRequests {
 			r, err := tasks.ReadRequestFromFile(identifier)
 			if r != nil && err == nil {
 				_ = sr.add(identifier, r, false)
-				for index, t := range r.Tasks {
+				for _, t := range r.Tasks {
 					if t.Task.CheckIfPending() {
-						if _, err := t.Task.Config(r, r.Seed, r.SeedEnd, index, true); err == nil {
+						if _, err := t.Task.Config(r, r.Seed, r.SeedEnd, true); err == nil {
 							go t.Task.Do()
+						} else {
+							log.Println(err.Error())
 						}
 					}
 				}
@@ -203,19 +205,24 @@ func (sr *ServerRequests) GetRequestOfIdentifier(identifier string) (*tasks.Requ
 
 func (sr *ServerRequests) ClearIdentifierAndRequest(identifier string) error {
 	if sr.checkIfExists(identifier) {
+		r, _ := sr.RequestLookup.Load(identifier)
+		req, ok := r.(*tasks.Request)
+		if ok && req != nil {
+			req.DisconnectConnectionManager()
+		}
 		sr.remove(identifier, true)
 	}
 	return tasks.RemoveRequestFromFile(identifier)
 }
 
 // AddTask add a tasks.Task to the lookup table with search key as identifier.
-func (sr *ServerRequests) AddTask(identifier string, o string, t tasks.Task) (error, int) {
+func (sr *ServerRequests) AddTask(identifier string, o string, t tasks.Task) error {
 	r, err := sr.GetRequestOfIdentifier(identifier)
 	if r == nil {
-		return fmt.Errorf("unable to create request"), -1
+		return fmt.Errorf("unable to create request")
 	}
 	if err != nil {
-		return err, -1
+		return err
 	}
 	return r.AddTask(o, t)
 }

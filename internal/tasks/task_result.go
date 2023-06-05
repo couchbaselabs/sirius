@@ -2,9 +2,9 @@ package tasks
 
 // TaskResult represents a request structure for retrieving result of the task.
 type TaskResult struct {
-	Seed         string `json:"seed"`
-	DeleteRecord bool   `json:"deleteRecord"`
-	TaskPending  bool
+	Seed         string `json:"seed" doc:"true"`
+	DeleteRecord bool   `json:"deleteRecord" doc:"true"`
+	TaskPending  bool   `json:"-" doc:"false"`
 }
 
 func (r *TaskResult) Describe() string {
@@ -20,7 +20,7 @@ func (r *TaskResult) Do() error {
 	return nil
 }
 
-func (r *TaskResult) Config(req *Request, seed int64, seedEnd int64, index int, rerun bool) (int64, error) {
+func (r *TaskResult) Config(req *Request, seed int64, seedEnd int64, rerun bool) (int64, error) {
 	r.TaskPending = false
 	return 0, nil
 }

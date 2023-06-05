@@ -29,12 +29,6 @@ type KeyStates struct {
 }
 
 type TaskState struct {
-	Operation    string             `json:"operation"`
-	User         string             `json:"user,omitempty"`
-	Host         string             `json:"host,omitempty"`
-	BUCKET       string             `json:"BUCKET,omitempty"`
-	SCOPE        string             `json:"scope,omitempty"`
-	Collection   string             `json:"collection,omitempty"`
 	TemplateName string             `json:"templateName"`
 	DocumentSize int64              `json:"documentSize"`
 	SeedStart    int64              `json:"seedStart"`
@@ -172,7 +166,7 @@ func (t *TaskState) StoreState() {
 
 }
 
-// storeCompleted appends a list of completed offset to Completed Key State
+// storeCompleted appends a list of completed offset to Completed Key state
 func (t *TaskState) storeCompleted(completed []int64) {
 	t.lock.Lock()
 	for _, offset := range completed {
@@ -181,7 +175,7 @@ func (t *TaskState) storeCompleted(completed []int64) {
 	t.lock.Unlock()
 }
 
-// storeError appends a list of error offset to Error Key State
+// storeError appends a list of error offset to Error Key state
 func (t *TaskState) storeError(err []int64) {
 	t.lock.Lock()
 	for _, offset := range err {

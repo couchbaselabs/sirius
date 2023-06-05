@@ -1,10 +1,10 @@
 package tasks
 
 import (
-	"context"
 	"encoding/gob"
 	"fmt"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
+	"github.com/couchbaselabs/sirius/internal/sdk"
 	"github.com/jaswdr/faker"
 	"os"
 	"path/filepath"
@@ -13,43 +13,50 @@ import (
 )
 
 const RequestPath = "./internal/tasks/request_logs"
-const RETRY = 5
 
 type TaskWithIdentifier struct {
-	Operation string `json:"operation"`
-	Task      Task   `json:"task"`
+	Operation string `json:"operation" doc:"true"`
+	Task      Task   `json:"task" doc:"true"`
 }
 
 type Request struct {
-	Identifier     string               `json:"identifier"`
-	Seed           int64                `json:"seed"`
-	SeedEnd        int64                `json:"seedEnd"`
-	Tasks          []TaskWithIdentifier `json:"tasks"`
-	lock           sync.Mutex           `json:"-"`
-	IndexChannel   chan int             `json:"-"`
-	ctx            context.Context      `json:"-"`
-	cancel         context.CancelFunc   `json:"-"`
-	Retry          int                  `json:"retry"`
-	Timeout        int64                `json:"timeout"`
-	IndexCompleted int                  `json:"indexCompleted"`
+	Identifier        string                 `json:"identifier" doc:"true" `
+	Seed              int64                  `json:"seed" doc:"true"`
+	SeedEnd           int64                  `json:"seedEnd" doc:"true"`
+	Tasks             []TaskWithIdentifier   `json:"tasks" doc:"true"`
+	connectionManager *sdk.ConnectionManager `json:"-" doc:"false"`
+	lock              sync.Mutex             `json:"-" doc:"false"`
 }
 
 // NewRequest return  a instance of Request
 func NewRequest(identifier string) *Request {
-	ctx, cancel := context.WithCancel(context.Background())
 	seed := time.Now().UnixNano()
 	return &Request{
-		Identifier:     identifier,
-		Seed:           seed,
-		SeedEnd:        seed,
-		lock:           sync.Mutex{},
-		IndexChannel:   make(chan int, 1),
-		ctx:            ctx,
-		cancel:         cancel,
-		Retry:          RETRY,
-		Timeout:        300,
-		IndexCompleted: -1,
+		Identifier:        identifier,
+		Seed:              seed,
+		SeedEnd:           seed,
+		connectionManager: sdk.ConfigConnectionManager(),
+		lock:              sync.Mutex{},
 	}
+}
+
+// ReconnectionManager setups again sdk.ConnectionManager
+func (r *Request) ReconnectionManager() {
+	defer r.lock.Unlock()
+	r.lock.Lock()
+	if r.connectionManager == nil {
+		r.connectionManager = sdk.ConfigConnectionManager()
+	}
+}
+
+// DisconnectConnectionManager disconnect all the cluster connections.
+func (r *Request) DisconnectConnectionManager() {
+	defer r.lock.Unlock()
+	r.lock.Lock()
+	if r.connectionManager == nil {
+		return
+	}
+	r.connectionManager.DisconnectAll()
 }
 
 // retracePreviousMutations returns a updated document after mutating the original documents.
@@ -63,12 +70,13 @@ func (r *Request) retracePreviousMutations(offset int64, doc interface{}, gen do
 			if !ok {
 				return nil, fmt.Errorf("unable to decode upsert task from backlog")
 			} else {
-				if offset >= (u.Start) && (offset < u.End) && resultSeed != u.ResultSeed {
+				if offset >= (u.OperationConfig.Start) && (offset < u.OperationConfig.End) && resultSeed != u.
+					ResultSeed {
 					errOffset := u.State.ReturnErrOffset()
 					if _, ok := errOffset[offset]; ok {
 						continue
 					} else {
-						doc, _ = gen.Template.UpdateDocument(u.FieldsToChange, doc, fake)
+						doc, _ = gen.Template.UpdateDocument(u.OperationConfig.FieldsToChange, doc, fake)
 					}
 				}
 			}
@@ -124,7 +132,7 @@ func (r *Request) retracePreviousFailedInsertions(resultSeed int64) (map[int64]s
 }
 
 // AddTask will add tasks.Task with operation type.
-func (r *Request) AddTask(o string, t Task) (error, int) {
+func (r *Request) AddTask(o string, t Task) error {
 	defer r.lock.Unlock()
 	r.lock.Lock()
 	r.Tasks = append(r.Tasks, TaskWithIdentifier{
@@ -132,7 +140,7 @@ func (r *Request) AddTask(o string, t Task) (error, int) {
 		Task:      t,
 	})
 	err := r.saveRequestIntoFile()
-	return err, len(r.Tasks) - 1
+	return err
 }
 
 // AddToSeedEnd will update the Request.SeedEnd by  adding count into it.
@@ -160,23 +168,6 @@ func (r *Request) checkAndUpdateSeedEnd(key int64) {
 	if key > r.SeedEnd {
 		r.SeedEnd = key
 	}
-}
-
-// SendOverIndexChannel  :-> Future proof
-func (r *Request) SendOverIndexChannel(index int) error {
-	defer r.lock.Unlock()
-	r.lock.Lock()
-	r.IndexChannel <- index
-	err := r.saveRequestIntoFile()
-	return err
-}
-
-// UpdateIndexCompleted  :-> Future proof
-func (r *Request) UpdateIndexCompleted(index int) error {
-	defer r.lock.Lock()
-	r.IndexCompleted = index
-	err := r.SaveRequestIntoFile()
-	return err
 }
 
 // RemoveRequestFromFile will remove Request from the disk.
@@ -207,6 +198,7 @@ func (r *Request) saveRequestIntoFile() error {
 		return err
 	}
 	return nil
+
 }
 
 // SaveRequestIntoFile will save request into disk

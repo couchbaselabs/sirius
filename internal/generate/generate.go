@@ -65,6 +65,14 @@ configuration that is also available on a per-task basis:
 			if _, ok := f.Tag.Lookup("json"); !ok {
 				continue
 			}
+			// doc
+			if tagContent, ok := f.Tag.Lookup("doc"); !ok {
+				continue
+			} else {
+				if tagContent == "false" {
+					continue
+				}
+			}
 			// Name
 			output += "| `" + f.Name + "` "
 
@@ -77,7 +85,7 @@ configuration that is also available on a per-task basis:
 				output += "| `" + k + "` "
 			}
 
-			// JSON, CP-CLI
+			// JSON
 			for _, tagName := range []string{"json"} {
 				if tagContents, ok := f.Tag.Lookup(tagName); ok {
 					output += "| `" + tagName + ":" + tagContents + "` "
@@ -91,7 +99,68 @@ configuration that is also available on a per-task basis:
 		output += "\n---\n"
 	}
 
-	output += "**API's Response Description**.\n\n" +
+	output += "**Description of JSON tags used in routes**.\n\n"
+
+	tt := t.HelperStruct()
+	tagKeys := make([]string, 0, len(t.HelperStruct()))
+	for k := range tt {
+		tagKeys = append(tagKeys, k)
+	}
+	sort.Strings(tagKeys)
+
+	for _, k := range tagKeys {
+		a := strings.Replace(strings.ToLower(k), "/", "", 1)
+		output += fmt.Sprintf(" * [%s](#%s)\n", k, a)
+	}
+	output += "\n---\n"
+
+	for _, k := range tagKeys {
+		output += fmt.Sprintf("#### %s\n\n", k)
+		s := tt[k]
+		hVal := reflect.ValueOf(s)
+		output += "| Name | Type | JSON Tag |\n"
+		output += "| ---- | ---- | -------- |\n"
+		for i := 0; i < hVal.Elem().NumField(); i++ {
+			f := hVal.Elem().Type().Field(i)
+			if _, ok := f.Tag.Lookup("json"); !ok {
+				continue
+			}
+
+			// doc
+			if tagContent, ok := f.Tag.Lookup("doc"); !ok {
+				continue
+			} else {
+				if tagContent == "false" {
+					continue
+				}
+			}
+
+			// Name
+			output += "| `" + f.Name + "` "
+
+			// Type
+			n := f.Type.Name()
+			k := f.Type.Kind().String()
+			if n == k {
+				output += "| `" + n + "` "
+			} else {
+				output += "| `" + k + "` "
+			}
+
+			for _, tagName := range []string{"json"} {
+				if tagContents, ok := f.Tag.Lookup(tagName); ok {
+					output += "| `" + tagName + ":" + tagContents + "` "
+					continue
+				}
+				output += "| "
+			}
+			// Close last table column
+			output += " |\n"
+		}
+	}
+	output += "\n---\n"
+
+	output += "**APIs Response Description**.\n\n" +
 		"1. Response after initiating a TASK.\n\n"
 
 	apiRespVal := reflect.ValueOf(&tasks.TaskResponse{})
@@ -115,7 +184,7 @@ configuration that is also available on a per-task basis:
 			output += "| `" + k + "` "
 		}
 
-		// JSON, CP-CLI
+		// JSON
 		for _, tagName := range []string{"json"} {
 			if tagContents, ok := f.Tag.Lookup(tagName); ok {
 				output += "| `" + tagName + ":" + tagContents + "` "
@@ -126,6 +195,7 @@ configuration that is also available on a per-task basis:
 		// Close last table column
 		output += " |\n"
 	}
+
 	output += "\n---\n"
 
 	output += "2. Response which contains the TASK's result.\n\n"
@@ -151,7 +221,7 @@ configuration that is also available on a per-task basis:
 			output += "| `" + k + "` "
 		}
 
-		// JSON, CP-CLI
+		// JSON
 		for _, tagName := range []string{"json"} {
 			if tagContents, ok := f.Tag.Lookup(tagName); ok {
 				output += "| `" + tagName + ":" + tagContents + "` "
