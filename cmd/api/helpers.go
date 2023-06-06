@@ -80,6 +80,9 @@ func registerInterfaces() {
 	gob.Register(&task_state.TaskState{})
 	gob.Register(&tasks.ReadTask{})
 	gob.Register(&tasks.SingleInsertTask{})
+	gob.Register(&tasks.SingleDeleteTask{})
+	gob.Register(&tasks.SingleUpsertTask{})
+	gob.Register(&tasks.SingleReadTask{})
 
 	r := generate.Register{}
 	for _, i := range r.HelperStruct() {

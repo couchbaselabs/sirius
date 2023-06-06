@@ -1,8 +1,6 @@
 package tasks
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/couchbase/gocb/v2"
@@ -13,13 +11,13 @@ import (
 	"time"
 )
 
-type SingleInsertTask struct {
+type SingleDeleteTask struct {
 	IdentifierToken string                  `json:"identifierToken" doc:"true"`
 	ClusterConfig   *sdk.ClusterConfig      `json:"clusterConfig" doc:"true"`
 	Bucket          string                  `json:"bucket" doc:"true"`
 	Scope           string                  `json:"scope,omitempty" doc:"true"`
 	Collection      string                  `json:"collection,omitempty" doc:"true"`
-	InsertOptions   *InsertOptions          `json:"insertOptions,omitempty" doc:"true"`
+	RemoveOptions   *RemoveOptions          `json:"insertOptions,omitempty" doc:"true"`
 	OperationConfig *SingleOperationConfig  `json:"singleOperationConfig" doc:"true"`
 	Operation       string                  `json:"operation" doc:"false"`
 	ResultSeed      int64                   `json:"resultSeed" doc:"false"`
@@ -28,11 +26,11 @@ type SingleInsertTask struct {
 	req             *Request                `json:"-" doc:"false"`
 }
 
-func (task *SingleInsertTask) Describe() string {
-	return "Single insert task create key value in Couchbase.\n"
+func (task *SingleDeleteTask) Describe() string {
+	return "Single insert task delete key in Couchbase.\n"
 }
 
-func (task *SingleInsertTask) BuildIdentifier() string {
+func (task *SingleDeleteTask) BuildIdentifier() string {
 	if task.ClusterConfig == nil {
 		task.ClusterConfig = &sdk.ClusterConfig{}
 		log.Println("build Identifier have received nil ClusterConfig")
@@ -50,12 +48,12 @@ func (task *SingleInsertTask) BuildIdentifier() string {
 		task.Collection)
 }
 
-func (task *SingleInsertTask) CheckIfPending() bool {
+func (task *SingleDeleteTask) CheckIfPending() bool {
 	return task.TaskPending
 }
 
 // Config configures  the insert task
-func (task *SingleInsertTask) Config(req *Request, seed int64, seedEnd int64, reRun bool) (int64, error) {
+func (task *SingleDeleteTask) Config(req *Request, seed int64, seedEnd int64, reRun bool) (int64, error) {
 	task.TaskPending = true
 	task.req = req
 
@@ -72,14 +70,14 @@ func (task *SingleInsertTask) Config(req *Request, seed int64, seedEnd int64, re
 
 	if !reRun {
 		task.ResultSeed = time.Now().UnixNano()
-		task.Operation = SingleInsertOperation
+		task.Operation = SingleDeleteOperation
 		task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
 		if task.IdentifierToken == "" {
 			task.Result.ErrorOther = "identifier token is missing"
 		}
 
-		if err := configInsertOptions(task.InsertOptions); err != nil {
+		if err := configRemoveOptions(task.RemoveOptions); err != nil {
 			task.Result.ErrorOther = err.Error()
 		}
 
@@ -92,12 +90,12 @@ func (task *SingleInsertTask) Config(req *Request, seed int64, seedEnd int64, re
 	return task.ResultSeed, nil
 }
 
-func (task *SingleInsertTask) tearUp() error {
+func (task *SingleDeleteTask) tearUp() error {
 	task.TaskPending = false
 	return task.req.SaveRequestIntoFile()
 }
 
-func (task *SingleInsertTask) Do() error {
+func (task *SingleDeleteTask) Do() error {
 
 	if task.Result != nil && task.Result.ErrorOther != "" {
 		log.Println(task.Result.ErrorOther)
@@ -122,7 +120,7 @@ func (task *SingleInsertTask) Do() error {
 		return task.tearUp()
 	}
 
-	singleInsertDocuments(task, collection)
+	singleDeleteDocuments(task, collection)
 
 	task.Result.Success = int64(len(task.OperationConfig.KeyValue)) - task.Result.Failure
 
@@ -133,8 +131,8 @@ func (task *SingleInsertTask) Do() error {
 	return task.tearUp()
 }
 
-// singleInsertDocuments uploads new documents in a bucket.scope.collection in a defined batch size at multiple iterations.
-func singleInsertDocuments(task *SingleInsertTask, collection *gocb.Collection) {
+// singleDeleteDocuments uploads new documents in a bucket.scope.collection in a defined batch size at multiple iterations.
+func singleDeleteDocuments(task *SingleDeleteTask, collection *gocb.Collection) {
 
 	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
 	dataChannel := make(chan interface{}, MaxConcurrentRoutines)
@@ -155,57 +153,17 @@ func singleInsertDocuments(task *SingleInsertTask, collection *gocb.Collection) 
 				return errors.New("unable to decode Key Value for single crud")
 			}
 
-			_, err := collection.Insert(kV.Key, kV.Doc, &gocb.InsertOptions{
-				DurabilityLevel: getDurability(task.InsertOptions.Durability),
-				PersistTo:       task.InsertOptions.PersistTo,
-				ReplicateTo:     task.InsertOptions.ReplicateTo,
-				Timeout:         time.Duration(task.InsertOptions.Timeout) * time.Second,
-				Expiry:          time.Duration(task.InsertOptions.Expiry) * time.Second,
+			_, err := collection.Remove(kV.Key, &gocb.RemoveOptions{
+				Cas:             gocb.Cas(task.RemoveOptions.Cas),
+				PersistTo:       task.RemoveOptions.PersistTo,
+				ReplicateTo:     task.RemoveOptions.ReplicateTo,
+				DurabilityLevel: getDurability(task.RemoveOptions.Durability),
+				Timeout:         time.Duration(task.RemoveOptions.Timeout) * time.Second,
 			})
-			if task.OperationConfig.ReadYourOwnWrite {
-
-				var resultFromHost map[string]interface{}
-				result, err := collection.Get(kV.Key, nil)
-				if err != nil {
-					task.Result.IncrementFailure(kV.Key, kV.Doc, err)
-					<-routineLimiter
-					return err
-				}
-				if err := result.Content(&resultFromHost); err != nil {
-					task.Result.IncrementFailure(kV.Key, kV.Doc, err)
-					<-routineLimiter
-					return err
-				}
-
-				resultFromHostBytes, err := json.Marshal(resultFromHost)
-				if err != nil {
-					task.Result.IncrementFailure(kV.Key, kV.Doc, err)
-					<-routineLimiter
-					return err
-				}
-				resultFromDocBytes, err := json.Marshal(kV.Doc)
-				if err != nil {
-					task.Result.IncrementFailure(kV.Key, kV.Doc, err)
-					<-routineLimiter
-					return err
-				}
-
-				if !bytes.Equal(resultFromHostBytes, resultFromDocBytes) {
-					task.Result.IncrementFailure(kV.Key, kV.Doc, errors.New("document mismatch on RYOW"))
-					<-routineLimiter
-					return err
-				}
-			} else {
-				if err != nil {
-					if errors.Is(err, gocb.ErrDocumentExists) {
-						<-routineLimiter
-						return nil
-					} else {
-						task.Result.IncrementFailure(kV.Key, kV.Doc, err)
-						<-routineLimiter
-						return err
-					}
-				}
+			if err != nil {
+				task.Result.IncrementFailure(kV.Key, kV.Doc, err)
+				<-routineLimiter
+				return err
 			}
 
 			<-routineLimiter

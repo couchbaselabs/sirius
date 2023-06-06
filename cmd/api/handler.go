@@ -320,3 +320,114 @@ func (app *Config) singleInsertTask(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = app.writeJSON(w, http.StatusOK, resPayload)
 }
+
+// singleDeleteTask is used to bulk loading documents into buckets
+func (app *Config) singleDeleteTask(w http.ResponseWriter, r *http.Request) {
+	task := &tasks.SingleDeleteTask{}
+	if err := app.readJSON(w, r, task); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	log.Print(task, "singleInsert")
+	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SingleDeleteOperation, task)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	seed, err := task.Config(req, req.Seed, req.SeedEnd, false)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	if err := app.taskManager.AddTask(task); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+	}
+	respPayload := tasks.TaskResponse{
+		Seed: fmt.Sprintf("%d", seed),
+	}
+	resPayload := jsonResponse{
+		Error:   false,
+		Message: "Successfully started requested doc loading",
+		Data:    respPayload,
+	}
+	_ = app.writeJSON(w, http.StatusOK, resPayload)
+}
+
+// singleUpsertTask is used to bulk loading documents into buckets
+func (app *Config) singleUpsertTask(w http.ResponseWriter, r *http.Request) {
+	task := &tasks.SingleUpsertTask{}
+	if err := app.readJSON(w, r, task); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	log.Print(task, "singleInsert")
+	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SingleUpsertOperation, task)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	seed, err := task.Config(req, req.Seed, req.SeedEnd, false)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	if err := app.taskManager.AddTask(task); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+	}
+	respPayload := tasks.TaskResponse{
+		Seed: fmt.Sprintf("%d", seed),
+	}
+	resPayload := jsonResponse{
+		Error:   false,
+		Message: "Successfully started requested doc loading",
+		Data:    respPayload,
+	}
+	_ = app.writeJSON(w, http.StatusOK, resPayload)
+}
+
+// singleReadTask is used to bulk loading documents into buckets
+func (app *Config) singleReadTask(w http.ResponseWriter, r *http.Request) {
+	task := &tasks.SingleReadTask{}
+	if err := app.readJSON(w, r, task); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	log.Print(task, "singleInsert")
+	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SingleReadOperation, task)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	seed, err := task.Config(req, req.Seed, req.SeedEnd, false)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	if err := app.taskManager.AddTask(task); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+	}
+	respPayload := tasks.TaskResponse{
+		Seed: fmt.Sprintf("%d", seed),
+	}
+	resPayload := jsonResponse{
+		Error:   false,
+		Message: "Successfully started requested doc loading",
+		Data:    respPayload,
+	}
+	_ = app.writeJSON(w, http.StatusOK, resPayload)
+}

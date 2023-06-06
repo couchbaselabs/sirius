@@ -15,15 +15,18 @@ type Register struct {
 
 func (r *Register) RegisteredTasks() map[string]TaskRegister {
 	return map[string]TaskRegister{
-		"/bulk-insert":   {"POST", &tasks.InsertTask{}},
-		"/fast-insert":   {"Post", &tasks.FastInsertTask{}},
+		"/bulk-create":   {"POST", &tasks.InsertTask{}},
+		"/fast-create":   {"Post", &tasks.FastInsertTask{}},
 		"/bulk-delete":   {"POST", &tasks.DeleteTask{}},
 		"/bulk-upsert":   {"POST", &tasks.UpsertTask{}},
 		"/validate":      {"POST", &tasks.ValidateTask{}},
 		"/result":        {"POST", &tasks.TaskResult{}},
 		"/clear_data":    {"POST", &tasks.ClearTask{}},
 		"/bulk-read":     {"POST", &tasks.ReadTask{}},
-		"/single-insert": {"POST", &tasks.SingleInsertTask{}},
+		"/single-create": {"POST", &tasks.SingleInsertTask{}},
+		"/single-delete": {"POST", &tasks.SingleDeleteTask{}},
+		"/single-upsert": {"POST", &tasks.SingleUpsertTask{}},
+		"/single-read":   {"POST", &tasks.SingleReadTask{}},
 	}
 }
 
