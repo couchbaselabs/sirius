@@ -4,34 +4,18 @@
 Each task can be executed using REST endpoints. All tasks tags to provide additional
 configuration that is also available on a per-task basis:
 
+ * [/bulk-delete](#bulk-delete)
+ * [/bulk-insert](#bulk-insert)
+ * [/bulk-read](#bulk-read)
+ * [/bulk-upsert](#bulk-upsert)
  * [/clear_data](#clear_data)
- * [/delete](#delete)
  * [/fast-insert](#fast-insert)
- * [/insert](#insert)
- * [/read](#read)
  * [/result](#result)
- * [/upsert](#upsert)
+ * [/single-insert](#single-insert)
  * [/validate](#validate)
 
 ---
-#### /clear_data
-
- REST : POST
-
-Description : The Task clear operation will remove the metadata from the bucket on the specific Couchbase server where
-the test was executed.
-
-| Name | Type | JSON Tag |
-| ---- | ---- | -------- |
-| `IdentifierToken` | `string` | `json:identifierToken`  |
-| `Username` | `string` | `json:username`  |
-| `Password` | `string` | `json:password`  |
-| `Bucket` | `string` | `json:bucket,omitempty`  |
-| `Scope` | `string` | `json:scope,omitempty`  |
-| `Collection` | `string` | `json:collection,omitempty`  |
-
----
-#### /delete
+#### /bulk-delete
 
  REST : POST
 
@@ -49,26 +33,7 @@ The task will delete documents from [start,end] inclusive.
 | `OperationConfig` | `ptr` | `json:operationConfig,omitempty`  |
 
 ---
-#### /fast-insert
-
- REST : Post
-
-Description : Fast Insert task uploads documents in bulk into a bucket without maintaining intermediate state of task 
-During fast operations, An incomplete task will be retied as whole if server dies in between of the operation.
- 
-
-| Name | Type | JSON Tag |
-| ---- | ---- | -------- |
-| `IdentifierToken` | `string` | `json:identifierToken`  |
-| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
-| `Bucket` | `string` | `json:bucket`  |
-| `Scope` | `string` | `json:scope,omitempty`  |
-| `Collection` | `string` | `json:collection,omitempty`  |
-| `InsertOptions` | `ptr` | `json:insertOptions,omitempty`  |
-| `OperationConfig` | `ptr` | `json:operationConfig,omitempty`  |
-
----
-#### /insert
+#### /bulk-insert
 
  REST : POST
 
@@ -90,7 +55,7 @@ The durability while inserting a document can be set using following values in t
 | `OperationConfig` | `ptr` | `json:operationConfig,omitempty`  |
 
 ---
-#### /read
+#### /bulk-read
 
  REST : POST
 
@@ -106,20 +71,7 @@ Description : Read Task get documents from bucket and validate them with the exp
 | `OperationConfig` | `ptr` | `json:operationConfig,omitempty`  |
 
 ---
-#### /result
-
- REST : POST
-
-Description :  Task result is retrieved via this endpoint.
-
-
-| Name | Type | JSON Tag |
-| ---- | ---- | -------- |
-| `Seed` | `string` | `json:seed`  |
-| `DeleteRecord` | `bool` | `json:deleteRecord`  |
-
----
-#### /upsert
+#### /bulk-upsert
 
  REST : POST
 
@@ -136,6 +88,73 @@ We need to share the fields we want to update in a json document using SQL++ syn
 | `Collection` | `string` | `json:collection,omitempty`  |
 | `InsertOptions` | `ptr` | `json:insertOptions,omitempty`  |
 | `OperationConfig` | `ptr` | `json:operationConfig,omitempty`  |
+
+---
+#### /clear_data
+
+ REST : POST
+
+Description : The Task clear operation will remove the metadata from the bucket on the specific Couchbase server where
+the test was executed.
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `Username` | `string` | `json:username`  |
+| `Password` | `string` | `json:password`  |
+| `Bucket` | `string` | `json:bucket,omitempty`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+
+---
+#### /fast-insert
+
+ REST : Post
+
+Description : Fast Insert task uploads documents in bulk into a bucket without maintaining intermediate state of task 
+During fast operations, An incomplete task will be retied as whole if server dies in between of the operation.
+ 
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `InsertOptions` | `ptr` | `json:insertOptions,omitempty`  |
+| `OperationConfig` | `ptr` | `json:operationConfig,omitempty`  |
+
+---
+#### /result
+
+ REST : POST
+
+Description :  Task result is retrieved via this endpoint.
+
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `Seed` | `string` | `json:seed`  |
+| `DeleteRecord` | `bool` | `json:deleteRecord`  |
+
+---
+#### /single-insert
+
+ REST : POST
+
+Description : Single insert task uploads key value in CB.
+
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `InsertOptions` | `ptr` | `json:insertOptions,omitempty`  |
+| `OperationConfig` | `ptr` | `json:singleOperationConfig`  |
 
 ---
 #### /validate
@@ -159,8 +178,10 @@ Description : Validates every document in the cluster's bucket
  * [clusterConfig](#clusterconfig)
  * [compressionConfig](#compressionconfig)
  * [insertOptions](#insertoptions)
+ * [keyValue](#keyvalue)
  * [operationConfig](#operationconfig)
  * [removeOptions](#removeoptions)
+ * [singleOperationConfig](#singleoperationconfig)
  * [timeoutsConfig](#timeoutsconfig)
 
 ---
@@ -189,6 +210,12 @@ Description : Validates every document in the cluster's bucket
 | `ReplicateTo` | `uint` | `json:replicateTo,omitempty`  |
 | `Durability` | `string` | `json:durability,omitempty`  |
 | `Timeout` | `int` | `json:timeout,omitempty`  |
+#### keyValue
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `Key` | `string` | `json:key`  |
+| `Doc` | `interface` | `json:value`  |
 #### operationConfig
 
 | Name | Type | JSON Tag |
@@ -215,6 +242,12 @@ Description : Validates every document in the cluster's bucket
 | `ReplicateTo` | `uint` | `json:replicateTo,omitempty`  |
 | `Durability` | `string` | `json:durability,omitempty`  |
 | `Timeout` | `int` | `json:timeout,omitempty`  |
+#### singleOperationConfig
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `KeyValue` | `slice` | `json:keyValue`  |
+| `ReadYourOwnWrite` | `bool` | `json:readYourOwnWrite,omitempty`  |
 #### timeoutsConfig
 
 | Name | Type | JSON Tag |

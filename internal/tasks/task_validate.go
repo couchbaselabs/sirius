@@ -70,11 +70,13 @@ func (task *ValidateTask) Config(req *Request, seed int64, seedEnd int64, reRun 
 	task.req = req
 
 	if task.req == nil {
+		task.TaskPending = false
 		return 0, fmt.Errorf("request.Request struct is nil")
 	}
 
 	task.req.ReconnectionManager()
 	if _, err := task.req.connectionManager.GetCluster(task.ClusterConfig); err != nil {
+		task.TaskPending = false
 		return 0, err
 	}
 

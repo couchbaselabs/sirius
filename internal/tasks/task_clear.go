@@ -12,7 +12,7 @@ type ClearTask struct {
 	Bucket          string `json:"bucket,omitempty" doc:"true"`
 	Scope           string `json:"scope,omitempty" doc:"true"`
 	Collection      string `json:"collection,omitempty" doc:"true"`
-	TaskPending     bool
+	TaskPending     bool   `json:"-" doc"false"`
 }
 
 func (task *ClearTask) Describe() string {
