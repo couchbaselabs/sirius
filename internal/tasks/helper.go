@@ -13,6 +13,7 @@ const (
 	UpsertOperation       string = "upsert"
 	ValidateOperation     string = "validate"
 	ReadOperation         string = "read"
+	SingleInsertOperation string = "singleInsert"
 )
 
 const (
@@ -26,7 +27,7 @@ const (
 	DefaultPassword                           string = "password"
 )
 
-// getDurability returns gocb.DurabilityLevel required for doc loading operation
+// getDurability returns gocb.DurabilityLevel required for Doc loading operation
 func getDurability(durability string) gocb.DurabilityLevel {
 	switch durability {
 	case DurabilityLevelMajority:
@@ -55,6 +56,31 @@ type OperationConfig struct {
 	Start            int64    `json:"start" doc:"true"`
 	End              int64    `json:"end" doc:"true"`
 	FieldsToChange   []string `json:"fieldsToChange" doc:"true"`
+}
+
+type KeyValue struct {
+	Key string      `json:"key" doc:"true"`
+	Doc interface{} `json:"value" doc:"true"`
+}
+
+type SingleOperationConfig struct {
+	KeyValue         []KeyValue `json:"keyValue" doc:"true"`
+	ReadYourOwnWrite bool       `json:"readYourOwnWrite,omitempty" doc:"true"`
+}
+
+func configSingleOperationConfig(s *SingleOperationConfig) error {
+	if s == nil {
+		return fmt.Errorf("unable to parse SingleOperationConfig")
+	}
+
+	var finalKeyValue []KeyValue
+	for _, kv := range s.KeyValue {
+		if kv.Key != "" {
+			finalKeyValue = append(finalKeyValue, kv)
+		}
+	}
+	s.KeyValue = finalKeyValue
+	return nil
 }
 
 // configureOperationConfig configures and validate the OperationConfig

@@ -27,13 +27,14 @@ func (app *Config) routes() http.Handler {
 
 	mux.Get("/", app.testServer)
 	mux.Post("/result", app.taskResult)
-	mux.Post("/insert", app.insertTask)
+	mux.Post("/bulk-insert", app.insertTask)
 	mux.Post("/fast-insert", app.fastInsertTask)
-	mux.Post("/delete", app.deleteTask)
-	mux.Post("/upsert", app.upsertTask)
+	mux.Post("/bulk-delete", app.deleteTask)
+	mux.Post("/bulk-upsert", app.upsertTask)
 	mux.Post("/validate", app.validateTask)
 	mux.Post("/clear_data", app.clearRequestFromServer)
-	mux.Post("/read", app.readTask)
+	mux.Post("/bulk-read", app.readTask)
+	mux.Post("/single-insert", app.singleInsertTask)
 
 	return mux
 }

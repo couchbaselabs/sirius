@@ -1,7 +1,6 @@
 package tasks
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
@@ -16,12 +15,13 @@ import (
 	"time"
 )
 
-type ReadTask struct {
+type UpsertTask struct {
 	IdentifierToken string                  `json:"identifierToken" doc:"true"`
 	ClusterConfig   *sdk.ClusterConfig      `json:"clusterConfig" doc:"true"`
 	Bucket          string                  `json:"bucket" doc:"true"`
 	Scope           string                  `json:"scope,omitempty" doc:"true"`
 	Collection      string                  `json:"collection,omitempty" doc:"true"`
+	InsertOptions   *InsertOptions          `json:"insertOptions,omitempty" doc:"true"`
 	OperationConfig *OperationConfig        `json:"operationConfig,omitempty" doc:"true"`
 	Template        interface{}             `json:"-" doc:"false"`
 	Operation       string                  `json:"operation" doc:"false"`
@@ -33,7 +33,7 @@ type ReadTask struct {
 	req             *Request                `json:"-" doc:"false"`
 }
 
-func (task *ReadTask) BuildIdentifier() string {
+func (task *UpsertTask) BuildIdentifier() string {
 	if task.ClusterConfig == nil {
 		task.ClusterConfig = &sdk.ClusterConfig{}
 		log.Println("build Identifier have received nil ClusterConfig")
@@ -51,40 +51,42 @@ func (task *ReadTask) BuildIdentifier() string {
 		task.Collection)
 }
 
-func (task *ReadTask) Describe() string {
-	return "Read Task get documents from bucket and validate them with the expected ones"
+func (task *UpsertTask) Describe() string {
+	return `Upsert task mutates documents in bulk into a bucket.
+The task will update the fields in a documents ranging from [start,end] inclusive.
+We need to share the fields we want to update in a json document using SQL++ syntax.`
 }
 
-func (task *ReadTask) CheckIfPending() bool {
+func (task *UpsertTask) CheckIfPending() bool {
 	return task.TaskPending
 }
 
-func (task *ReadTask) tearUp() error {
-	task.State.StopStoringState()
-	task.TaskPending = false
-	return task.req.SaveRequestIntoFile()
-}
-
-func (task *ReadTask) Config(req *Request, seed int64, seedEnd int64, reRun bool) (int64, error) {
+func (task *UpsertTask) Config(req *Request, seed int64, seedEnd int64, reRun bool) (int64, error) {
 	task.TaskPending = true
 	task.req = req
 
 	if task.req == nil {
+		task.TaskPending = false
 		return 0, fmt.Errorf("request.Request struct is nil")
 	}
 
 	task.req.ReconnectionManager()
 	if _, err := task.req.connectionManager.GetCluster(task.ClusterConfig); err != nil {
+		task.TaskPending = false
 		return 0, err
 	}
 
 	if !reRun {
 		task.ResultSeed = time.Now().UnixNano()
-		task.Operation = ReadOperation
+		task.Operation = UpsertOperation
 		task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
 		if task.IdentifierToken == "" {
-			task.Result.ErrorOther = "identifier token is missing"
+			return 0, fmt.Errorf("identifier token is missing")
+		}
+
+		if err := configInsertOptions(task.InsertOptions); err != nil {
+			task.Result.ErrorOther = err.Error()
 		}
 
 		if err := configureOperationConfig(task.OperationConfig); err != nil {
@@ -95,6 +97,7 @@ func (task *ReadTask) Config(req *Request, seed int64, seedEnd int64, reRun bool
 
 		task.State = task_state.ConfigTaskState(task.OperationConfig.TemplateName, task.OperationConfig.KeyPrefix,
 			task.OperationConfig.KeySuffix, task.OperationConfig.DocSize, seed, seedEnd, task.ResultSeed)
+
 	} else {
 		if task.State == nil {
 			return task.ResultSeed, fmt.Errorf("task State is nil")
@@ -107,7 +110,13 @@ func (task *ReadTask) Config(req *Request, seed int64, seedEnd int64, reRun bool
 	return task.ResultSeed, nil
 }
 
-func (task *ReadTask) Do() error {
+func (task *UpsertTask) tearUp() error {
+	task.State.StopStoringState()
+	task.TaskPending = false
+	return task.req.SaveRequestIntoFile()
+}
+
+func (task *UpsertTask) Do() error {
 
 	if task.Result != nil && task.Result.ErrorOther != "" {
 		log.Println(task.Result.ErrorOther)
@@ -129,6 +138,7 @@ func (task *ReadTask) Do() error {
 			log.Println("not able to save Result into ", task.ResultSeed)
 			return err
 		}
+		task.State.AddRangeToErrSet(task.OperationConfig.Start, task.OperationConfig.End)
 		return task.tearUp()
 	}
 
@@ -136,22 +146,21 @@ func (task *ReadTask) Do() error {
 		task.OperationConfig.KeySuffix, task.State.SeedStart, task.State.SeedEnd,
 		template.InitialiseTemplate(task.OperationConfig.TemplateName))
 
-	getDocuments(task, collection)
+	upsertDocuments(task, collection)
 
 	task.Result.Success = task.OperationConfig.End - task.OperationConfig.Start - task.Result.Failure
 
 	if err := task.Result.SaveResultIntoFile(); err != nil {
 		log.Println("not able to save Result into ", task.ResultSeed)
 	}
-	task.State.ClearErrorKeyStates()
 	task.State.ClearCompletedKeyStates()
 	return task.tearUp()
 }
 
-// getDocuments reads the documents in the bucket
-func getDocuments(task *ReadTask, collection *gocb.Collection) {
+func upsertDocuments(task *UpsertTask, collection *gocb.Collection) {
 	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
 	dataChannel := make(chan int64, MaxConcurrentRoutines)
+	maxKey := int64(-1)
 	skip := make(map[int64]struct{})
 	for _, offset := range task.State.KeyStates.Completed {
 		skip[offset] = struct{}{}
@@ -159,12 +168,8 @@ func getDocuments(task *ReadTask, collection *gocb.Collection) {
 	for _, offset := range task.State.KeyStates.Err {
 		skip[offset] = struct{}{}
 	}
-	deletedOffset, err1 := task.req.retracePreviousDeletions(task.ResultSeed)
-	if err1 != nil {
-		return
-	}
-	insertErrorOffset, err2 := task.req.retracePreviousFailedInsertions(task.ResultSeed)
-	if err2 != nil {
+	deletedOffset, err := task.req.retracePreviousDeletions(task.ResultSeed)
+	if err != nil {
 		return
 	}
 
@@ -172,7 +177,9 @@ func getDocuments(task *ReadTask, collection *gocb.Collection) {
 	for i := task.OperationConfig.Start; i < task.OperationConfig.End; i++ {
 		routineLimiter <- struct{}{}
 		dataChannel <- i
+
 		group.Go(func() error {
+			var err error
 			offset := <-dataChannel
 			key := task.req.Seed + offset
 			docId := task.gen.BuildKey(key)
@@ -184,61 +191,38 @@ func getDocuments(task *ReadTask, collection *gocb.Collection) {
 				<-routineLimiter
 				return fmt.Errorf("alreday deleted docID on " + docId)
 			}
-			if _, ok := insertErrorOffset[offset]; ok {
-				<-routineLimiter
-				return fmt.Errorf("error in insertion of docID on " + docId)
-			}
-
 			fake := faker.NewWithSeed(rand.NewSource(key))
-			originalDocument, err := task.gen.Template.GenerateDocument(&fake, task.State.DocumentSize)
+			originalDoc, err := task.gen.Template.GenerateDocument(&fake, task.State.DocumentSize)
 			if err != nil {
-				task.Result.IncrementFailure(docId, originalDocument, err)
-				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 				<-routineLimiter
-				return err
-			}
-			originalDocument, err = task.req.retracePreviousMutations(offset, originalDocument, *task.gen, &fake,
-				task.ResultSeed)
-			if err != nil {
-				task.Result.IncrementFailure(docId, originalDocument, err)
-				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
-				<-routineLimiter
-				return err
-			}
 
-			var resultFromHost map[string]interface{}
-			documentFromHost := template.InitialiseTemplate(task.State.TemplateName)
-			result, err := collection.Get(docId, nil)
+				return err
+			}
+			originalDoc, err = task.req.retracePreviousMutations(offset, originalDoc, *task.gen, &fake, task.ResultSeed)
 			if err != nil {
-				task.Result.IncrementFailure(docId, originalDocument, err)
-				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
+				task.Result.IncrementFailure(docId, originalDoc, err)
 				<-routineLimiter
 				return err
 			}
-			if err := result.Content(&resultFromHost); err != nil {
-				task.Result.IncrementFailure(docId, originalDocument, err)
-				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
-				<-routineLimiter
-				return err
-			}
-			resultBytes, err := json.Marshal(resultFromHost)
-			err = json.Unmarshal(resultBytes, &documentFromHost)
+			docUpdated, err := task.gen.Template.UpdateDocument(task.OperationConfig.FieldsToChange, originalDoc, &fake)
+			_, err = collection.Upsert(docId, docUpdated, &gocb.UpsertOptions{
+				DurabilityLevel: getDurability(task.InsertOptions.Durability),
+				PersistTo:       task.InsertOptions.PersistTo,
+				ReplicateTo:     task.InsertOptions.ReplicateTo,
+				Timeout:         time.Duration(task.InsertOptions.Timeout) * time.Second,
+				Expiry:          time.Duration(task.InsertOptions.Expiry) * time.Second,
+			})
 			if err != nil {
-				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
-				task.Result.IncrementFailure(docId, originalDocument, err)
-				<-routineLimiter
-				return err
-			}
-
-			ok, err := task.gen.Template.Compare(documentFromHost, originalDocument)
-			if err != nil || !ok {
-				task.Result.IncrementFailure(docId, originalDocument, err)
+				task.Result.IncrementFailure(docId, docUpdated, err)
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 				<-routineLimiter
 				return err
 			}
 
 			task.State.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
+			if offset > maxKey {
+				maxKey = offset
+			}
 			<-routineLimiter
 			return nil
 		})
@@ -246,5 +230,6 @@ func getDocuments(task *ReadTask, collection *gocb.Collection) {
 	_ = group.Wait()
 	close(routineLimiter)
 	close(dataChannel)
+	task.req.checkAndUpdateSeedEnd(maxKey)
 	log.Println("completed :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 }

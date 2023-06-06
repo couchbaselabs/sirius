@@ -64,6 +64,8 @@ func (app *Config) errorJSON(w http.ResponseWriter, err error, status ...int) er
 }
 
 func registerInterfaces() {
+	gob.Register(&[]interface{}{})
+	gob.Register(&map[string]interface{}{})
 	gob.Register(&tasks.Request{})
 	gob.Register(&template.Person{})
 	gob.Register(&template.SmallTemplate{})
@@ -77,6 +79,7 @@ func registerInterfaces() {
 	gob.Register(&task_result.TaskResult{})
 	gob.Register(&task_state.TaskState{})
 	gob.Register(&tasks.ReadTask{})
+	gob.Register(&tasks.SingleInsertTask{})
 
 	r := generate.Register{}
 	for _, i := range r.HelperStruct() {

@@ -15,7 +15,7 @@ func TestConfigConnectionManager(t *testing.T) {
 	cConfig := &ClusterConfig{
 		Username:          "Administrator",
 		Password:          "password",
-		ConnectionString:  "couchbase://172.23.136.104",
+		ConnectionString:  "couchbase://172.23.120.59",
 		CompressionConfig: CompressionConfig{},
 		TimeoutsConfig:    TimeoutsConfig{},
 	}

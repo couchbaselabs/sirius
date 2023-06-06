@@ -1,7 +1,7 @@
 package tasks
 
 import (
-	"errors"
+	"encoding/json"
 	"fmt"
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
@@ -9,18 +9,19 @@ import (
 	"github.com/couchbaselabs/sirius/internal/task_result"
 	"github.com/couchbaselabs/sirius/internal/task_state"
 	"github.com/couchbaselabs/sirius/internal/template"
+	"github.com/jaswdr/faker"
 	"golang.org/x/sync/errgroup"
 	"log"
+	"math/rand"
 	"time"
 )
 
-type DeleteTask struct {
+type ReadTask struct {
 	IdentifierToken string                  `json:"identifierToken" doc:"true"`
 	ClusterConfig   *sdk.ClusterConfig      `json:"clusterConfig" doc:"true"`
 	Bucket          string                  `json:"bucket" doc:"true"`
 	Scope           string                  `json:"scope,omitempty" doc:"true"`
 	Collection      string                  `json:"collection,omitempty" doc:"true"`
-	RemoveOptions   *RemoveOptions          `json:"removeOptions,omitempty" doc:"true"`
 	OperationConfig *OperationConfig        `json:"operationConfig,omitempty" doc:"true"`
 	Template        interface{}             `json:"-" doc:"false"`
 	Operation       string                  `json:"operation" doc:"false"`
@@ -32,12 +33,7 @@ type DeleteTask struct {
 	req             *Request                `json:"-" doc:"false"`
 }
 
-func (task *DeleteTask) Describe() string {
-	return `Delete task deletes documents in bulk into a bucket.
-The task will delete documents from [start,end] inclusive.`
-}
-
-func (task *DeleteTask) BuildIdentifier() string {
+func (task *ReadTask) BuildIdentifier() string {
 	if task.ClusterConfig == nil {
 		task.ClusterConfig = &sdk.ClusterConfig{}
 		log.Println("build Identifier have received nil ClusterConfig")
@@ -55,35 +51,42 @@ func (task *DeleteTask) BuildIdentifier() string {
 		task.Collection)
 }
 
-func (task *DeleteTask) CheckIfPending() bool {
+func (task *ReadTask) Describe() string {
+	return "Read Task get documents from bucket and validate them with the expected ones"
+}
+
+func (task *ReadTask) CheckIfPending() bool {
 	return task.TaskPending
 }
 
-// Config checks the validity of DeleteTask
-func (task *DeleteTask) Config(req *Request, seed int64, seedEnd int64, reRun bool) (int64, error) {
+func (task *ReadTask) tearUp() error {
+	task.State.StopStoringState()
+	task.TaskPending = false
+	return task.req.SaveRequestIntoFile()
+}
+
+func (task *ReadTask) Config(req *Request, seed int64, seedEnd int64, reRun bool) (int64, error) {
 	task.TaskPending = true
 	task.req = req
 
 	if task.req == nil {
+		task.TaskPending = false
 		return 0, fmt.Errorf("request.Request struct is nil")
 	}
 
 	task.req.ReconnectionManager()
 	if _, err := task.req.connectionManager.GetCluster(task.ClusterConfig); err != nil {
+		task.TaskPending = false
 		return 0, err
 	}
 
 	if !reRun {
 		task.ResultSeed = time.Now().UnixNano()
-		task.Operation = DeleteOperation
+		task.Operation = ReadOperation
 		task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
 		if task.IdentifierToken == "" {
 			task.Result.ErrorOther = "identifier token is missing"
-		}
-
-		if err := configRemoveOptions(task.RemoveOptions); err != nil {
-			task.Result.ErrorOther = err.Error()
 		}
 
 		if err := configureOperationConfig(task.OperationConfig); err != nil {
@@ -94,7 +97,6 @@ func (task *DeleteTask) Config(req *Request, seed int64, seedEnd int64, reRun bo
 
 		task.State = task_state.ConfigTaskState(task.OperationConfig.TemplateName, task.OperationConfig.KeyPrefix,
 			task.OperationConfig.KeySuffix, task.OperationConfig.DocSize, seed, seedEnd, task.ResultSeed)
-
 	} else {
 		if task.State == nil {
 			return task.ResultSeed, fmt.Errorf("task State is nil")
@@ -107,13 +109,7 @@ func (task *DeleteTask) Config(req *Request, seed int64, seedEnd int64, reRun bo
 	return task.ResultSeed, nil
 }
 
-func (task *DeleteTask) tearUp() error {
-	task.State.StopStoringState()
-	task.TaskPending = false
-	return task.req.SaveRequestIntoFile()
-}
-
-func (task *DeleteTask) Do() error {
+func (task *ReadTask) Do() error {
 
 	if task.Result != nil && task.Result.ErrorOther != "" {
 		log.Println(task.Result.ErrorOther)
@@ -138,22 +134,26 @@ func (task *DeleteTask) Do() error {
 		return task.tearUp()
 	}
 
-	task.gen = docgenerator.ConfigGenerator("", task.State.KeyPrefix, task.State.KeySuffix,
-		task.State.SeedStart, task.State.SeedEnd, template.InitialiseTemplate(task.State.TemplateName))
+	task.gen = docgenerator.ConfigGenerator(task.OperationConfig.DocType, task.OperationConfig.KeyPrefix,
+		task.OperationConfig.KeySuffix, task.State.SeedStart, task.State.SeedEnd,
+		template.InitialiseTemplate(task.OperationConfig.TemplateName))
 
-	deleteDocuments(task, collection)
+	getDocuments(task, collection)
+
 	task.Result.Success = task.OperationConfig.End - task.OperationConfig.Start - task.Result.Failure
 
 	if err := task.Result.SaveResultIntoFile(); err != nil {
 		log.Println("not able to save Result into ", task.ResultSeed)
 	}
-
 	task.State.ClearErrorKeyStates()
+	task.State.ClearCompletedKeyStates()
 	return task.tearUp()
 }
 
-// deleteDocuments delete the document stored on a host from start to end.
-func deleteDocuments(task *DeleteTask, collection *gocb.Collection) {
+// getDocuments reads the documents in the bucket
+func getDocuments(task *ReadTask, collection *gocb.Collection) {
+	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
+	dataChannel := make(chan int64, MaxConcurrentRoutines)
 	skip := make(map[int64]struct{})
 	for _, offset := range task.State.KeyStates.Completed {
 		skip[offset] = struct{}{}
@@ -161,18 +161,19 @@ func deleteDocuments(task *DeleteTask, collection *gocb.Collection) {
 	for _, offset := range task.State.KeyStates.Err {
 		skip[offset] = struct{}{}
 	}
-	deletedOffset, err := task.req.retracePreviousDeletions(task.ResultSeed)
-	if err != nil {
+	deletedOffset, err1 := task.req.retracePreviousDeletions(task.ResultSeed)
+	if err1 != nil {
 		return
 	}
-	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
-	dataChannel := make(chan int64, MaxConcurrentRoutines)
-	group := errgroup.Group{}
+	insertErrorOffset, err2 := task.req.retracePreviousFailedInsertions(task.ResultSeed)
+	if err2 != nil {
+		return
+	}
 
+	group := errgroup.Group{}
 	for i := task.OperationConfig.Start; i < task.OperationConfig.End; i++ {
 		routineLimiter <- struct{}{}
 		dataChannel <- i
-
 		group.Go(func() error {
 			offset := <-dataChannel
 			key := task.req.Seed + offset
@@ -185,20 +186,55 @@ func deleteDocuments(task *DeleteTask, collection *gocb.Collection) {
 				<-routineLimiter
 				return fmt.Errorf("alreday deleted docID on " + docId)
 			}
-			if key > task.req.SeedEnd || key < task.req.Seed {
-				task.Result.IncrementFailure(docId, nil, errors.New("docId out of bound"))
+			if _, ok := insertErrorOffset[offset]; ok {
 				<-routineLimiter
-				return fmt.Errorf("docId out of bound")
+				return fmt.Errorf("error in insertion of docID on " + docId)
 			}
-			_, err := collection.Remove(docId, &gocb.RemoveOptions{
-				Cas:             gocb.Cas(task.RemoveOptions.Cas),
-				PersistTo:       task.RemoveOptions.PersistTo,
-				ReplicateTo:     task.RemoveOptions.ReplicateTo,
-				DurabilityLevel: getDurability(task.RemoveOptions.Durability),
-				Timeout:         time.Duration(task.RemoveOptions.Timeout) * time.Second,
-			})
+
+			fake := faker.NewWithSeed(rand.NewSource(key))
+			originalDocument, err := task.gen.Template.GenerateDocument(&fake, task.State.DocumentSize)
 			if err != nil {
-				task.Result.IncrementFailure(docId, nil, err)
+				task.Result.IncrementFailure(docId, originalDocument, err)
+				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
+				<-routineLimiter
+				return err
+			}
+			originalDocument, err = task.req.retracePreviousMutations(offset, originalDocument, *task.gen, &fake,
+				task.ResultSeed)
+			if err != nil {
+				task.Result.IncrementFailure(docId, originalDocument, err)
+				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
+				<-routineLimiter
+				return err
+			}
+
+			var resultFromHost map[string]interface{}
+			documentFromHost := template.InitialiseTemplate(task.State.TemplateName)
+			result, err := collection.Get(docId, nil)
+			if err != nil {
+				task.Result.IncrementFailure(docId, originalDocument, err)
+				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
+				<-routineLimiter
+				return err
+			}
+			if err := result.Content(&resultFromHost); err != nil {
+				task.Result.IncrementFailure(docId, originalDocument, err)
+				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
+				<-routineLimiter
+				return err
+			}
+			resultBytes, err := json.Marshal(resultFromHost)
+			err = json.Unmarshal(resultBytes, &documentFromHost)
+			if err != nil {
+				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
+				task.Result.IncrementFailure(docId, originalDocument, err)
+				<-routineLimiter
+				return err
+			}
+
+			ok, err := task.gen.Template.Compare(documentFromHost, originalDocument)
+			if err != nil || !ok {
+				task.Result.IncrementFailure(docId, originalDocument, err)
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 				<-routineLimiter
 				return err
