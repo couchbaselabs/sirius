@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-type SingleInsertTask struct {
+type SingleUpsertTask struct {
 	IdentifierToken string                  `json:"identifierToken" doc:"true"`
 	ClusterConfig   *sdk.ClusterConfig      `json:"clusterConfig" doc:"true"`
 	Bucket          string                  `json:"bucket" doc:"true"`
@@ -28,11 +28,11 @@ type SingleInsertTask struct {
 	req             *Request                `json:"-" doc:"false"`
 }
 
-func (task *SingleInsertTask) Describe() string {
-	return "Single insert task create key value in Couchbase.\n"
+func (task *SingleUpsertTask) Describe() string {
+	return "Single insert task updates key value in Couchbase.\n"
 }
 
-func (task *SingleInsertTask) BuildIdentifier() string {
+func (task *SingleUpsertTask) BuildIdentifier() string {
 	if task.ClusterConfig == nil {
 		task.ClusterConfig = &sdk.ClusterConfig{}
 		log.Println("build Identifier have received nil ClusterConfig")
@@ -50,12 +50,12 @@ func (task *SingleInsertTask) BuildIdentifier() string {
 		task.Collection)
 }
 
-func (task *SingleInsertTask) CheckIfPending() bool {
+func (task *SingleUpsertTask) CheckIfPending() bool {
 	return task.TaskPending
 }
 
 // Config configures  the insert task
-func (task *SingleInsertTask) Config(req *Request, seed int64, seedEnd int64, reRun bool) (int64, error) {
+func (task *SingleUpsertTask) Config(req *Request, seed int64, seedEnd int64, reRun bool) (int64, error) {
 	task.TaskPending = true
 	task.req = req
 
@@ -72,7 +72,7 @@ func (task *SingleInsertTask) Config(req *Request, seed int64, seedEnd int64, re
 
 	if !reRun {
 		task.ResultSeed = time.Now().UnixNano()
-		task.Operation = SingleInsertOperation
+		task.Operation = SingleUpsertOperation
 		task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
 		if task.IdentifierToken == "" {
@@ -92,12 +92,12 @@ func (task *SingleInsertTask) Config(req *Request, seed int64, seedEnd int64, re
 	return task.ResultSeed, nil
 }
 
-func (task *SingleInsertTask) tearUp() error {
+func (task *SingleUpsertTask) tearUp() error {
 	task.TaskPending = false
 	return task.req.SaveRequestIntoFile()
 }
 
-func (task *SingleInsertTask) Do() error {
+func (task *SingleUpsertTask) Do() error {
 
 	if task.Result != nil && task.Result.ErrorOther != "" {
 		log.Println(task.Result.ErrorOther)
@@ -122,7 +122,7 @@ func (task *SingleInsertTask) Do() error {
 		return task.tearUp()
 	}
 
-	singleInsertDocuments(task, collection)
+	singleUpsertDocuments(task, collection)
 
 	task.Result.Success = int64(len(task.OperationConfig.KeyValue)) - task.Result.Failure
 
@@ -133,8 +133,8 @@ func (task *SingleInsertTask) Do() error {
 	return task.tearUp()
 }
 
-// singleInsertDocuments uploads new documents in a bucket.scope.collection in a defined batch size at multiple iterations.
-func singleInsertDocuments(task *SingleInsertTask, collection *gocb.Collection) {
+// singleUpsertDocuments uploads new documents in a bucket.scope.collection in a defined batch size at multiple iterations.
+func singleUpsertDocuments(task *SingleUpsertTask, collection *gocb.Collection) {
 
 	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
 	dataChannel := make(chan interface{}, MaxConcurrentRoutines)
@@ -155,7 +155,7 @@ func singleInsertDocuments(task *SingleInsertTask, collection *gocb.Collection) 
 				return errors.New("unable to decode Key Value for single crud")
 			}
 
-			_, err := collection.Insert(kV.Key, kV.Doc, &gocb.InsertOptions{
+			_, err := collection.Upsert(kV.Key, kV.Doc, &gocb.UpsertOptions{
 				DurabilityLevel: getDurability(task.InsertOptions.Durability),
 				PersistTo:       task.InsertOptions.PersistTo,
 				ReplicateTo:     task.InsertOptions.ReplicateTo,

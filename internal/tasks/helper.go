@@ -11,9 +11,12 @@ const (
 	InsertOperation       string = "insert"
 	DeleteOperation       string = "delete"
 	UpsertOperation       string = "upsert"
-	ValidateOperation     string = "validate"
 	ReadOperation         string = "read"
+	ValidateOperation     string = "validate"
 	SingleInsertOperation string = "singleInsert"
+	SingleDeleteOperation string = "singleDelete"
+	SingleUpsertOperation string = "singleUpsert"
+	SingleReadOperation   string = "singleRead"
 )
 
 const (
