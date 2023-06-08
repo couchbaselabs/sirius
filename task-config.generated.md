@@ -14,6 +14,8 @@ configuration that is also available on a per-task basis:
  * [/single-create](#single-create)
  * [/single-delete](#single-delete)
  * [/single-read](#single-read)
+ * [/single-replace](#single-replace)
+ * [/single-touch](#single-touch)
  * [/single-upsert](#single-upsert)
  * [/validate](#validate)
 
@@ -195,6 +197,42 @@ Description : Single read task reads key value in couchbase and validates.
 | `OperationConfig` | `ptr` | `json:singleOperationConfig`  |
 
 ---
+#### /single-replace
+
+ REST : POST
+
+Description : Single replace task a document in the collection in Couchbase.
+
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `ReplaceOptions` | `ptr` | `json:replaceOptions,omitempty`  |
+| `OperationConfig` | `ptr` | `json:singleOperationConfig`  |
+
+---
+#### /single-touch
+
+ REST : POST
+
+Description : Single touch task specifies a new expiry time for a document in Couchbase.
+
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `InsertOptions` | `ptr` | `json:insertOptions,omitempty`  |
+| `OperationConfig` | `ptr` | `json:singleOperationConfig`  |
+
+---
 #### /single-upsert
 
  REST : POST
@@ -237,6 +275,7 @@ Description : Validates every document in the cluster's bucket
  * [keyValue](#keyvalue)
  * [operationConfig](#operationconfig)
  * [removeOptions](#removeoptions)
+ * [replaceOption](#replaceoption)
  * [singleOperationConfig](#singleoperationconfig)
  * [timeoutsConfig](#timeoutsconfig)
 
@@ -293,6 +332,16 @@ Description : Validates every document in the cluster's bucket
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
+| `Cas` | `uint64` | `json:cas,omitempty`  |
+| `PersistTo` | `uint` | `json:persistTo,omitempty`  |
+| `ReplicateTo` | `uint` | `json:replicateTo,omitempty`  |
+| `Durability` | `string` | `json:durability,omitempty`  |
+| `Timeout` | `int` | `json:timeout,omitempty`  |
+#### replaceOption
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `Expiry` | `int64` | `json:expiry,omitempty`  |
 | `Cas` | `uint64` | `json:cas,omitempty`  |
 | `PersistTo` | `uint` | `json:persistTo,omitempty`  |
 | `ReplicateTo` | `uint` | `json:replicateTo,omitempty`  |

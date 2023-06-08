@@ -38,6 +38,8 @@ func (app *Config) routes() http.Handler {
 	mux.Post("/single-delete", app.singleDeleteTask)
 	mux.Post("/single-upsert", app.singleUpsertTask)
 	mux.Post("/single-read", app.singleReadTask)
+	mux.Post("/single-touch", app.singleTouchTask)
+	mux.Post("/single-replace", app.singleReplaceTask)
 
 	return mux
 }

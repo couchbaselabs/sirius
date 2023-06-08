@@ -7,16 +7,18 @@ import (
 )
 
 const (
-	MaxConcurrentRoutines        = 30
-	InsertOperation       string = "insert"
-	DeleteOperation       string = "delete"
-	UpsertOperation       string = "upsert"
-	ReadOperation         string = "read"
-	ValidateOperation     string = "validate"
-	SingleInsertOperation string = "singleInsert"
-	SingleDeleteOperation string = "singleDelete"
-	SingleUpsertOperation string = "singleUpsert"
-	SingleReadOperation   string = "singleRead"
+	MaxConcurrentRoutines         = 30
+	InsertOperation        string = "insert"
+	DeleteOperation        string = "delete"
+	UpsertOperation        string = "upsert"
+	ReadOperation          string = "read"
+	ValidateOperation      string = "validate"
+	SingleInsertOperation  string = "singleInsert"
+	SingleDeleteOperation  string = "singleDelete"
+	SingleUpsertOperation  string = "singleUpsert"
+	SingleReadOperation    string = "singleRead"
+	SingleTouchOperation   string = "singleTouch"
+	SingleReplaceOperation string = "singleReplace"
 )
 
 const (
@@ -145,6 +147,25 @@ type RemoveOptions struct {
 }
 
 func configRemoveOptions(r *RemoveOptions) error {
+	if r == nil {
+		return fmt.Errorf("unable to parse RemoveOptions")
+	}
+	if r.Timeout == 0 {
+		r.Timeout = 10
+	}
+	return nil
+}
+
+type ReplaceOptions struct {
+	Expiry      int64  `json:"expiry,omitempty" doc:"true"`
+	Cas         uint64 `json:"cas,omitempty" doc:"true"`
+	PersistTo   uint   `json:"persistTo,omitempty" doc:"true"`
+	ReplicateTo uint   `json:"replicateTo,omitempty" doc:"true"`
+	Durability  string `json:"durability,omitempty" doc:"true"`
+	Timeout     int    `json:"timeout,omitempty" doc:"true"`
+}
+
+func configReplaceOptions(r *ReplaceOptions) error {
 	if r == nil {
 		return fmt.Errorf("unable to parse RemoveOptions")
 	}
