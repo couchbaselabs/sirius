@@ -15,18 +15,20 @@ type Register struct {
 
 func (r *Register) RegisteredTasks() map[string]TaskRegister {
 	return map[string]TaskRegister{
-		"/bulk-create":   {"POST", &tasks.InsertTask{}},
-		"/fast-create":   {"Post", &tasks.FastInsertTask{}},
-		"/bulk-delete":   {"POST", &tasks.DeleteTask{}},
-		"/bulk-upsert":   {"POST", &tasks.UpsertTask{}},
-		"/validate":      {"POST", &tasks.ValidateTask{}},
-		"/result":        {"POST", &tasks.TaskResult{}},
-		"/clear_data":    {"POST", &tasks.ClearTask{}},
-		"/bulk-read":     {"POST", &tasks.ReadTask{}},
-		"/single-create": {"POST", &tasks.SingleInsertTask{}},
-		"/single-delete": {"POST", &tasks.SingleDeleteTask{}},
-		"/single-upsert": {"POST", &tasks.SingleUpsertTask{}},
-		"/single-read":   {"POST", &tasks.SingleReadTask{}},
+		"/bulk-create":    {"POST", &tasks.InsertTask{}},
+		"/fast-create":    {"Post", &tasks.FastInsertTask{}},
+		"/bulk-delete":    {"POST", &tasks.DeleteTask{}},
+		"/bulk-upsert":    {"POST", &tasks.UpsertTask{}},
+		"/validate":       {"POST", &tasks.ValidateTask{}},
+		"/result":         {"POST", &tasks.TaskResult{}},
+		"/clear_data":     {"POST", &tasks.ClearTask{}},
+		"/bulk-read":      {"POST", &tasks.ReadTask{}},
+		"/single-create":  {"POST", &tasks.SingleInsertTask{}},
+		"/single-delete":  {"POST", &tasks.SingleDeleteTask{}},
+		"/single-upsert":  {"POST", &tasks.SingleUpsertTask{}},
+		"/single-read":    {"POST", &tasks.SingleReadTask{}},
+		"/single-touch":   {"POST", &tasks.SingleTouchTask{}},
+		"/single-replace": {"POST", &tasks.SingleReplaceTask{}},
 	}
 }
 
@@ -38,6 +40,7 @@ func (r *Register) HelperStruct() map[string]any {
 		"operationConfig":       &tasks.OperationConfig{},
 		"insertOptions":         &tasks.InsertOptions{},
 		"removeOptions":         &tasks.RemoveOptions{},
+		"replaceOption":         &tasks.ReplaceOptions{},
 		"singleOperationConfig": &tasks.SingleOperationConfig{},
 		"keyValue":              &tasks.KeyValue{},
 	}
