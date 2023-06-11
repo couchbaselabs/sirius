@@ -31,11 +31,12 @@ func RegisteredErrors() map[error]struct{} {
 }
 
 // CheckSDKException returns SDK Exception on possible match.
-func CheckSDKException(err error) (string, error) {
+func CheckSDKException(err error) (string, string) {
+
 	for e, _ := range RegisteredErrors() {
 		if errors.Is(err, e) {
-			return e.Error(), nil
+			return e.Error(), err.Error()
 		}
 	}
-	return "", errors.New("SDK Exception Not Found")
+	return "unknown exceptions", err.Error()
 }
