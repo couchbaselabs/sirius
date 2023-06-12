@@ -161,9 +161,10 @@ func (task *InsertTask) Do() error {
 		log.Println("not able to save Result into ", task.ResultSeed)
 	}
 
-	if err := task.State.SaveTaskSateOnDisk(); err != nil {
-		log.Println("Error in storing TASK State on DISK")
-	}
+	// Use this case to store task's state on disk when required
+	//if err := task.State.SaveTaskSateOnDisk(); err != nil {
+	//	log.Println("Error in storing TASK State on DISK")
+	//}
 
 	task.State.ClearCompletedKeyStates()
 	return task.tearUp()

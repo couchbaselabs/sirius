@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 )
 
@@ -16,8 +15,9 @@ const ResultPath = "./internal/task_result/task_result_logs"
 // TaskResult defines the type of result stored in a response after an operation.
 
 type FailedDocument struct {
-	DocId string      `json:"key"`
-	Doc   interface{} `json:"value"`
+	DocId       string      `json:"key"`
+	Doc         interface{} `json:"value"`
+	ErrorString string      `json:"errorString"`
 }
 
 type TaskResult struct {
@@ -45,23 +45,12 @@ func ConfigTaskResult(operation string, seed int64) *TaskResult {
 func (t *TaskResult) IncrementFailure(docId string, doc interface{}, err error) {
 	t.lock.Lock()
 	t.Failure++
-	if v, e := sdk.CheckSDKException(err); e == nil {
-		t.Error[v] = append(t.Error[v], FailedDocument{
-			DocId: docId,
-			Doc:   doc,
-		})
-	} else {
-		errorStr := err.Error()
-		errorIndex := strings.IndexByte(errorStr, '|')
-		errStrUpdated := errorStr
-		if errorIndex != -1 {
-			errStrUpdated = errorStr[:errorIndex]
-		}
-		t.Error[errStrUpdated] = append(t.Error[errStrUpdated], FailedDocument{
-			DocId: docId,
-			Doc:   doc,
-		})
-	}
+	v, errorString := sdk.CheckSDKException(err)
+	t.Error[v] = append(t.Error[v], FailedDocument{
+		DocId:       docId,
+		Doc:         doc,
+		ErrorString: errorString,
+	})
 	t.lock.Unlock()
 }
 
