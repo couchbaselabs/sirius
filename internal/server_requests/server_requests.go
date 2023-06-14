@@ -210,6 +210,7 @@ func (sr *ServerRequests) ClearIdentifierAndRequest(identifier string) error {
 		if ok && req != nil {
 			req.DisconnectConnectionManager()
 		}
+		req = nil
 		sr.remove(identifier, true)
 	}
 	return tasks.RemoveRequestFromFile(identifier)
