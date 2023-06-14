@@ -59,6 +59,13 @@ func (r *Request) DisconnectConnectionManager() {
 	r.connectionManager.DisconnectAll()
 }
 
+// ClearAllTask will remove all task
+func (r *Request) ClearAllTask() {
+	for _, t := range r.Tasks {
+		t.Task = nil
+	}
+}
+
 // retracePreviousMutations returns a updated document after mutating the original documents.
 func (r *Request) retracePreviousMutations(offset int64, doc interface{}, gen docgenerator.Generator,
 	fake *faker.Faker, resultSeed int64) (interface{}, error) {

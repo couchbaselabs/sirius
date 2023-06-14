@@ -28,7 +28,7 @@ type FastInsertTask struct {
 	Operation       string                  `json:"operation" doc:"false"`
 	ResultSeed      int64                   `json:"resultSeed" doc:"false"`
 	TaskPending     bool                    `json:"taskPending" doc:"false"`
-	Result          *task_result.TaskResult `json:"Result" doc:"false"`
+	result          *task_result.TaskResult `json:"-" doc:"false"`
 	gen             *docgenerator.Generator `json:"-" doc:"false"`
 	req             *Request                `json:"-" doc:"false"`
 }
@@ -79,18 +79,18 @@ func (task *FastInsertTask) Config(req *Request, seed int64, seedEnd int64, reRu
 	if !reRun {
 		task.ResultSeed = time.Now().UnixNano()
 		task.Operation = InsertOperation
-		task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
 		if task.IdentifierToken == "" {
-			task.Result.ErrorOther = "identifier token is missing"
+			task.result.ErrorOther = "identifier token is missing"
 		}
 
 		if err := configInsertOptions(task.InsertOptions); err != nil {
-			task.Result.ErrorOther = err.Error()
+			task.result.ErrorOther = err.Error()
 		}
 
 		if err := configureOperationConfig(task.OperationConfig); err != nil {
-			task.Result.ErrorOther = err.Error()
+			task.result.ErrorOther = err.Error()
 		}
 
 		task.Operation = InsertOperation
@@ -106,30 +106,31 @@ func (task *FastInsertTask) Config(req *Request, seed int64, seedEnd int64, reRu
 }
 
 func (task *FastInsertTask) tearUp() error {
+	task.result = nil
 	task.TaskPending = false
 	return task.req.SaveRequestIntoFile()
 }
 
 func (task *FastInsertTask) Do() error {
 
-	if task.Result != nil && task.Result.ErrorOther != "" {
-		log.Println(task.Result.ErrorOther)
-		if err := task.Result.SaveResultIntoFile(); err != nil {
-			log.Println("not able to save Result into ", task.ResultSeed)
+	if task.result != nil && task.result.ErrorOther != "" {
+		log.Println(task.result.ErrorOther)
+		if err := task.result.SaveResultIntoFile(); err != nil {
+			log.Println("not able to save result into ", task.ResultSeed)
 			return err
 		}
 		return task.tearUp()
 	} else {
-		task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 	}
 
 	collection, err1 := task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
 		task.Collection)
 
 	if err1 != nil {
-		task.Result.ErrorOther = err1.Error()
-		if err := task.Result.SaveResultIntoFile(); err != nil {
-			log.Println("not able to save Result into ", task.ResultSeed)
+		task.result.ErrorOther = err1.Error()
+		if err := task.result.SaveResultIntoFile(); err != nil {
+			log.Println("not able to save result into ", task.ResultSeed)
 			return err
 		}
 		_ = task.req.RemoveFromSeedEnd(task.OperationConfig.Count)
@@ -141,10 +142,10 @@ func (task *FastInsertTask) Do() error {
 		template.InitialiseTemplate(task.OperationConfig.TemplateName))
 
 	fastInsertDocuments(task, collection)
-	task.Result.Success = task.OperationConfig.Count - task.Result.Failure
+	task.result.Success = task.OperationConfig.Count - task.result.Failure
 
-	if err := task.Result.SaveResultIntoFile(); err != nil {
-		log.Println("not able to save Result into ", task.ResultSeed)
+	if err := task.result.SaveResultIntoFile(); err != nil {
+		log.Println("not able to save result into ", task.ResultSeed)
 	}
 
 	return task.tearUp()
@@ -168,7 +169,7 @@ func fastInsertDocuments(task *FastInsertTask, collection *gocb.Collection) {
 			fake := faker.NewWithSeed(rand.NewSource(key))
 			doc, err := task.gen.Template.GenerateDocument(&fake, task.OperationConfig.DocSize)
 			if err != nil {
-				task.Result.IncrementFailure(docId, doc, err)
+				task.result.IncrementFailure(docId, doc, err)
 				<-routineLimiter
 				return err
 			}
@@ -183,31 +184,31 @@ func fastInsertDocuments(task *FastInsertTask, collection *gocb.Collection) {
 				documentFromHost := template.InitialiseTemplate(task.OperationConfig.TemplateName)
 				result, err := collection.Get(docId, nil)
 				if err != nil {
-					task.Result.IncrementFailure(docId, doc, err)
+					task.result.IncrementFailure(docId, doc, err)
 					<-routineLimiter
 					return err
 				}
 				if err := result.Content(&resultFromHost); err != nil {
-					task.Result.IncrementFailure(docId, doc, err)
+					task.result.IncrementFailure(docId, doc, err)
 					<-routineLimiter
 					return err
 				}
 				resultBytes, err := json.Marshal(resultFromHost)
 				err = json.Unmarshal(resultBytes, &documentFromHost)
 				if err != nil {
-					task.Result.IncrementFailure(docId, doc, err)
+					task.result.IncrementFailure(docId, doc, err)
 					<-routineLimiter
 					return err
 				}
 				ok, err := task.gen.Template.Compare(documentFromHost, doc)
 				if err != nil || !ok {
-					task.Result.IncrementFailure(docId, doc, errors.New("read your own write failure"))
+					task.result.IncrementFailure(docId, doc, errors.New("read your own write failure"))
 					<-routineLimiter
 					return err
 				}
 			} else {
 				if err != nil {
-					task.Result.IncrementFailure(docId, doc, err)
+					task.result.IncrementFailure(docId, doc, err)
 					<-routineLimiter
 					return err
 				}

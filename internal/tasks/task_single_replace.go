@@ -22,7 +22,7 @@ type SingleReplaceTask struct {
 	Operation       string                  `json:"operation" doc:"false"`
 	ResultSeed      int64                   `json:"resultSeed" doc:"false"`
 	TaskPending     bool                    `json:"taskPending" doc:"false"`
-	Result          *task_result.TaskResult `json:"Result" doc:"false"`
+	result          *task_result.TaskResult `json:"-" doc:"false"`
 	req             *Request                `json:"-" doc:"false"`
 }
 
@@ -71,18 +71,18 @@ func (task *SingleReplaceTask) Config(req *Request, seed int64, seedEnd int64, r
 	if !reRun {
 		task.ResultSeed = time.Now().UnixNano()
 		task.Operation = SingleReplaceOperation
-		task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
 		if task.IdentifierToken == "" {
-			task.Result.ErrorOther = "identifier token is missing"
+			task.result.ErrorOther = "identifier token is missing"
 		}
 
 		if err := configReplaceOptions(task.ReplaceOptions); err != nil {
-			task.Result.ErrorOther = err.Error()
+			task.result.ErrorOther = err.Error()
 		}
 
 		if err := configSingleOperationConfig(task.OperationConfig); err != nil {
-			task.Result.ErrorOther = err.Error()
+			task.result.ErrorOther = err.Error()
 		}
 	} else {
 		log.Println("retrying :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
@@ -91,30 +91,31 @@ func (task *SingleReplaceTask) Config(req *Request, seed int64, seedEnd int64, r
 }
 
 func (task *SingleReplaceTask) tearUp() error {
+	task.result = nil
 	task.TaskPending = false
 	return task.req.SaveRequestIntoFile()
 }
 
 func (task *SingleReplaceTask) Do() error {
 
-	if task.Result != nil && task.Result.ErrorOther != "" {
-		log.Println(task.Result.ErrorOther)
-		if err := task.Result.SaveResultIntoFile(); err != nil {
-			log.Println("not able to save Result into ", task.ResultSeed)
+	if task.result != nil && task.result.ErrorOther != "" {
+		log.Println(task.result.ErrorOther)
+		if err := task.result.SaveResultIntoFile(); err != nil {
+			log.Println("not able to save result into ", task.ResultSeed)
 			return err
 		}
 		return task.tearUp()
 	} else {
-		task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 	}
 
 	collection, err1 := task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
 		task.Collection)
 
 	if err1 != nil {
-		task.Result.ErrorOther = err1.Error()
-		if err := task.Result.SaveResultIntoFile(); err != nil {
-			log.Println("not able to save Result into ", task.ResultSeed)
+		task.result.ErrorOther = err1.Error()
+		if err := task.result.SaveResultIntoFile(); err != nil {
+			log.Println("not able to save result into ", task.ResultSeed)
 			return err
 		}
 		return task.tearUp()
@@ -122,10 +123,10 @@ func (task *SingleReplaceTask) Do() error {
 
 	singleReplaceDocuments(task, collection)
 
-	task.Result.Success = int64(len(task.OperationConfig.KeyValue)) - task.Result.Failure
+	task.result.Success = int64(len(task.OperationConfig.KeyValue)) - task.result.Failure
 
-	if err := task.Result.SaveResultIntoFile(); err != nil {
-		log.Println("not able to save Result into ", task.ResultSeed)
+	if err := task.result.SaveResultIntoFile(); err != nil {
+		log.Println("not able to save result into ", task.ResultSeed)
 	}
 
 	return task.tearUp()
@@ -148,7 +149,7 @@ func singleReplaceDocuments(task *SingleReplaceTask, collection *gocb.Collection
 			keyValue := <-dataChannel
 			kV, ok := keyValue.(KeyValue)
 			if !ok {
-				task.Result.IncrementFailure("unknownDocId", struct{}{},
+				task.result.IncrementFailure("unknownDocId", struct{}{},
 					errors.New("unable to decode Key Value for single crud"))
 				<-routineLimiter
 				return errors.New("unable to decode Key Value for single crud")
@@ -164,7 +165,7 @@ func singleReplaceDocuments(task *SingleReplaceTask, collection *gocb.Collection
 			})
 
 			if err != nil {
-				task.Result.IncrementFailure(kV.Key, kV.Doc, err)
+				task.result.IncrementFailure(kV.Key, kV.Doc, err)
 				<-routineLimiter
 				return err
 			}

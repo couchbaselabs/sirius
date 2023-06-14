@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	MaxConcurrentRoutines         = 30
+	MaxConcurrentRoutines         = 5
 	InsertOperation        string = "insert"
 	DeleteOperation        string = "delete"
 	UpsertOperation        string = "upsert"

@@ -30,6 +30,7 @@ func (cm *ConnectionManager) DisconnectAll() {
 			_ = v.Cluster.Close(nil)
 			delete(cm.clusters, cS)
 		}
+		v = nil
 	}
 }
 

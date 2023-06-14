@@ -28,7 +28,7 @@ type UpsertTask struct {
 	ResultSeed      int64                   `json:"resultSeed" doc:"false"`
 	TaskPending     bool                    `json:"taskPending" doc:"false"`
 	State           *task_state.TaskState   `json:"State" doc:"false"`
-	Result          *task_result.TaskResult `json:"Result" doc:"false"`
+	result          *task_result.TaskResult `json:"-" doc:"false"`
 	gen             *docgenerator.Generator `json:"-" doc:"false"`
 	req             *Request                `json:"-" doc:"false"`
 }
@@ -79,18 +79,18 @@ func (task *UpsertTask) Config(req *Request, seed int64, seedEnd int64, reRun bo
 	if !reRun {
 		task.ResultSeed = time.Now().UnixNano()
 		task.Operation = UpsertOperation
-		task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
 		if task.IdentifierToken == "" {
 			return 0, fmt.Errorf("identifier token is missing")
 		}
 
 		if err := configInsertOptions(task.InsertOptions); err != nil {
-			task.Result.ErrorOther = err.Error()
+			task.result.ErrorOther = err.Error()
 		}
 
 		if err := configureOperationConfig(task.OperationConfig); err != nil {
-			task.Result.ErrorOther = err.Error()
+			task.result.ErrorOther = err.Error()
 		}
 
 		task.Template = template.InitialiseTemplate(task.OperationConfig.TemplateName)
@@ -111,6 +111,7 @@ func (task *UpsertTask) Config(req *Request, seed int64, seedEnd int64, reRun bo
 }
 
 func (task *UpsertTask) tearUp() error {
+	task.result = nil
 	task.State.StopStoringState()
 	task.TaskPending = false
 	return task.req.SaveRequestIntoFile()
@@ -118,24 +119,24 @@ func (task *UpsertTask) tearUp() error {
 
 func (task *UpsertTask) Do() error {
 
-	if task.Result != nil && task.Result.ErrorOther != "" {
-		log.Println(task.Result.ErrorOther)
-		if err := task.Result.SaveResultIntoFile(); err != nil {
-			log.Println("not able to save Result into ", task.ResultSeed)
+	if task.result != nil && task.result.ErrorOther != "" {
+		log.Println(task.result.ErrorOther)
+		if err := task.result.SaveResultIntoFile(); err != nil {
+			log.Println("not able to save result into ", task.ResultSeed)
 			return err
 		}
 		return task.tearUp()
 	} else {
-		task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 	}
 
 	collection, err1 := task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
 		task.Collection)
 
 	if err1 != nil {
-		task.Result.ErrorOther = err1.Error()
-		if err := task.Result.SaveResultIntoFile(); err != nil {
-			log.Println("not able to save Result into ", task.ResultSeed)
+		task.result.ErrorOther = err1.Error()
+		if err := task.result.SaveResultIntoFile(); err != nil {
+			log.Println("not able to save result into ", task.ResultSeed)
 			return err
 		}
 		task.State.AddRangeToErrSet(task.OperationConfig.Start, task.OperationConfig.End)
@@ -148,10 +149,10 @@ func (task *UpsertTask) Do() error {
 
 	upsertDocuments(task, collection)
 
-	task.Result.Success = task.OperationConfig.End - task.OperationConfig.Start - task.Result.Failure
+	task.result.Success = task.OperationConfig.End - task.OperationConfig.Start - task.result.Failure
 
-	if err := task.Result.SaveResultIntoFile(); err != nil {
-		log.Println("not able to save Result into ", task.ResultSeed)
+	if err := task.result.SaveResultIntoFile(); err != nil {
+		log.Println("not able to save result into ", task.ResultSeed)
 	}
 	task.State.ClearCompletedKeyStates()
 	return task.tearUp()
@@ -200,7 +201,7 @@ func upsertDocuments(task *UpsertTask, collection *gocb.Collection) {
 			}
 			originalDoc, err = task.req.retracePreviousMutations(offset, originalDoc, *task.gen, &fake, task.ResultSeed)
 			if err != nil {
-				task.Result.IncrementFailure(docId, originalDoc, err)
+				task.result.IncrementFailure(docId, originalDoc, err)
 				<-routineLimiter
 				return err
 			}
@@ -213,7 +214,7 @@ func upsertDocuments(task *UpsertTask, collection *gocb.Collection) {
 				Expiry:          time.Duration(task.InsertOptions.Expiry) * time.Second,
 			})
 			if err != nil {
-				task.Result.IncrementFailure(docId, docUpdated, err)
+				task.result.IncrementFailure(docId, docUpdated, err)
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 				<-routineLimiter
 				return err
