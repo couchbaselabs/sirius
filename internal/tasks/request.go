@@ -21,8 +21,8 @@ type TaskWithIdentifier struct {
 
 type Request struct {
 	Identifier        string                 `json:"identifier" doc:"true" `
-	Seed              int64                  `json:"seed" doc:"true"`
-	SeedEnd           int64                  `json:"seedEnd" doc:"true"`
+	Seed              int                    `json:"seed" doc:"true"`
+	SeedEnd           int                    `json:"seedEnd" doc:"true"`
 	Tasks             []TaskWithIdentifier   `json:"tasks" doc:"true"`
 	connectionManager *sdk.ConnectionManager `json:"-" doc:"false"`
 	lock              sync.Mutex             `json:"-" doc:"false"`
@@ -30,7 +30,7 @@ type Request struct {
 
 // NewRequest return  a instance of Request
 func NewRequest(identifier string) *Request {
-	seed := time.Now().UnixNano()
+	seed := int(time.Now().UnixNano())
 	return &Request{
 		Identifier:        identifier,
 		Seed:              seed,
@@ -67,8 +67,8 @@ func (r *Request) ClearAllTask() {
 }
 
 // retracePreviousMutations returns a updated document after mutating the original documents.
-func (r *Request) retracePreviousMutations(offset int64, doc interface{}, gen docgenerator.Generator,
-	fake *faker.Faker, resultSeed int64) (interface{}, error) {
+func (r *Request) retracePreviousMutations(offset int, doc interface{}, gen docgenerator.Generator,
+	fake *faker.Faker, resultSeed int) (interface{}, error) {
 	defer r.lock.Unlock()
 	r.lock.Lock()
 	for _, td := range r.Tasks {
@@ -93,15 +93,15 @@ func (r *Request) retracePreviousMutations(offset int64, doc interface{}, gen do
 }
 
 // retracePreviousDeletions returns a lookup table representing the offsets which are successfully deleted.
-func (r *Request) retracePreviousDeletions(resultSeed int64) (map[int64]struct{}, error) {
+func (r *Request) retracePreviousDeletions(resultSeed int) (map[int]struct{}, error) {
 	defer r.lock.Unlock()
 	r.lock.Lock()
-	result := make(map[int64]struct{})
+	result := make(map[int]struct{})
 	for _, td := range r.Tasks {
 		if td.Operation == DeleteOperation {
 			u, ok := td.Task.(*DeleteTask)
 			if !ok {
-				return map[int64]struct{}{}, fmt.Errorf("unable to decode delete task from backlog")
+				return map[int]struct{}{}, fmt.Errorf("unable to decode delete task from backlog")
 			} else {
 				if resultSeed != u.ResultSeed {
 					completedOffSet := u.State.ReturnCompletedOffset()
@@ -116,15 +116,15 @@ func (r *Request) retracePreviousDeletions(resultSeed int64) (map[int64]struct{}
 }
 
 // returns a lookup table representing the offsets which are not inserted properly..
-func (r *Request) retracePreviousFailedInsertions(resultSeed int64) (map[int64]struct{}, error) {
+func (r *Request) retracePreviousFailedInsertions(resultSeed int) (map[int]struct{}, error) {
 	defer r.lock.Unlock()
 	r.lock.Lock()
-	result := make(map[int64]struct{})
+	result := make(map[int]struct{})
 	for _, td := range r.Tasks {
 		if td.Operation == InsertOperation {
 			u, ok := td.Task.(*InsertTask)
 			if !ok {
-				return map[int64]struct{}{}, fmt.Errorf("unable to decode delete task from backlog")
+				return map[int]struct{}{}, fmt.Errorf("unable to decode delete task from backlog")
 			} else {
 				if resultSeed != u.ResultSeed {
 					errorOffSet := u.State.ReturnErrOffset()
@@ -151,7 +151,7 @@ func (r *Request) AddTask(o string, t Task) error {
 }
 
 // AddToSeedEnd will update the Request.SeedEnd by  adding count into it.
-func (r *Request) AddToSeedEnd(count int64) error {
+func (r *Request) AddToSeedEnd(count int) error {
 	defer r.lock.Unlock()
 	r.lock.Lock()
 	r.SeedEnd += count
@@ -160,7 +160,7 @@ func (r *Request) AddToSeedEnd(count int64) error {
 }
 
 // RemoveFromSeedEnd will update the Request.SeedEnd by  subtracting count into it.
-func (r *Request) RemoveFromSeedEnd(count int64) error {
+func (r *Request) RemoveFromSeedEnd(count int) error {
 	defer r.lock.Unlock()
 	r.lock.Lock()
 	r.SeedEnd -= count
@@ -169,7 +169,7 @@ func (r *Request) RemoveFromSeedEnd(count int64) error {
 }
 
 // checkAndUpdateSeedEnd will store the max seed value that may occur in upsert operations.
-func (r *Request) checkAndUpdateSeedEnd(key int64) {
+func (r *Request) checkAndUpdateSeedEnd(key int) {
 	defer r.lock.Unlock()
 	r.lock.Lock()
 	if key > r.SeedEnd {

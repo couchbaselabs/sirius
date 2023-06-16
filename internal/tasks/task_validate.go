@@ -25,7 +25,7 @@ type ValidateTask struct {
 	OperationConfig *OperationConfig        `json:"operationConfig,omitempty" doc:"true"`
 	Template        interface{}             `json:"-" doc:"false"`
 	Operation       string                  `json:"operation" doc:"false"`
-	ResultSeed      int64                   `json:"resultSeed" doc:"false"`
+	ResultSeed      int                     `json:"resultSeed" doc:"false"`
 	TaskPending     bool                    `json:"taskPending" doc:"false"`
 	State           *task_state.TaskState   `json:"State" doc:"false"`
 	result          *task_result.TaskResult `json:"-" doc:"false"`
@@ -66,7 +66,7 @@ func (task *ValidateTask) tearUp() error {
 	return task.req.SaveRequestIntoFile()
 }
 
-func (task *ValidateTask) Config(req *Request, seed int64, seedEnd int64, reRun bool) (int64, error) {
+func (task *ValidateTask) Config(req *Request, seed int, seedEnd int, reRun bool) (int, error) {
 	task.TaskPending = true
 	task.req = req
 
@@ -82,7 +82,7 @@ func (task *ValidateTask) Config(req *Request, seed int64, seedEnd int64, reRun 
 	}
 
 	if !reRun {
-		task.ResultSeed = time.Now().UnixNano()
+		task.ResultSeed = int(time.Now().UnixNano())
 		task.Operation = ValidateOperation
 		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
@@ -144,8 +144,8 @@ func (task *ValidateTask) Do() error {
 
 	validateDocuments(task, collection)
 
-	task.result.Success = task.State.SeedEnd - task.State.SeedStart - task.result.Failure - int64(len(task.result.
-		ValidationError))
+	task.result.Success = task.State.SeedEnd - task.State.SeedStart - task.result.Failure - len(task.result.
+		ValidationError)
 
 	if err := task.result.SaveResultIntoFile(); err != nil {
 		log.Println("not able to save result into ", task.ResultSeed)
@@ -158,8 +158,8 @@ func (task *ValidateTask) Do() error {
 // ValidateDocuments return the validity of the collection using TaskState
 func validateDocuments(task *ValidateTask, collection *gocb.Collection) {
 	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
-	dataChannel := make(chan int64, MaxConcurrentRoutines)
-	skip := make(map[int64]struct{})
+	dataChannel := make(chan int, MaxConcurrentRoutines)
+	skip := make(map[int]struct{})
 	for _, offset := range task.State.KeyStates.Completed {
 		skip[offset] = struct{}{}
 	}
@@ -176,7 +176,7 @@ func validateDocuments(task *ValidateTask, collection *gocb.Collection) {
 	}
 
 	group := errgroup.Group{}
-	for offset := int64(0); offset < (task.State.SeedEnd - task.State.SeedStart); offset++ {
+	for offset := 0; offset < (task.State.SeedEnd - task.State.SeedStart); offset++ {
 		routineLimiter <- struct{}{}
 		dataChannel <- offset
 		group.Go(func() error {
@@ -196,7 +196,7 @@ func validateDocuments(task *ValidateTask, collection *gocb.Collection) {
 				return fmt.Errorf("error in insertion of docID on " + docId)
 			}
 
-			fake := faker.NewWithSeed(rand.NewSource(key))
+			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
 			originalDocument, err := task.gen.Template.GenerateDocument(&fake, task.State.DocumentSize)
 			if err != nil {
 				task.result.IncrementFailure(docId, originalDocument, err)

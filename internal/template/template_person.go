@@ -24,7 +24,7 @@ type Person struct {
 	Padding   string  `json:"payload"`
 }
 
-func (p *Person) GenerateDocument(fake *faker.Faker, documentSize int64) (interface{}, error) {
+func (p *Person) GenerateDocument(fake *faker.Faker, documentSize int) (interface{}, error) {
 	person := &Person{
 		FirstName: fake.Person().FirstName(),
 		Lastname:  fake.Person().LastName(),

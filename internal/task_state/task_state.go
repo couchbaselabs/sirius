@@ -19,21 +19,21 @@ const (
 )
 
 type StateHelper struct {
-	Status int   `json:"-"`
-	Offset int64 `json:"-"`
+	Status int `json:"-"`
+	Offset int `json:"-"`
 }
 
 type KeyStates struct {
-	Completed []int64 `json:"completed"`
-	Err       []int64 `json:"err"`
+	Completed []int `json:"completed"`
+	Err       []int `json:"err"`
 }
 
 type TaskState struct {
 	TemplateName string             `json:"templateName"`
-	DocumentSize int64              `json:"documentSize"`
-	SeedStart    int64              `json:"seedStart"`
-	SeedEnd      int64              `json:"seedEnd"`
-	ResultSeed   int64              `json:"resultSeed"`
+	DocumentSize int                `json:"documentSize"`
+	SeedStart    int                `json:"seedStart"`
+	SeedEnd      int                `json:"seedEnd"`
+	ResultSeed   int                `json:"resultSeed"`
 	KeyPrefix    string             `json:"keyPrefix"`
 	KeySuffix    string             `json:"keySuffix"`
 	KeyStates    KeyStates          `json:"keyStates"`
@@ -44,7 +44,7 @@ type TaskState struct {
 }
 
 // ConfigTaskState returns a instance of TaskState
-func ConfigTaskState(templateName, keyPrefix, keySuffix string, docSize, seed, seedEnd, resultSeed int64) *TaskState {
+func ConfigTaskState(templateName, keyPrefix, keySuffix string, docSize, seed, seedEnd, resultSeed int) *TaskState {
 	ctx, cancel := context.WithCancel(context.Background())
 	ts := &TaskState{
 		TemplateName: templateName,
@@ -76,34 +76,34 @@ func (t *TaskState) SetupStoringKeys() {
 }
 
 // AddOffsetToCompleteSet will add offset to Complete set
-func (t *TaskState) AddOffsetToCompleteSet(offset int64) {
+func (t *TaskState) AddOffsetToCompleteSet(offset int) {
 	t.KeyStates.Completed = append(t.KeyStates.Completed, offset)
 }
 
 // AddRangeToCompleteSet will add a range of offset to Complete set
-func (t *TaskState) AddRangeToCompleteSet(start, end int64) {
+func (t *TaskState) AddRangeToCompleteSet(start, end int) {
 	for i := start; i <= end; i++ {
 		t.KeyStates.Completed = append(t.KeyStates.Completed, i)
 	}
 }
 
 // AddOffsetToErrSet will add offset to Error set
-func (t *TaskState) AddOffsetToErrSet(offset int64) {
+func (t *TaskState) AddOffsetToErrSet(offset int) {
 	t.KeyStates.Err = append(t.KeyStates.Err, offset)
 }
 
 // AddRangeToErrSet will add a range of offset to Error set
-func (t *TaskState) AddRangeToErrSet(start, end int64) {
+func (t *TaskState) AddRangeToErrSet(start, end int) {
 	for i := start; i <= end; i++ {
 		t.KeyStates.Err = append(t.KeyStates.Err, i)
 	}
 }
 
 // ReturnCompletedOffset returns a lookup table for searching completed offsets
-func (t *TaskState) ReturnCompletedOffset() map[int64]struct{} {
+func (t *TaskState) ReturnCompletedOffset() map[int]struct{} {
 	defer t.lock.Unlock()
 	t.lock.Lock()
-	completed := make(map[int64]struct{})
+	completed := make(map[int]struct{})
 	for _, v := range t.KeyStates.Completed {
 		completed[v] = struct{}{}
 	}
@@ -111,10 +111,10 @@ func (t *TaskState) ReturnCompletedOffset() map[int64]struct{} {
 }
 
 // ReturnErrOffset returns a lookup table for searching  error offsets
-func (t *TaskState) ReturnErrOffset() map[int64]struct{} {
+func (t *TaskState) ReturnErrOffset() map[int]struct{} {
 	defer t.lock.Unlock()
 	t.lock.Lock()
-	err := make(map[int64]struct{})
+	err := make(map[int]struct{})
 	for _, v := range t.KeyStates.Err {
 		err[v] = struct{}{}
 	}
@@ -126,8 +126,8 @@ func (t *TaskState) ReturnErrOffset() map[int64]struct{} {
 func (t *TaskState) StoreState() {
 
 	go func() {
-		var completed []int64
-		var err []int64
+		var completed []int
+		var err []int
 		d := time.NewTicker(30 * time.Second)
 		if t.ctx.Err() != nil {
 			log.Print("Ctx closed for StoreState()")
@@ -167,7 +167,7 @@ func (t *TaskState) StoreState() {
 }
 
 // storeCompleted appends a list of completed offset to Completed Key state
-func (t *TaskState) storeCompleted(completed []int64) {
+func (t *TaskState) storeCompleted(completed []int) {
 	t.lock.Lock()
 	for _, offset := range completed {
 		t.AddOffsetToCompleteSet(offset)
@@ -176,7 +176,7 @@ func (t *TaskState) storeCompleted(completed []int64) {
 }
 
 // storeError appends a list of error offset to Error Key state
-func (t *TaskState) storeError(err []int64) {
+func (t *TaskState) storeError(err []int) {
 	t.lock.Lock()
 	for _, offset := range err {
 		t.AddOffsetToErrSet(offset)

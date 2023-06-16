@@ -10,9 +10,9 @@ import (
 const WaitUnityReadyTime = 30
 
 type TimeoutsConfig struct {
-	ConnectTimeout   int64 `json:"connectTimeout,omitempty" doc:"true"`
-	KVTimeout        int64 `json:"KVTimeout,omitempty" doc:"true"`
-	KVDurableTimeout int64 `json:"KVDurableTimeout,omitempty" doc:"true"`
+	ConnectTimeout   int `json:"connectTimeout,omitempty" doc:"true"`
+	KVTimeout        int `json:"KVTimeout,omitempty" doc:"true"`
+	KVDurableTimeout int `json:"KVDurableTimeout,omitempty" doc:"true"`
 }
 
 type CompressionConfig struct {

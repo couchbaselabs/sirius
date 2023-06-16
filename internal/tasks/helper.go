@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	MaxConcurrentRoutines         = 5
+	MaxConcurrentRoutines         = 16
 	InsertOperation        string = "insert"
 	DeleteOperation        string = "delete"
 	UpsertOperation        string = "upsert"
@@ -48,8 +48,8 @@ func getDurability(durability string) gocb.DurabilityLevel {
 
 // OperationConfig contains all the configuration for document operation.
 type OperationConfig struct {
-	Count            int64    `json:"count,omitempty" doc:"true"`
-	DocSize          int64    `json:"docSize" doc:"true"`
+	Count            int      `json:"count,omitempty" doc:"true"`
+	DocSize          int      `json:"docSize" doc:"true"`
 	DocType          string   `json:"docType,omitempty" doc:"true"`
 	KeySize          int      `json:"keySize,omitempty" doc:"true"`
 	KeyPrefix        string   `json:"keyPrefix" doc:"true"`
@@ -58,8 +58,8 @@ type OperationConfig struct {
 	RandomKeySize    bool     `json:"randomKeySize,omitempty" doc:"true"`
 	ReadYourOwnWrite bool     `json:"readYourOwnWrite,omitempty" doc:"true"`
 	TemplateName     string   `json:"template" doc:"true"`
-	Start            int64    `json:"start" doc:"true"`
-	End              int64    `json:"end" doc:"true"`
+	Start            int      `json:"start" doc:"true"`
+	End              int      `json:"end" doc:"true"`
 	FieldsToChange   []string `json:"fieldsToChange" doc:"true"`
 }
 

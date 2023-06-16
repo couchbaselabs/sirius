@@ -25,7 +25,7 @@ type ReadTask struct {
 	OperationConfig *OperationConfig        `json:"operationConfig,omitempty" doc:"true"`
 	Template        interface{}             `json:"-" doc:"false"`
 	Operation       string                  `json:"operation" doc:"false"`
-	ResultSeed      int64                   `json:"resultSeed" doc:"false"`
+	ResultSeed      int                     `json:"resultSeed" doc:"false"`
 	TaskPending     bool                    `json:"taskPending" doc:"false"`
 	State           *task_state.TaskState   `json:"State" doc:"false"`
 	result          *task_result.TaskResult `json:"result" doc:"false"`
@@ -66,7 +66,7 @@ func (task *ReadTask) tearUp() error {
 	return task.req.SaveRequestIntoFile()
 }
 
-func (task *ReadTask) Config(req *Request, seed int64, seedEnd int64, reRun bool) (int64, error) {
+func (task *ReadTask) Config(req *Request, seed int, seedEnd int, reRun bool) (int, error) {
 	task.TaskPending = true
 	task.req = req
 
@@ -82,7 +82,7 @@ func (task *ReadTask) Config(req *Request, seed int64, seedEnd int64, reRun bool
 	}
 
 	if !reRun {
-		task.ResultSeed = time.Now().UnixNano()
+		task.ResultSeed = int(time.Now().UnixNano())
 		task.Operation = ReadOperation
 		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
@@ -154,8 +154,8 @@ func (task *ReadTask) Do() error {
 // getDocuments reads the documents in the bucket
 func getDocuments(task *ReadTask, collection *gocb.Collection) {
 	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
-	dataChannel := make(chan int64, MaxConcurrentRoutines)
-	skip := make(map[int64]struct{})
+	dataChannel := make(chan int, MaxConcurrentRoutines)
+	skip := make(map[int]struct{})
 	for _, offset := range task.State.KeyStates.Completed {
 		skip[offset] = struct{}{}
 	}
@@ -192,7 +192,7 @@ func getDocuments(task *ReadTask, collection *gocb.Collection) {
 				return fmt.Errorf("error in insertion of docID on " + docId)
 			}
 
-			fake := faker.NewWithSeed(rand.NewSource(key))
+			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
 			originalDocument, err := task.gen.Template.GenerateDocument(&fake, task.State.DocumentSize)
 			if err != nil {
 				task.result.IncrementFailure(docId, originalDocument, err)
