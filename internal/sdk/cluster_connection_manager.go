@@ -86,6 +86,9 @@ func (cm *ConnectionManager) getClusterObject(clusterConfig *ClusterConfig) (*Cl
 				MinSize:  clusterConfig.CompressionConfig.MinSize,
 				MinRatio: clusterConfig.CompressionConfig.MinRatio,
 			},
+			SecurityConfig: gocb.SecurityConfig{
+				TLSSkipVerify: true,
+			},
 		})
 		if err != nil {
 			return nil, err
