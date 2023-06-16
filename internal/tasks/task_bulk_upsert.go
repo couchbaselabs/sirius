@@ -25,7 +25,7 @@ type UpsertTask struct {
 	OperationConfig *OperationConfig        `json:"operationConfig,omitempty" doc:"true"`
 	Template        interface{}             `json:"-" doc:"false"`
 	Operation       string                  `json:"operation" doc:"false"`
-	ResultSeed      int64                   `json:"resultSeed" doc:"false"`
+	ResultSeed      int                     `json:"resultSeed" doc:"false"`
 	TaskPending     bool                    `json:"taskPending" doc:"false"`
 	State           *task_state.TaskState   `json:"State" doc:"false"`
 	result          *task_result.TaskResult `json:"-" doc:"false"`
@@ -61,7 +61,7 @@ func (task *UpsertTask) CheckIfPending() bool {
 	return task.TaskPending
 }
 
-func (task *UpsertTask) Config(req *Request, seed int64, seedEnd int64, reRun bool) (int64, error) {
+func (task *UpsertTask) Config(req *Request, seed int, seedEnd int, reRun bool) (int, error) {
 	task.TaskPending = true
 	task.req = req
 
@@ -77,7 +77,7 @@ func (task *UpsertTask) Config(req *Request, seed int64, seedEnd int64, reRun bo
 	}
 
 	if !reRun {
-		task.ResultSeed = time.Now().UnixNano()
+		task.ResultSeed = int(time.Now().UnixNano())
 		task.Operation = UpsertOperation
 		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
@@ -160,9 +160,9 @@ func (task *UpsertTask) Do() error {
 
 func upsertDocuments(task *UpsertTask, collection *gocb.Collection) {
 	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
-	dataChannel := make(chan int64, MaxConcurrentRoutines)
-	maxKey := int64(-1)
-	skip := make(map[int64]struct{})
+	dataChannel := make(chan int, MaxConcurrentRoutines)
+	maxKey := int(-1)
+	skip := make(map[int]struct{})
 	for _, offset := range task.State.KeyStates.Completed {
 		skip[offset] = struct{}{}
 	}
@@ -192,7 +192,7 @@ func upsertDocuments(task *UpsertTask, collection *gocb.Collection) {
 				<-routineLimiter
 				return fmt.Errorf("alreday deleted docID on " + docId)
 			}
-			fake := faker.NewWithSeed(rand.NewSource(key))
+			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
 			originalDoc, err := task.gen.Template.GenerateDocument(&fake, task.State.DocumentSize)
 			if err != nil {
 				<-routineLimiter

@@ -24,7 +24,7 @@ type DeleteTask struct {
 	OperationConfig *OperationConfig        `json:"operationConfig,omitempty" doc:"true"`
 	Template        interface{}             `json:"-" doc:"false"`
 	Operation       string                  `json:"operation" doc:"false"`
-	ResultSeed      int64                   `json:"resultSeed" doc:"false"`
+	ResultSeed      int                     `json:"resultSeed" doc:"false"`
 	TaskPending     bool                    `json:"taskPending" doc:"false"`
 	State           *task_state.TaskState   `json:"State" doc:"false"`
 	result          *task_result.TaskResult `json:"-" doc:"false"`
@@ -60,7 +60,7 @@ func (task *DeleteTask) CheckIfPending() bool {
 }
 
 // Config checks the validity of DeleteTask
-func (task *DeleteTask) Config(req *Request, seed int64, seedEnd int64, reRun bool) (int64, error) {
+func (task *DeleteTask) Config(req *Request, seed int, seedEnd int, reRun bool) (int, error) {
 	task.TaskPending = true
 	task.req = req
 
@@ -76,7 +76,7 @@ func (task *DeleteTask) Config(req *Request, seed int64, seedEnd int64, reRun bo
 	}
 
 	if !reRun {
-		task.ResultSeed = time.Now().UnixNano()
+		task.ResultSeed = int(time.Now().UnixNano())
 		task.Operation = DeleteOperation
 		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
@@ -157,7 +157,7 @@ func (task *DeleteTask) Do() error {
 
 // deleteDocuments delete the document stored on a host from start to end.
 func deleteDocuments(task *DeleteTask, collection *gocb.Collection) {
-	skip := make(map[int64]struct{})
+	skip := make(map[int]struct{})
 	for _, offset := range task.State.KeyStates.Completed {
 		skip[offset] = struct{}{}
 	}
@@ -169,7 +169,7 @@ func deleteDocuments(task *DeleteTask, collection *gocb.Collection) {
 		return
 	}
 	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
-	dataChannel := make(chan int64, MaxConcurrentRoutines)
+	dataChannel := make(chan int, MaxConcurrentRoutines)
 	group := errgroup.Group{}
 
 	for i := task.OperationConfig.Start; i < task.OperationConfig.End; i++ {

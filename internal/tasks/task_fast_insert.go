@@ -26,7 +26,7 @@ type FastInsertTask struct {
 	OperationConfig *OperationConfig        `json:"operationConfig,omitempty" doc:"true"`
 	Template        interface{}             `json:"-" doc:"false"`
 	Operation       string                  `json:"operation" doc:"false"`
-	ResultSeed      int64                   `json:"resultSeed" doc:"false"`
+	ResultSeed      int                     `json:"resultSeed" doc:"false"`
 	TaskPending     bool                    `json:"taskPending" doc:"false"`
 	result          *task_result.TaskResult `json:"-" doc:"false"`
 	gen             *docgenerator.Generator `json:"-" doc:"false"`
@@ -63,7 +63,7 @@ func (task *FastInsertTask) CheckIfPending() bool {
 }
 
 // Config configures  the insert task
-func (task *FastInsertTask) Config(req *Request, seed int64, seedEnd int64, reRun bool) (int64, error) {
+func (task *FastInsertTask) Config(req *Request, seed int, seedEnd int, reRun bool) (int, error) {
 	task.TaskPending = true
 	task.req = req
 
@@ -77,7 +77,7 @@ func (task *FastInsertTask) Config(req *Request, seed int64, seedEnd int64, reRu
 	}
 
 	if !reRun {
-		task.ResultSeed = time.Now().UnixNano()
+		task.ResultSeed = int(time.Now().UnixNano())
 		task.Operation = InsertOperation
 		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
@@ -155,10 +155,10 @@ func (task *FastInsertTask) Do() error {
 func fastInsertDocuments(task *FastInsertTask, collection *gocb.Collection) {
 
 	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
-	dataChannel := make(chan int64, MaxConcurrentRoutines)
+	dataChannel := make(chan int, MaxConcurrentRoutines)
 
 	group := errgroup.Group{}
-	for iteration := int64(0); iteration < task.OperationConfig.Count; iteration++ {
+	for iteration := 0; iteration < task.OperationConfig.Count; iteration++ {
 
 		routineLimiter <- struct{}{}
 		dataChannel <- iteration
@@ -166,7 +166,7 @@ func fastInsertDocuments(task *FastInsertTask, collection *gocb.Collection) {
 		group.Go(func() error {
 			offset := <-dataChannel
 			docId, key := task.gen.GetDocIdAndKey(offset)
-			fake := faker.NewWithSeed(rand.NewSource(key))
+			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
 			doc, err := task.gen.Template.GenerateDocument(&fake, task.OperationConfig.DocSize)
 			if err != nil {
 				task.result.IncrementFailure(docId, doc, err)

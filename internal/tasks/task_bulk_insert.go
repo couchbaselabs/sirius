@@ -27,7 +27,7 @@ type InsertTask struct {
 	OperationConfig *OperationConfig        `json:"operationConfig,omitempty" doc:"true"`
 	Template        interface{}             `json:"-" doc:"false"`
 	Operation       string                  `json:"operation" doc:"false"`
-	ResultSeed      int64                   `json:"resultSeed" doc:"false"`
+	ResultSeed      int                     `json:"resultSeed" doc:"false"`
 	TaskPending     bool                    `json:"taskPending" doc:"false"`
 	State           *task_state.TaskState   `json:"State" doc:"false"`
 	result          *task_result.TaskResult `json:"-" doc:"false"`
@@ -66,7 +66,7 @@ func (task *InsertTask) CheckIfPending() bool {
 }
 
 // Config configures  the insert task
-func (task *InsertTask) Config(req *Request, seed int64, seedEnd int64, reRun bool) (int64, error) {
+func (task *InsertTask) Config(req *Request, seed int, seedEnd int, reRun bool) (int, error) {
 	task.TaskPending = true
 	task.req = req
 
@@ -82,7 +82,7 @@ func (task *InsertTask) Config(req *Request, seed int64, seedEnd int64, reRun bo
 	}
 
 	if !reRun {
-		task.ResultSeed = time.Now().UnixNano()
+		task.ResultSeed = int(time.Now().UnixNano())
 		task.Operation = InsertOperation
 		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
@@ -175,9 +175,9 @@ func (task *InsertTask) Do() error {
 func insertDocuments(task *InsertTask, collection *gocb.Collection) {
 
 	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
-	dataChannel := make(chan int64, MaxConcurrentRoutines)
+	dataChannel := make(chan int, MaxConcurrentRoutines)
 
-	skip := make(map[int64]struct{})
+	skip := make(map[int]struct{})
 	for _, offset := range task.State.KeyStates.Completed {
 		skip[offset] = struct{}{}
 	}
@@ -185,7 +185,7 @@ func insertDocuments(task *InsertTask, collection *gocb.Collection) {
 		skip[offset] = struct{}{}
 	}
 	group := errgroup.Group{}
-	for iteration := int64(0); iteration < task.OperationConfig.Count; iteration++ {
+	for iteration := int(0); iteration < task.OperationConfig.Count; iteration++ {
 
 		routineLimiter <- struct{}{}
 		dataChannel <- iteration
@@ -197,7 +197,7 @@ func insertDocuments(task *InsertTask, collection *gocb.Collection) {
 				<-routineLimiter
 				return fmt.Errorf("alreday performed operation on " + docId)
 			}
-			fake := faker.NewWithSeed(rand.NewSource(key))
+			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
 			doc, err := task.gen.Template.GenerateDocument(&fake, task.State.DocumentSize)
 			if err != nil {
 				task.result.IncrementFailure(docId, doc, err)

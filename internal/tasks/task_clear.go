@@ -29,7 +29,7 @@ func (task *ClearTask) Do() error {
 	return nil
 }
 
-func (task *ClearTask) Config(req *Request, seed int64, seedEnd int64, rerun bool) (int64, error) {
+func (task *ClearTask) Config(req *Request, seed int, seedEnd int, rerun bool) (int, error) {
 	task.TaskPending = false
 	return 0, nil
 }

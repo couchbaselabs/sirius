@@ -25,7 +25,7 @@ func (app *Config) routes() http.Handler {
 
 	mux.Use(middleware.Heartbeat("/ping"))
 
-	mux.Get("/", app.testServer)
+	mux.Get("/check-online", app.testServer)
 	mux.Post("/result", app.taskResult)
 	mux.Post("/bulk-create", app.insertTask)
 	mux.Post("/fast-create", app.fastInsertTask)

@@ -17,10 +17,10 @@ func TestGenerator_GetNextKey(t *testing.T) {
 		SeedEnd:  1678383842563225000,
 		Template: temp,
 	}
-	for i := int64(0); i < int64(10); i++ {
+	for i := 0; i < 10; i++ {
 		docId, key := g.GetDocIdAndKey(i)
 		log.Println(key, docId)
-		fake := faker.NewWithSeed(rand.NewSource(key))
+		fake := faker.NewWithSeed(rand.NewSource(int64(key)))
 		doc, err := g.Template.GenerateDocument(&fake, 1024)
 		if err != nil {
 			t.Fail()

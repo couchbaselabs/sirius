@@ -10,7 +10,7 @@ import (
 	"os"
 )
 
-const webPort = "80"
+const webPort = "4000"
 const TaskQueueSize = 100
 
 type Config struct {

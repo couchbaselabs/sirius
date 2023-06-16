@@ -21,18 +21,18 @@ type FailedDocument struct {
 }
 
 type TaskResult struct {
-	ResultSeed      int64                       `json:"resultSeed"`
+	ResultSeed      int                         `json:"resultSeed"`
 	Operation       string                      `json:"operation"`
 	ErrorOther      string                      `json:"other-errors,omitempty"`
-	Success         int64                       `json:"success"`
-	Failure         int64                       `json:"failure"`
+	Success         int                         `json:"success"`
+	Failure         int                         `json:"failure"`
 	ValidationError []string                    `json:"validation-errors,omitempty"`
 	Error           map[string][]FailedDocument `json:"errors"`
 	lock            sync.Mutex                  `json:"-"`
 }
 
 // ConfigTaskResult returns a new instance of TaskResult
-func ConfigTaskResult(operation string, seed int64) *TaskResult {
+func ConfigTaskResult(operation string, seed int) *TaskResult {
 	return &TaskResult{
 		ResultSeed: seed,
 		Operation:  operation,

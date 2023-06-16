@@ -8,7 +8,7 @@ services:
       dockerfile: sirius.dockerfile
     restart: always
     ports:
-      - "80:80"
+      - "4000:4000"
     deploy:
       mode: replicated
       replicas: 1

@@ -20,7 +20,7 @@ type SingleTouchTask struct {
 	InsertOptions   *InsertOptions          `json:"insertOptions,omitempty" doc:"true"`
 	OperationConfig *SingleOperationConfig  `json:"singleOperationConfig" doc:"true"`
 	Operation       string                  `json:"operation" doc:"false"`
-	ResultSeed      int64                   `json:"resultSeed" doc:"false"`
+	ResultSeed      int                     `json:"resultSeed" doc:"false"`
 	TaskPending     bool                    `json:"taskPending" doc:"false"`
 	result          *task_result.TaskResult `json:"-" doc:"false"`
 	req             *Request                `json:"-" doc:"false"`
@@ -53,7 +53,7 @@ func (task *SingleTouchTask) CheckIfPending() bool {
 }
 
 // Config configures  the insert task
-func (task *SingleTouchTask) Config(req *Request, seed int64, seedEnd int64, reRun bool) (int64, error) {
+func (task *SingleTouchTask) Config(req *Request, seed int, seedEnd int, reRun bool) (int, error) {
 	task.TaskPending = true
 	task.req = req
 
@@ -69,7 +69,7 @@ func (task *SingleTouchTask) Config(req *Request, seed int64, seedEnd int64, reR
 	}
 
 	if !reRun {
-		task.ResultSeed = time.Now().UnixNano()
+		task.ResultSeed = int(time.Now().UnixNano())
 		task.Operation = SingleTouchOperation
 		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
@@ -123,7 +123,7 @@ func (task *SingleTouchTask) Do() error {
 
 	singleTouchDocuments(task, collection)
 
-	task.result.Success = int64(len(task.OperationConfig.KeyValue)) - task.result.Failure
+	task.result.Success = (len(task.OperationConfig.KeyValue)) - task.result.Failure
 
 	if err := task.result.SaveResultIntoFile(); err != nil {
 		log.Println("not able to save result into ", task.ResultSeed)

@@ -10,7 +10,7 @@ type SmallTemplate struct {
 	RandomData string `json:"data,omitempty"`
 }
 
-func (s *SmallTemplate) GenerateDocument(fake *faker.Faker, documentSize int64) (interface{}, error) {
+func (s *SmallTemplate) GenerateDocument(fake *faker.Faker, documentSize int) (interface{}, error) {
 	return &SmallTemplate{RandomData: fake.RandomStringWithLength(int(documentSize))}, nil
 }
 

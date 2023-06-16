@@ -315,8 +315,8 @@ Description : Validates every document in the cluster's bucket
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
-| `Count` | `int64` | `json:count,omitempty`  |
-| `DocSize` | `int64` | `json:docSize`  |
+| `Count` | `int` | `json:count,omitempty`  |
+| `DocSize` | `int` | `json:docSize`  |
 | `DocType` | `string` | `json:docType,omitempty`  |
 | `KeySize` | `int` | `json:keySize,omitempty`  |
 | `KeyPrefix` | `string` | `json:keyPrefix`  |
@@ -325,8 +325,8 @@ Description : Validates every document in the cluster's bucket
 | `RandomKeySize` | `bool` | `json:randomKeySize,omitempty`  |
 | `ReadYourOwnWrite` | `bool` | `json:readYourOwnWrite,omitempty`  |
 | `TemplateName` | `string` | `json:template`  |
-| `Start` | `int64` | `json:start`  |
-| `End` | `int64` | `json:end`  |
+| `Start` | `int` | `json:start`  |
+| `End` | `int` | `json:end`  |
 | `FieldsToChange` | `slice` | `json:fieldsToChange`  |
 #### removeOptions
 
@@ -357,9 +357,9 @@ Description : Validates every document in the cluster's bucket
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
-| `ConnectTimeout` | `int64` | `json:connectTimeout,omitempty`  |
-| `KVTimeout` | `int64` | `json:KVTimeout,omitempty`  |
-| `KVDurableTimeout` | `int64` | `json:KVDurableTimeout,omitempty`  |
+| `ConnectTimeout` | `int` | `json:connectTimeout,omitempty`  |
+| `KVTimeout` | `int` | `json:KVTimeout,omitempty`  |
+| `KVDurableTimeout` | `int` | `json:KVDurableTimeout,omitempty`  |
 
 ---
 **APIs Response Description**.
@@ -375,11 +375,11 @@ Description : Validates every document in the cluster's bucket
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
-| `ResultSeed` | `int64` | `json:resultSeed`  |
+| `ResultSeed` | `int` | `json:resultSeed`  |
 | `Operation` | `string` | `json:operation`  |
 | `ErrorOther` | `string` | `json:other-errors,omitempty`  |
-| `Success` | `int64` | `json:success`  |
-| `Failure` | `int64` | `json:failure`  |
+| `Success` | `int` | `json:success`  |
+| `Failure` | `int` | `json:failure`  |
 | `ValidationError` | `slice` | `json:validation-errors,omitempty`  |
 | `Error` | `map` | `json:errors`  |
 

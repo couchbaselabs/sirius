@@ -15,7 +15,7 @@ func TestConfigConnectionManager(t *testing.T) {
 	cConfig := &ClusterConfig{
 		Username:          "Administrator",
 		Password:          "password",
-		ConnectionString:  "couchbase://172.23.120.59",
+		ConnectionString:  "couchbase://172.23.104.147",
 		CompressionConfig: CompressionConfig{},
 		TimeoutsConfig:    TimeoutsConfig{},
 	}
@@ -40,9 +40,9 @@ func TestConfigConnectionManager(t *testing.T) {
 			SeedEnd:  1678383842563225000,
 			Template: temp,
 		}
-		for i := int64(0); i < int64(10); i++ {
+		for i := 0; i < 10; i++ {
 			docId, key := g.GetDocIdAndKey(i)
-			fake := faker.NewWithSeed(rand.NewSource(key))
+			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
 			doc, _ := g.Template.GenerateDocument(&fake, 1024)
 			log.Println(docId, doc)
 			_, e := c.Upsert(docId, doc, nil)
@@ -51,7 +51,7 @@ func TestConfigConnectionManager(t *testing.T) {
 				t.Error(e)
 			}
 		}
-		for i := int64(0); i < int64(10); i++ {
+		for i := 0; i < 10; i++ {
 			docId, _ := g.GetDocIdAndKey(i)
 			r, e := c.Get(docId, nil)
 			if e != nil {
