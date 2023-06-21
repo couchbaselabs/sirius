@@ -15,12 +15,14 @@ func TestConfigConnectionManager(t *testing.T) {
 	cConfig := &ClusterConfig{
 		Username:          "Administrator",
 		Password:          "password",
-		ConnectionString:  "couchbase://172.23.104.147",
+		ConnectionString:  "couchbase://172.23.136.130",
 		CompressionConfig: CompressionConfig{},
 		TimeoutsConfig:    TimeoutsConfig{},
 	}
 	cmObj := ConfigConnectionManager()
 	c, err := cmObj.GetCollection(cConfig, "default", "_default", "_default")
+	c, err = cmObj.GetCollection(cConfig, "default", "_default", "_default")
+	c, err = cmObj.GetCollection(cConfig, "default", "_default", "_default")
 	if err != nil {
 		log.Println(err.Error())
 		KVError := &gocb.KeyValueError{}
