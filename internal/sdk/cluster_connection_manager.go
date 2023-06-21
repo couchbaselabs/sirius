@@ -52,11 +52,8 @@ func (cm *ConnectionManager) getClusterObject(clusterConfig *ClusterConfig) (*Cl
 	_, ok := cm.clusters[clusterConfig.ConnectionString]
 	waitUntilReadyFlag := false
 	if ok {
-		if err := cm.clusters[clusterConfig.ConnectionString].Cluster.WaitUntilReady(time.Duration(25)*time.Second,
-			&gocb.WaitUntilReadyOptions{
-				DesiredState: gocb.ClusterStateOnline,
-				ServiceTypes: []gocb.ServiceType{gocb.ServiceTypeKeyValue},
-			}); err == nil {
+		_, err := cm.clusters[clusterConfig.ConnectionString].Cluster.Ping(nil)
+		if err == nil {
 			waitUntilReadyFlag = true
 		}
 	}
