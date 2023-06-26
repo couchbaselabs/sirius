@@ -15,29 +15,37 @@ const ResultPath = "./internal/task_result/task_result_logs"
 // TaskResult defines the type of result stored in a response after an operation.
 
 type FailedDocument struct {
-	DocId       string      `json:"key"`
-	Doc         interface{} `json:"value"`
-	ErrorString string      `json:"errorString"`
+	DocId       string      `json:"key" doc:"true"`
+	Doc         interface{} `json:"value"  doc:"true"`
+	ErrorString string      `json:"errorString"  doc:"true"`
+}
+
+type SingleOperationResult struct {
+	ErrorString string `json:"errorString"  doc:"true"`
+	Status      bool   `json:"status"  doc:"true"`
+	Cas         uint64 `json:"cas"  doc:"true"`
 }
 
 type TaskResult struct {
-	ResultSeed      int                         `json:"resultSeed"`
-	Operation       string                      `json:"operation"`
-	ErrorOther      string                      `json:"other-errors,omitempty"`
-	Success         int                         `json:"success"`
-	Failure         int                         `json:"failure"`
-	ValidationError []string                    `json:"validation-errors,omitempty"`
-	Error           map[string][]FailedDocument `json:"errors"`
-	lock            sync.Mutex                  `json:"-"`
+	ResultSeed      int                              `json:"resultSeed"`
+	Operation       string                           `json:"operation"`
+	ErrorOther      string                           `json:"otherErrors,omitempty"`
+	Success         int                              `json:"success"`
+	Failure         int                              `json:"failure"`
+	ValidationError []string                         `json:"validationErrors,omitempty"`
+	BulkError       map[string][]FailedDocument      `json:"bulkErrors"`
+	SingleResult    map[string]SingleOperationResult `json:"singleResult"`
+	lock            sync.Mutex                       `json:"-"`
 }
 
 // ConfigTaskResult returns a new instance of TaskResult
 func ConfigTaskResult(operation string, seed int) *TaskResult {
 	return &TaskResult{
-		ResultSeed: seed,
-		Operation:  operation,
-		Error:      make(map[string][]FailedDocument),
-		lock:       sync.Mutex{},
+		ResultSeed:   seed,
+		Operation:    operation,
+		BulkError:    make(map[string][]FailedDocument),
+		SingleResult: make(map[string]SingleOperationResult),
+		lock:         sync.Mutex{},
 	}
 }
 
@@ -46,7 +54,7 @@ func (t *TaskResult) IncrementFailure(docId string, doc interface{}, err error) 
 	t.lock.Lock()
 	t.Failure++
 	v, errorString := sdk.CheckSDKException(err)
-	t.Error[v] = append(t.Error[v], FailedDocument{
+	t.BulkError[v] = append(t.BulkError[v], FailedDocument{
 		DocId:       docId,
 		Doc:         doc,
 		ErrorString: errorString,
@@ -102,4 +110,12 @@ func ReadResultFromFile(seed string, deleteRecord bool) (*TaskResult, error) {
 		}
 	}
 	return result, nil
+}
+
+func (t *TaskResult) CreateSingleErrorResult(docId string, errorString string, status bool, cas uint64) {
+	t.SingleResult[docId] = SingleOperationResult{
+		ErrorString: errorString,
+		Status:      status,
+		Cas:         cas,
+	}
 }

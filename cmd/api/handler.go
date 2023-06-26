@@ -49,7 +49,7 @@ func (app *Config) insertTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	log.Print(task, "insert")
+	log.Print(task, tasks.InsertOperation)
 	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.InsertOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
@@ -86,7 +86,7 @@ func (app *Config) fastInsertTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	log.Print(task, "insert")
+	log.Print(task, tasks.InsertOperation)
 	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.InsertOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
@@ -123,7 +123,7 @@ func (app *Config) deleteTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	log.Print(task, "delete")
+	log.Print(task, tasks.DeleteOperation)
 	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.DeleteOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
@@ -160,7 +160,7 @@ func (app *Config) upsertTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	log.Print(task, "upsert")
+	log.Print(task, tasks.UpsertOperation)
 	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.UpsertOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
@@ -197,7 +197,7 @@ func (app *Config) validateTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	log.Print(task, "validate")
+	log.Print(task, tasks.ValidateOperation)
 	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.ValidateOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
@@ -291,7 +291,7 @@ func (app *Config) singleInsertTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	log.Print(task, "singleInsert")
+	log.Print(task, tasks.SingleInsertOperation)
 	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SingleInsertOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
@@ -328,7 +328,7 @@ func (app *Config) singleDeleteTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	log.Print(task, "singleInsert")
+	log.Print(task, tasks.SingleDeleteOperation)
 	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SingleDeleteOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
@@ -365,7 +365,7 @@ func (app *Config) singleUpsertTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	log.Print(task, "singleInsert")
+	log.Print(task, tasks.SingleUpsertOperation)
 	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SingleUpsertOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
@@ -402,7 +402,7 @@ func (app *Config) singleReadTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	log.Print(task, "singleInsert")
+	log.Print(task, tasks.SingleReadOperation)
 	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SingleReadOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
@@ -439,7 +439,7 @@ func (app *Config) singleTouchTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	log.Print(task, "singleTouch")
+	log.Print(task, tasks.SingleTouchOperation)
 	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SingleTouchOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
@@ -476,7 +476,7 @@ func (app *Config) singleReplaceTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	log.Print(task, "singleReplace")
+	log.Print(task, tasks.SingleReplaceOperation)
 	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SingleReplaceOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)

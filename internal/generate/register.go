@@ -2,6 +2,7 @@ package generate
 
 import (
 	"github.com/couchbaselabs/sirius/internal/sdk"
+	"github.com/couchbaselabs/sirius/internal/task_result"
 	"github.com/couchbaselabs/sirius/internal/tasks"
 )
 
@@ -43,6 +44,8 @@ func (r *Register) HelperStruct() map[string]any {
 		"replaceOption":         &tasks.ReplaceOptions{},
 		"singleOperationConfig": &tasks.SingleOperationConfig{},
 		"keyValue":              &tasks.KeyValue{},
+		"bulkError":             &task_result.FailedDocument{},
+		"singleResult":          &task_result.SingleOperationResult{},
 	}
 
 }

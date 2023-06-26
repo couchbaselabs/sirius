@@ -54,8 +54,10 @@ func (task *FastInsertTask) BuildIdentifier() string {
 	if task.Collection == "" {
 		task.Collection = DefaultCollection
 	}
-	return fmt.Sprintf("%s-%s-%s-%s-%s", task.ClusterConfig.Username, task.IdentifierToken, task.Bucket, task.Scope,
-		task.Collection)
+	if task.IdentifierToken == "" {
+		task.IdentifierToken = DefaultIdentifierToken
+	}
+	return task.IdentifierToken
 }
 
 func (task *FastInsertTask) CheckIfPending() bool {

@@ -50,16 +50,7 @@ func (cm *ConnectionManager) getClusterObject(clusterConfig *ClusterConfig) (*Cl
 	}
 
 	_, ok := cm.clusters[clusterConfig.ConnectionString]
-	waitUntilReadyFlag := false
-	if ok {
-		_, err := cm.clusters[clusterConfig.ConnectionString].Cluster.Ping(nil)
-		if err == nil {
-			waitUntilReadyFlag = true
-		}
-	}
-	if ok && waitUntilReadyFlag {
-		return cm.clusters[clusterConfig.ConnectionString], nil
-	} else {
+	if !ok {
 		if err := ValidateClusterConfig(clusterConfig); err != nil {
 			return nil, err
 		}
@@ -96,9 +87,9 @@ func (cm *ConnectionManager) getClusterObject(clusterConfig *ClusterConfig) (*Cl
 			Buckets: make(map[string]*BucketObject),
 		}
 		cm.setClusterObject(clusterConfig.ConnectionString, c)
-		return c, nil
 	}
 
+	return cm.clusters[clusterConfig.ConnectionString], nil
 }
 
 // GetCollection return a *gocb.Collection which represents a single collection.

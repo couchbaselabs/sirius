@@ -33,21 +33,10 @@ func (task *SingleUpsertTask) Describe() string {
 }
 
 func (task *SingleUpsertTask) BuildIdentifier() string {
-	if task.ClusterConfig == nil {
-		task.ClusterConfig = &sdk.ClusterConfig{}
-		log.Println("build Identifier have received nil ClusterConfig")
+	if task.IdentifierToken == "" {
+		task.IdentifierToken = DefaultIdentifierToken
 	}
-	if task.Bucket == "" {
-		task.Bucket = DefaultBucket
-	}
-	if task.Scope == "" {
-		task.Scope = DefaultScope
-	}
-	if task.Collection == "" {
-		task.Collection = DefaultCollection
-	}
-	return fmt.Sprintf("%s-%s-%s-%s-%s", task.ClusterConfig.Username, task.IdentifierToken, task.Bucket, task.Scope,
-		task.Collection)
+	return task.IdentifierToken
 }
 
 func (task *SingleUpsertTask) CheckIfPending() bool {
@@ -75,8 +64,14 @@ func (task *SingleUpsertTask) Config(req *Request, seed int, seedEnd int, reRun 
 		task.Operation = SingleUpsertOperation
 		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
-		if task.IdentifierToken == "" {
-			task.result.ErrorOther = "identifier token is missing"
+		if task.Bucket == "" {
+			task.Bucket = DefaultBucket
+		}
+		if task.Scope == "" {
+			task.Scope = DefaultScope
+		}
+		if task.Collection == "" {
+			task.Collection = DefaultCollection
 		}
 
 		if err := configInsertOptions(task.InsertOptions); err != nil {
@@ -156,7 +151,7 @@ func singleUpsertDocuments(task *SingleUpsertTask, collection *gocb.Collection) 
 				return errors.New("unable to decode Key Value for single crud")
 			}
 
-			_, err := collection.Upsert(kV.Key, kV.Doc, &gocb.UpsertOptions{
+			m, err := collection.Upsert(kV.Key, kV.Doc, &gocb.UpsertOptions{
 				DurabilityLevel: getDurability(task.InsertOptions.Durability),
 				PersistTo:       task.InsertOptions.PersistTo,
 				ReplicateTo:     task.InsertOptions.ReplicateTo,
@@ -168,11 +163,15 @@ func singleUpsertDocuments(task *SingleUpsertTask, collection *gocb.Collection) 
 				var resultFromHost map[string]interface{}
 				result, err := collection.Get(kV.Key, nil)
 				if err != nil {
+					task.result.CreateSingleErrorResult(kV.Key, "document validation failed on read your own write",
+						false, 0)
 					task.result.IncrementFailure(kV.Key, kV.Doc, err)
 					<-routineLimiter
 					return err
 				}
 				if err := result.Content(&resultFromHost); err != nil {
+					task.result.CreateSingleErrorResult(kV.Key, "document validation failed on read your own write",
+						false, 0)
 					task.result.IncrementFailure(kV.Key, kV.Doc, err)
 					<-routineLimiter
 					return err
@@ -180,19 +179,25 @@ func singleUpsertDocuments(task *SingleUpsertTask, collection *gocb.Collection) 
 
 				resultFromHostBytes, err := json.Marshal(resultFromHost)
 				if err != nil {
+					task.result.CreateSingleErrorResult(kV.Key, "document validation failed on read your own write",
+						false, 0)
 					task.result.IncrementFailure(kV.Key, kV.Doc, err)
 					<-routineLimiter
 					return err
 				}
 				resultFromDocBytes, err := json.Marshal(kV.Doc)
 				if err != nil {
+					task.result.CreateSingleErrorResult(kV.Key, "document validation failed on read your own write",
+						false, 0)
 					task.result.IncrementFailure(kV.Key, kV.Doc, err)
 					<-routineLimiter
 					return err
 				}
 
 				if !bytes.Equal(resultFromHostBytes, resultFromDocBytes) {
-					task.result.IncrementFailure(kV.Key, kV.Doc, errors.New("document mismatch on RYOW"))
+					task.result.CreateSingleErrorResult(kV.Key, "document validation failed on read your own write",
+						false, 0)
+					task.result.IncrementFailure(kV.Key, kV.Doc, errors.New("document validation failed on read your own write"))
 					<-routineLimiter
 					return err
 				}
@@ -209,6 +214,7 @@ func singleUpsertDocuments(task *SingleUpsertTask, collection *gocb.Collection) 
 				}
 			}
 
+			task.result.CreateSingleErrorResult(kV.Key, "", true, uint64(m.Cas()))
 			<-routineLimiter
 			return nil
 		})

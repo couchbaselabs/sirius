@@ -31,21 +31,10 @@ func (task *SingleDeleteTask) Describe() string {
 }
 
 func (task *SingleDeleteTask) BuildIdentifier() string {
-	if task.ClusterConfig == nil {
-		task.ClusterConfig = &sdk.ClusterConfig{}
-		log.Println("build Identifier have received nil ClusterConfig")
+	if task.IdentifierToken == "" {
+		task.IdentifierToken = DefaultIdentifierToken
 	}
-	if task.Bucket == "" {
-		task.Bucket = DefaultBucket
-	}
-	if task.Scope == "" {
-		task.Scope = DefaultScope
-	}
-	if task.Collection == "" {
-		task.Collection = DefaultCollection
-	}
-	return fmt.Sprintf("%s-%s-%s-%s-%s", task.ClusterConfig.Username, task.IdentifierToken, task.Bucket, task.Scope,
-		task.Collection)
+	return task.IdentifierToken
 }
 
 func (task *SingleDeleteTask) CheckIfPending() bool {
@@ -73,8 +62,14 @@ func (task *SingleDeleteTask) Config(req *Request, seed int, seedEnd int, reRun 
 		task.Operation = SingleDeleteOperation
 		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
-		if task.IdentifierToken == "" {
-			task.result.ErrorOther = "identifier token is missing"
+		if task.Bucket == "" {
+			task.Bucket = DefaultBucket
+		}
+		if task.Scope == "" {
+			task.Scope = DefaultScope
+		}
+		if task.Collection == "" {
+			task.Collection = DefaultCollection
 		}
 
 		if err := configRemoveOptions(task.RemoveOptions); err != nil {
@@ -154,7 +149,7 @@ func singleDeleteDocuments(task *SingleDeleteTask, collection *gocb.Collection) 
 				return errors.New("unable to decode Key Value for single crud")
 			}
 
-			_, err := collection.Remove(kV.Key, &gocb.RemoveOptions{
+			r, err := collection.Remove(kV.Key, &gocb.RemoveOptions{
 				Cas:             gocb.Cas(task.RemoveOptions.Cas),
 				PersistTo:       task.RemoveOptions.PersistTo,
 				ReplicateTo:     task.RemoveOptions.ReplicateTo,
@@ -162,11 +157,13 @@ func singleDeleteDocuments(task *SingleDeleteTask, collection *gocb.Collection) 
 				Timeout:         time.Duration(task.RemoveOptions.Timeout) * time.Second,
 			})
 			if err != nil {
+				task.result.CreateSingleErrorResult(kV.Key, err.Error(), false, 0)
 				task.result.IncrementFailure(kV.Key, kV.Doc, err)
 				<-routineLimiter
 				return err
 			}
 
+			task.result.CreateSingleErrorResult(kV.Key, "", true, uint64(r.Cas()))
 			<-routineLimiter
 			return nil
 		})
