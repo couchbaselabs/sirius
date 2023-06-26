@@ -8,6 +8,7 @@ import (
 
 const (
 	MaxConcurrentRoutines         = 16
+	DefaultIdentifierToken        = "default"
 	InsertOperation        string = "insert"
 	DeleteOperation        string = "delete"
 	UpsertOperation        string = "upsert"

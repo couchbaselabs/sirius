@@ -1,6 +1,6 @@
 # Readme
 
-This Readme file provides instructions for building and running a Go application named Sirius. The Sirius 
+This Readme file provides instructions for building and running a Go application named **Sirius**. The Sirius 
 application is designed to load data into a Couchbase server and store task metadata and results in directories.
 
 Doc loader different capabilities are  described using  [**Rest Endpoints**](task-config.generated.md).
@@ -30,7 +30,7 @@ cd <repository_name>
 Build Sirius:
 
 ```shell
-make build_sirius
+make build
 ```
 
 ## Usage
@@ -39,9 +39,9 @@ make build_sirius
 
 To run Sirius locally, use the following command:
 
-clean everything and  run
+clean everything and run
 ```shell
-make clean_run
+make clean
 ```
 Run
 ```shell
@@ -77,7 +77,7 @@ make down
 To clean up the task metadata and results directories, use the following command:
 
 ```shell
-make clean_dir
+make clean
 ```
 
 To clean up the directories and then run Sirius, use the following command:
@@ -95,3 +95,7 @@ make clean_deploy
 ## Conclusion
 
 Sirius is a simple but powerful Go application for loading data into a server and storing task metadata and results. By following the instructions in this Readme, you can quickly build and run the application locally, or deploy it to a Docker environment for production use.
+
+Internal Reference Only :-
+[**Sirius**](https://docs.google.com/presentation/d/1B_de8lv1nKlaILmgGHwSUIVdRd4CYrAOa7rDV-d0QRA/edit#slide=id.g24f63dd352b_2_536)
+[**Wiki**](https://couchbasecloud.atlassian.net/wiki/spaces/~6346ad4e62541f0d4c4f6785/pages/2000748801/Sirius)

@@ -124,7 +124,7 @@ func (r *Request) retracePreviousFailedInsertions(resultSeed int) (map[int]struc
 		if td.Operation == InsertOperation {
 			u, ok := td.Task.(*InsertTask)
 			if !ok {
-				return map[int]struct{}{}, fmt.Errorf("unable to decode delete task from backlog")
+				return map[int]struct{}{}, fmt.Errorf("unable to decode insert task from backlog")
 			} else {
 				if resultSeed != u.ResultSeed {
 					errorOffSet := u.State.ReturnErrOffset()

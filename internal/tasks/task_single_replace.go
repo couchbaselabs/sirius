@@ -31,21 +31,10 @@ func (task *SingleReplaceTask) Describe() string {
 }
 
 func (task *SingleReplaceTask) BuildIdentifier() string {
-	if task.ClusterConfig == nil {
-		task.ClusterConfig = &sdk.ClusterConfig{}
-		log.Println("build Identifier have received nil ClusterConfig")
+	if task.IdentifierToken == "" {
+		task.IdentifierToken = DefaultIdentifierToken
 	}
-	if task.Bucket == "" {
-		task.Bucket = DefaultBucket
-	}
-	if task.Scope == "" {
-		task.Scope = DefaultScope
-	}
-	if task.Collection == "" {
-		task.Collection = DefaultCollection
-	}
-	return fmt.Sprintf("%s-%s-%s-%s-%s", task.ClusterConfig.Username, task.IdentifierToken, task.Bucket, task.Scope,
-		task.Collection)
+	return task.IdentifierToken
 }
 
 func (task *SingleReplaceTask) CheckIfPending() bool {
@@ -73,8 +62,14 @@ func (task *SingleReplaceTask) Config(req *Request, seed int, seedEnd int, reRun
 		task.Operation = SingleReplaceOperation
 		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
-		if task.IdentifierToken == "" {
-			task.result.ErrorOther = "identifier token is missing"
+		if task.Bucket == "" {
+			task.Bucket = DefaultBucket
+		}
+		if task.Scope == "" {
+			task.Scope = DefaultScope
+		}
+		if task.Collection == "" {
+			task.Collection = DefaultCollection
 		}
 
 		if err := configReplaceOptions(task.ReplaceOptions); err != nil {
@@ -155,7 +150,7 @@ func singleReplaceDocuments(task *SingleReplaceTask, collection *gocb.Collection
 				return errors.New("unable to decode Key Value for single crud")
 			}
 
-			_, err := collection.Replace(kV.Key, kV.Doc, &gocb.ReplaceOptions{
+			result, err := collection.Replace(kV.Key, kV.Doc, &gocb.ReplaceOptions{
 				Expiry:          time.Duration(task.ReplaceOptions.Expiry) * time.Second,
 				Cas:             gocb.Cas(task.ReplaceOptions.Cas),
 				PersistTo:       task.ReplaceOptions.PersistTo,
@@ -165,11 +160,13 @@ func singleReplaceDocuments(task *SingleReplaceTask, collection *gocb.Collection
 			})
 
 			if err != nil {
+				task.result.CreateSingleErrorResult(kV.Key, err.Error(), false, 0)
 				task.result.IncrementFailure(kV.Key, kV.Doc, err)
 				<-routineLimiter
 				return err
 			}
 
+			task.result.CreateSingleErrorResult(kV.Key, "", true, uint64(result.Cas()))
 			<-routineLimiter
 			return nil
 		})

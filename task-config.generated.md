@@ -105,11 +105,6 @@ the test was executed.
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
 | `IdentifierToken` | `string` | `json:identifierToken`  |
-| `Username` | `string` | `json:username`  |
-| `Password` | `string` | `json:password`  |
-| `Bucket` | `string` | `json:bucket,omitempty`  |
-| `Scope` | `string` | `json:scope,omitempty`  |
-| `Collection` | `string` | `json:collection,omitempty`  |
 
 ---
 #### /fast-create
@@ -269,6 +264,7 @@ Description : Validates every document in the cluster's bucket
 ---
 **Description of JSON tags used in routes**.
 
+ * [bulkError](#bulkerror)
  * [clusterConfig](#clusterconfig)
  * [compressionConfig](#compressionconfig)
  * [insertOptions](#insertoptions)
@@ -277,9 +273,17 @@ Description : Validates every document in the cluster's bucket
  * [removeOptions](#removeoptions)
  * [replaceOption](#replaceoption)
  * [singleOperationConfig](#singleoperationconfig)
+ * [singleResult](#singleresult)
  * [timeoutsConfig](#timeoutsconfig)
 
 ---
+#### bulkError
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `DocId` | `string` | `json:key`  |
+| `Doc` | `interface` | `json:value`  |
+| `ErrorString` | `string` | `json:errorString`  |
 #### clusterConfig
 
 | Name | Type | JSON Tag |
@@ -353,6 +357,13 @@ Description : Validates every document in the cluster's bucket
 | ---- | ---- | -------- |
 | `KeyValue` | `slice` | `json:keyValue`  |
 | `ReadYourOwnWrite` | `bool` | `json:readYourOwnWrite,omitempty`  |
+#### singleResult
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `ErrorString` | `string` | `json:errorString`  |
+| `Status` | `bool` | `json:status`  |
+| `Cas` | `uint64` | `json:cas`  |
 #### timeoutsConfig
 
 | Name | Type | JSON Tag |
@@ -377,10 +388,11 @@ Description : Validates every document in the cluster's bucket
 | ---- | ---- | -------- |
 | `ResultSeed` | `int` | `json:resultSeed`  |
 | `Operation` | `string` | `json:operation`  |
-| `ErrorOther` | `string` | `json:other-errors,omitempty`  |
+| `ErrorOther` | `string` | `json:otherErrors,omitempty`  |
 | `Success` | `int` | `json:success`  |
 | `Failure` | `int` | `json:failure`  |
-| `ValidationError` | `slice` | `json:validation-errors,omitempty`  |
-| `Error` | `map` | `json:errors`  |
+| `ValidationError` | `slice` | `json:validationErrors,omitempty`  |
+| `BulkError` | `map` | `json:bulkErrors`  |
+| `SingleResult` | `map` | `json:singleResult`  |
 
 ---

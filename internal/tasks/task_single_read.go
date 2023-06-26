@@ -32,21 +32,10 @@ func (task *SingleReadTask) Describe() string {
 }
 
 func (task *SingleReadTask) BuildIdentifier() string {
-	if task.ClusterConfig == nil {
-		task.ClusterConfig = &sdk.ClusterConfig{}
-		log.Println("build Identifier have received nil ClusterConfig")
+	if task.IdentifierToken == "" {
+		task.IdentifierToken = DefaultIdentifierToken
 	}
-	if task.Bucket == "" {
-		task.Bucket = DefaultBucket
-	}
-	if task.Scope == "" {
-		task.Scope = DefaultScope
-	}
-	if task.Collection == "" {
-		task.Collection = DefaultCollection
-	}
-	return fmt.Sprintf("%s-%s-%s-%s-%s", task.ClusterConfig.Username, task.IdentifierToken, task.Bucket, task.Scope,
-		task.Collection)
+	return task.IdentifierToken
 }
 
 func (task *SingleReadTask) CheckIfPending() bool {
@@ -74,8 +63,14 @@ func (task *SingleReadTask) Config(req *Request, seed int, seedEnd int, reRun bo
 		task.Operation = SingleReadOperation
 		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
-		if task.IdentifierToken == "" {
-			task.result.ErrorOther = "identifier token is missing"
+		if task.Bucket == "" {
+			task.Bucket = DefaultBucket
+		}
+		if task.Scope == "" {
+			task.Scope = DefaultScope
+		}
+		if task.Collection == "" {
+			task.Collection = DefaultCollection
 		}
 
 		if err := configSingleOperationConfig(task.OperationConfig); err != nil {
@@ -153,6 +148,8 @@ func singleReadDocuments(task *SingleReadTask, collection *gocb.Collection) {
 
 			result, err := collection.Get(kV.Key, nil)
 			if err != nil {
+				task.result.CreateSingleErrorResult(kV.Key, err.Error(),
+					false, 0)
 				task.result.IncrementFailure(kV.Key, kV.Doc, err)
 				<-routineLimiter
 				return err
@@ -162,6 +159,8 @@ func singleReadDocuments(task *SingleReadTask, collection *gocb.Collection) {
 
 				var resultFromHost map[string]interface{}
 				if err := result.Content(&resultFromHost); err != nil {
+					task.result.CreateSingleErrorResult(kV.Key, "document validation failed on read your own write",
+						false, 0)
 					task.result.IncrementFailure(kV.Key, kV.Doc, err)
 					<-routineLimiter
 					return err
@@ -169,24 +168,31 @@ func singleReadDocuments(task *SingleReadTask, collection *gocb.Collection) {
 
 				resultFromHostBytes, err := json.Marshal(resultFromHost)
 				if err != nil {
+					task.result.CreateSingleErrorResult(kV.Key, "document validation failed on read your own write",
+						false, 0)
 					task.result.IncrementFailure(kV.Key, kV.Doc, err)
 					<-routineLimiter
 					return err
 				}
 				resultFromDocBytes, err := json.Marshal(kV.Doc)
 				if err != nil {
+					task.result.CreateSingleErrorResult(kV.Key, "document validation failed on read your own write",
+						false, 0)
 					task.result.IncrementFailure(kV.Key, kV.Doc, err)
 					<-routineLimiter
 					return err
 				}
 
 				if !bytes.Equal(resultFromHostBytes, resultFromDocBytes) {
-					task.result.IncrementFailure(kV.Key, kV.Doc, errors.New("document mismatch on RYOW"))
+					task.result.CreateSingleErrorResult(kV.Key, "document validation failed on read your own write",
+						false, 0)
+					task.result.IncrementFailure(kV.Key, kV.Doc, errors.New("document validation failed on read your own write"))
 					<-routineLimiter
 					return err
 				}
 			}
 
+			task.result.CreateSingleErrorResult(kV.Key, "", true, uint64(result.Cas()))
 			<-routineLimiter
 			return nil
 		})

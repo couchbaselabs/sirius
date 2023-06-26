@@ -1,17 +1,8 @@
 package tasks
 
-import (
-	"fmt"
-)
-
 // ClearTask represents a request structure for clearing everything.
 type ClearTask struct {
 	IdentifierToken string `json:"identifierToken" doc:"true"`
-	Username        string `json:"username" doc:"true"`
-	Password        string `json:"password" doc:"true"`
-	Bucket          string `json:"bucket,omitempty" doc:"true"`
-	Scope           string `json:"scope,omitempty" doc:"true"`
-	Collection      string `json:"collection,omitempty" doc:"true"`
 	TaskPending     bool   `json:"-" doc"false"`
 }
 
@@ -35,16 +26,10 @@ func (task *ClearTask) Config(req *Request, seed int, seedEnd int, rerun bool) (
 }
 
 func (task *ClearTask) BuildIdentifier() string {
-	if task.Bucket == "" {
-		task.Bucket = DefaultBucket
+	if task.IdentifierToken == "" {
+		task.IdentifierToken = DefaultIdentifierToken
 	}
-	if task.Scope == "" {
-		task.Scope = DefaultScope
-	}
-	if task.Collection == "" {
-		task.Collection = DefaultCollection
-	}
-	return fmt.Sprintf("%s-%s-%s-%s-%s", task.Username, task.IdentifierToken, task.Bucket, task.Scope, task.Collection)
+	return task.IdentifierToken
 }
 
 func (task *ClearTask) CheckIfPending() bool {

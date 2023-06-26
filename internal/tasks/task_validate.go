@@ -34,21 +34,10 @@ type ValidateTask struct {
 }
 
 func (task *ValidateTask) BuildIdentifier() string {
-	if task.ClusterConfig == nil {
-		task.ClusterConfig = &sdk.ClusterConfig{}
-		log.Println("build Identifier have received nil ClusterConfig")
+	if task.IdentifierToken == "" {
+		task.IdentifierToken = DefaultIdentifierToken
 	}
-	if task.Bucket == "" {
-		task.Bucket = DefaultBucket
-	}
-	if task.Scope == "" {
-		task.Scope = DefaultScope
-	}
-	if task.Collection == "" {
-		task.Collection = DefaultCollection
-	}
-	return fmt.Sprintf("%s-%s-%s-%s-%s", task.ClusterConfig.Username, task.IdentifierToken, task.Bucket, task.Scope,
-		task.Collection)
+	return task.IdentifierToken
 }
 
 func (task *ValidateTask) Describe() string {
@@ -86,8 +75,14 @@ func (task *ValidateTask) Config(req *Request, seed int, seedEnd int, reRun bool
 		task.Operation = ValidateOperation
 		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
-		if task.IdentifierToken == "" {
-			return 0, fmt.Errorf("identifier token is missing")
+		if task.Bucket == "" {
+			task.Bucket = DefaultBucket
+		}
+		if task.Scope == "" {
+			task.Scope = DefaultScope
+		}
+		if task.Collection == "" {
+			task.Collection = DefaultCollection
 		}
 
 		if err := configureOperationConfig(task.OperationConfig); err != nil {
