@@ -31,6 +31,7 @@ func TestGeneratePerson(t *testing.T) {
 	}
 
 	if !ok {
+		log.Println("test failed while comparing the document1 and document2")
 		t.Fail()
 	}
 
@@ -43,6 +44,7 @@ func TestGeneratePerson(t *testing.T) {
 
 	document1Updated, ok := document3.(*Person)
 	if !ok {
+		log.Println("test failed while updating the document3")
 		t.Fail()
 	}
 	log.Println(document1Updated, document1)
@@ -55,7 +57,22 @@ func TestGeneratePerson(t *testing.T) {
 	}
 
 	if !ok {
+		log.Println("test failed while comparing the document1 and document1updated")
 		t.Fail()
 	}
 
+	queries, err := template.GenerateQueries()
+	if err != nil {
+		fmt.Println(err)
+		t.Fail()
+	} else {
+		log.Println(queries)
+	}
+	indexes, err := template.GenerateIndexes()
+	if err != nil {
+		fmt.Println(err)
+		t.Fail()
+	} else {
+		log.Println(indexes)
+	}
 }

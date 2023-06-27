@@ -35,3 +35,11 @@ func (s *SmallTemplate) Compare(document1 interface{}, document2 interface{}) (b
 	}
 	return reflect.DeepEqual(t1, t2), nil
 }
+
+func (s *SmallTemplate) GenerateQueries() ([]string, error) {
+	return []string{}, nil
+}
+
+func (s *SmallTemplate) GenerateIndexes() ([]string, error) {
+	return []string{}, nil
+}
