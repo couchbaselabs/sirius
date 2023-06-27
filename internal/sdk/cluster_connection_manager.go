@@ -25,6 +25,8 @@ func ConfigConnectionManager() *ConnectionManager {
 
 // DisconnectAll disconnect all the clusters used in a tasks.Request
 func (cm *ConnectionManager) DisconnectAll() {
+	defer cm.lock.Unlock()
+	cm.lock.Lock()
 	for cS, v := range cm.clusters {
 		if v.Cluster != nil {
 			_ = v.Cluster.Close(nil)
