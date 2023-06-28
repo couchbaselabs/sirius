@@ -9,7 +9,11 @@ import (
 const (
 	MaxConcurrentRoutines         = 16
 	DefaultIdentifierToken        = "default"
+	MaxQueryRuntime        int    = 86400
+	DefaultQueryRunTime    int    = 100
+	WatchIndexDuration     int    = 120
 	InsertOperation        string = "insert"
+	QueryOperation         string = "query"
 	DeleteOperation        string = "delete"
 	UpsertOperation        string = "upsert"
 	ReadOperation          string = "read"
@@ -20,6 +24,9 @@ const (
 	SingleReadOperation    string = "singleRead"
 	SingleTouchOperation   string = "singleTouch"
 	SingleReplaceOperation string = "singleReplace"
+	CreatePrimaryIndex     string = "createPrimaryIndex"
+	CreateIndex            string = "createIndex"
+	BuildIndex             string = "buildIndex"
 )
 
 const (
@@ -86,6 +93,24 @@ func configSingleOperationConfig(s *SingleOperationConfig) error {
 		}
 	}
 	s.KeyValue = finalKeyValue
+	return nil
+}
+
+type QueryOperationConfig struct {
+	Template         string `json:"template,omitempty" doc:"true"`
+	Duration         int    `json:"duration,omitempty" doc:"true"`
+	BuildIndex       bool   `json:"buildIndex" doc:"true"`
+	BuildIndexViaSDK bool   `json:"buildIndexViaSDK" doc:"true"`
+}
+
+func configQueryOperationConfig(s *QueryOperationConfig) error {
+	if s == nil {
+		return fmt.Errorf("unable to parse QueryOperationConfig")
+	}
+
+	if s.Duration == 0 || s.Duration > MaxQueryRuntime {
+		s.Duration = DefaultQueryRunTime
+	}
 	return nil
 }
 

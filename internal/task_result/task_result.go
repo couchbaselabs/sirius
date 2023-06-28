@@ -26,6 +26,11 @@ type SingleOperationResult struct {
 	Cas         uint64 `json:"cas"  doc:"true"`
 }
 
+type FailedQuery struct {
+	Query       string `json:"query" doc:"true"`
+	ErrorString string `json:"errorString" doc:"true"`
+}
+
 type TaskResult struct {
 	ResultSeed      int                              `json:"resultSeed"`
 	Operation       string                           `json:"operation"`
@@ -34,6 +39,7 @@ type TaskResult struct {
 	Failure         int                              `json:"failure"`
 	ValidationError []string                         `json:"validationErrors,omitempty"`
 	BulkError       map[string][]FailedDocument      `json:"bulkErrors"`
+	QueryError      map[string][]FailedQuery         `json:"queryErrors,omitempty"`
 	SingleResult    map[string]SingleOperationResult `json:"singleResult"`
 	lock            sync.Mutex                       `json:"-"`
 }
@@ -44,6 +50,7 @@ func ConfigTaskResult(operation string, seed int) *TaskResult {
 		ResultSeed:   seed,
 		Operation:    operation,
 		BulkError:    make(map[string][]FailedDocument),
+		QueryError:   make(map[string][]FailedQuery),
 		SingleResult: make(map[string]SingleOperationResult),
 		lock:         sync.Mutex{},
 	}
@@ -57,6 +64,18 @@ func (t *TaskResult) IncrementFailure(docId string, doc interface{}, err error) 
 	t.BulkError[v] = append(t.BulkError[v], FailedDocument{
 		DocId:       docId,
 		Doc:         doc,
+		ErrorString: errorString,
+	})
+	t.lock.Unlock()
+}
+
+// IncrementQueryFailure saves the failure count of query running operation.
+func (t *TaskResult) IncrementQueryFailure(query string, err error) {
+	t.lock.Lock()
+	t.Failure++
+	v, errorString := sdk.CheckSDKException(err)
+	t.QueryError[v] = append(t.QueryError[v], FailedQuery{
+		Query:       query,
 		ErrorString: errorString,
 	})
 	t.lock.Unlock()
