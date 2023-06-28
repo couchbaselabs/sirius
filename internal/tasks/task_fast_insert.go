@@ -182,7 +182,7 @@ func fastInsertDocuments(task *FastInsertTask, collection *gocb.Collection) {
 				Timeout:         time.Duration(task.InsertOptions.Timeout) * time.Second,
 			})
 			if task.OperationConfig.ReadYourOwnWrite {
-				var resultFromHost map[string]interface{}
+				var resultFromHost map[string]any
 				documentFromHost := template.InitialiseTemplate(task.OperationConfig.TemplateName)
 				result, err := collection.Get(docId, nil)
 				if err != nil {

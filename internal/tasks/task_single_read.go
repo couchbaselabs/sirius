@@ -157,7 +157,7 @@ func singleReadDocuments(task *SingleReadTask, collection *gocb.Collection) {
 
 			if task.OperationConfig.ReadYourOwnWrite {
 
-				var resultFromHost map[string]interface{}
+				var resultFromHost map[string]any
 				if err := result.Content(&resultFromHost); err != nil {
 					task.result.CreateSingleErrorResult(kV.Key, "document validation failed on read your own write",
 						false, 0)

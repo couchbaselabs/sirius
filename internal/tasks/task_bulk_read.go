@@ -204,7 +204,7 @@ func getDocuments(task *ReadTask, collection *gocb.Collection) {
 				return err
 			}
 
-			var resultFromHost map[string]interface{}
+			var resultFromHost map[string]any
 			documentFromHost := template.InitialiseTemplate(task.State.TemplateName)
 			result, err := collection.Get(docId, nil)
 			if err != nil {
