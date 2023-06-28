@@ -160,7 +160,7 @@ func singleUpsertDocuments(task *SingleUpsertTask, collection *gocb.Collection) 
 			})
 			if task.OperationConfig.ReadYourOwnWrite {
 
-				var resultFromHost map[string]interface{}
+				var resultFromHost map[string]any
 				result, err := collection.Get(kV.Key, nil)
 				if err != nil {
 					task.result.CreateSingleErrorResult(kV.Key, "document validation failed on read your own write",

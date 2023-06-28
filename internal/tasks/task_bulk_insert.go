@@ -207,7 +207,7 @@ func insertDocuments(task *InsertTask, collection *gocb.Collection) {
 				Expiry:          time.Duration(task.InsertOptions.Expiry) * time.Second,
 			})
 			if task.OperationConfig.ReadYourOwnWrite {
-				var resultFromHost map[string]interface{}
+				var resultFromHost map[string]any
 				documentFromHost := template.InitialiseTemplate(task.OperationConfig.TemplateName)
 				result, err := collection.Get(docId, nil)
 				if err != nil {
