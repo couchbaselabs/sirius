@@ -58,4 +58,19 @@ func TestGenerateSmall(t *testing.T) {
 		t.Fail()
 	}
 
+	queries, err := template.GenerateQueries()
+	if err != nil {
+		fmt.Println(err)
+		t.Fail()
+	} else {
+		log.Println(queries)
+	}
+	indexes, err := template.GenerateIndexes()
+	if err != nil {
+		fmt.Println(err)
+		t.Fail()
+	} else {
+		log.Println(indexes)
+	}
+
 }
