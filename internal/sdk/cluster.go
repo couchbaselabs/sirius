@@ -70,7 +70,6 @@ func (c *ClusterObject) getBucketObject(bucketName string) (*BucketObject, error
 	}
 
 	globalKVPingFlag := false
-	globalQueryPingFlag := false
 	if pings, err := c.Buckets[bucketName].bucket.Ping(&gocb.PingOptions{
 		ServiceTypes: []gocb.ServiceType{gocb.ServiceTypeKeyValue, gocb.ServiceTypeQuery},
 		ReportID:     bucketName,
@@ -85,19 +84,11 @@ func (c *ClusterObject) getBucketObject(bucketName string) (*BucketObject, error
 			}
 		}
 
-		queryPingResult, ok := pings.Services[gocb.ServiceTypeQuery]
-		if ok {
-			for _, pingReport := range queryPingResult {
-				if pingReport.State == gocb.PingStateOk {
-					globalQueryPingFlag = true
-				}
-			}
-		}
 	} else {
 		return nil, fmt.Errorf("unable to ping bucket-level service | %w", err)
 	}
 
-	if globalKVPingFlag && globalQueryPingFlag {
+	if globalKVPingFlag {
 		return c.Buckets[bucketName], nil
 	} else {
 		return nil, fmt.Errorf("unable to ping bucket-level service")
