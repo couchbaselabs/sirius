@@ -11,6 +11,7 @@ configuration that is also available on a per-task basis:
  * [/clear_data](#clear_data)
  * [/fast-create](#fast-create)
  * [/result](#result)
+ * [/run-template-query](#run-template-query)
  * [/single-create](#single-create)
  * [/single-delete](#single-delete)
  * [/single-read](#single-read)
@@ -139,6 +140,23 @@ Description :  Task result is retrieved via this endpoint.
 | `DeleteRecord` | `bool` | `json:deleteRecord`  |
 
 ---
+#### /run-template-query
+
+ REST : POST
+
+Description :  Query task runs N1QL query over a period of time over a bucket.
+
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `QueryOperationConfig` | `ptr` | `json:operationConfig,omitempty`  |
+
+---
 #### /single-create
 
  REST : POST
@@ -161,7 +179,7 @@ Description : Single insert task create key value in Couchbase.
 
  REST : POST
 
-Description : Single insert task delete key in Couchbase.
+Description : Single delete task deletes key in Couchbase.
 
 
 | Name | Type | JSON Tag |
@@ -270,6 +288,7 @@ Description : Validates every document in the cluster's bucket
  * [insertOptions](#insertoptions)
  * [keyValue](#keyvalue)
  * [operationConfig](#operationconfig)
+ * [queryOperationConfig](#queryoperationconfig)
  * [removeOptions](#removeoptions)
  * [replaceOption](#replaceoption)
  * [singleOperationConfig](#singleoperationconfig)
@@ -332,6 +351,14 @@ Description : Validates every document in the cluster's bucket
 | `Start` | `int` | `json:start`  |
 | `End` | `int` | `json:end`  |
 | `FieldsToChange` | `slice` | `json:fieldsToChange`  |
+#### queryOperationConfig
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `Template` | `string` | `json:template,omitempty`  |
+| `Duration` | `int` | `json:duration,omitempty`  |
+| `BuildIndex` | `bool` | `json:buildIndex`  |
+| `BuildIndexViaSDK` | `bool` | `json:buildIndexViaSDK`  |
 #### removeOptions
 
 | Name | Type | JSON Tag |
@@ -393,6 +420,7 @@ Description : Validates every document in the cluster's bucket
 | `Failure` | `int` | `json:failure`  |
 | `ValidationError` | `slice` | `json:validationErrors,omitempty`  |
 | `BulkError` | `map` | `json:bulkErrors`  |
+| `QueryError` | `map` | `json:queryErrors,omitempty`  |
 | `SingleResult` | `map` | `json:singleResult`  |
 
 ---

@@ -27,6 +27,11 @@ func RegisteredErrors() map[error]struct{} {
 		gocb.ErrRequestCanceled:        {},
 		gocb.ErrTemporaryFailure:       {},
 		gocb.ErrValueTooLarge:          {},
+		gocb.ErrIndexExists:            {},
+		gocb.ErrIndexFailure:           {},
+		gocb.ErrIndexNotFound:          {},
+		gocb.ErrAttemptNotFoundOnQuery: {},
+		gocb.ErrPlanningFailure:        {},
 	}
 }
 

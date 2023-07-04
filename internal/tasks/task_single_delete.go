@@ -27,7 +27,7 @@ type SingleDeleteTask struct {
 }
 
 func (task *SingleDeleteTask) Describe() string {
-	return "Single insert task delete key in Couchbase.\n"
+	return "Single delete task deletes key in Couchbase.\n"
 }
 
 func (task *SingleDeleteTask) BuildIdentifier() string {
@@ -41,7 +41,7 @@ func (task *SingleDeleteTask) CheckIfPending() bool {
 	return task.TaskPending
 }
 
-// Config configures  the insert task
+// Config configures  the delete task
 func (task *SingleDeleteTask) Config(req *Request, seed int, seedEnd int, reRun bool) (int, error) {
 	task.TaskPending = true
 	task.req = req

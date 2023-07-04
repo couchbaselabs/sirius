@@ -37,6 +37,16 @@ func ConfigGenerator(doctype, keyPrefix, keySuffix string, seed, seedEnd int, te
 	}
 }
 
+type QueryGenerator struct {
+	Template template.Template
+}
+
+func ConfigQueryGenerator(template template.Template) *QueryGenerator {
+	return &QueryGenerator{
+		Template: template,
+	}
+}
+
 // GetDocIdAndKey will return key for the next document
 func (g *Generator) GetDocIdAndKey(iteration int) (string, int) {
 	newKey := iteration + g.SeedEnd

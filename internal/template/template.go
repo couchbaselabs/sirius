@@ -9,8 +9,9 @@ type Template interface {
 	GenerateDocument(fake *faker.Faker, documentSize int) (interface{}, error)
 	UpdateDocument(fieldsToChange []string, lastUpdatedDocument interface{}, fake *faker.Faker) (interface{}, error)
 	Compare(document1 interface{}, document2 interface{}) (bool, error)
-	GenerateIndexes() ([]string, error)
-	GenerateQueries() ([]string, error)
+	GenerateIndexes(bucketName string, scopeName string, collectionName string) ([]string, error)
+	GenerateQueries(bucketName string, scopeName string, collectionName string) ([]string, error)
+	GenerateIndexesForSdk() (map[string][]string, error)
 }
 
 // InitialiseTemplate returns a template as an interface defined by user request.

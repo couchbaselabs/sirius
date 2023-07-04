@@ -36,10 +36,14 @@ func (s *SmallTemplate) Compare(document1 interface{}, document2 interface{}) (b
 	return reflect.DeepEqual(t1, t2), nil
 }
 
-func (s *SmallTemplate) GenerateQueries() ([]string, error) {
+func (s *SmallTemplate) GenerateQueries(bucketName string, scopeName string, collectionName string) ([]string, error) {
 	return []string{}, nil
 }
 
-func (s *SmallTemplate) GenerateIndexes() ([]string, error) {
+func (s *SmallTemplate) GenerateIndexes(bucketName string, scopeName string, collectionName string) ([]string, error) {
 	return []string{}, nil
+}
+
+func (s *SmallTemplate) GenerateIndexesForSdk() (map[string][]string, error) {
+	return map[string][]string{}, nil
 }
