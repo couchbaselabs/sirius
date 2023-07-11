@@ -415,12 +415,12 @@ Description : Validates every document in the cluster's bucket
 | ---- | ---- | -------- |
 | `ResultSeed` | `int` | `json:resultSeed`  |
 | `Operation` | `string` | `json:operation`  |
-| `ErrorOther` | `string` | `json:otherErrors,omitempty`  |
+| `ErrorOther` | `string` | `json:otherErrors`  |
 | `Success` | `int` | `json:success`  |
 | `Failure` | `int` | `json:failure`  |
-| `ValidationError` | `slice` | `json:validationErrors,omitempty`  |
+| `ValidationError` | `slice` | `json:validationErrors`  |
 | `BulkError` | `map` | `json:bulkErrors`  |
-| `QueryError` | `map` | `json:queryErrors,omitempty`  |
+| `QueryError` | `map` | `json:queryErrors`  |
 | `SingleResult` | `map` | `json:singleResult`  |
 
 ---

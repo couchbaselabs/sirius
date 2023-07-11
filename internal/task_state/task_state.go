@@ -43,12 +43,11 @@ type TaskState struct {
 	lock         sync.Mutex         `json:"-"`
 }
 
-// ConfigTaskState returns a instance of TaskState
+// ConfigTaskState returns an instance of TaskState
 func ConfigTaskState(templateName, keyPrefix, keySuffix string, docSize, seed, seedEnd, resultSeed int) *TaskState {
 	ctx, cancel := context.WithCancel(context.Background())
 	ts := &TaskState{
 		TemplateName: templateName,
-		DocumentSize: docSize,
 		SeedStart:    seed,
 		SeedEnd:      seedEnd,
 		ResultSeed:   resultSeed,

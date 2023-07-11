@@ -86,7 +86,8 @@ func (task *ValidateTask) Config(req *Request, seed int, seedEnd int, reRun bool
 		}
 
 		if err := configureOperationConfig(task.OperationConfig); err != nil {
-			task.result.ErrorOther = err.Error()
+			task.TaskPending = false
+			return 0, fmt.Errorf(err.Error())
 		}
 
 		task.Template = template.InitialiseTemplate(task.OperationConfig.TemplateName)
@@ -124,18 +125,20 @@ func (task *ValidateTask) Do() error {
 	collection, err1 := task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
 		task.Collection)
 
+	task.gen = docgenerator.ConfigGenerator(task.OperationConfig.DocType, task.OperationConfig.KeyPrefix,
+		task.OperationConfig.KeySuffix, task.State.SeedStart, task.State.SeedEnd,
+		template.InitialiseTemplate(task.OperationConfig.TemplateName))
+
 	if err1 != nil {
 		task.result.ErrorOther = err1.Error()
+		task.result.FailWholeBulkOperation(task.OperationConfig.Start, task.OperationConfig.End,
+			task.OperationConfig.DocSize, task.gen, err1)
 		if err := task.result.SaveResultIntoFile(); err != nil {
 			log.Println("not able to save result into ", task.ResultSeed)
 			return err
 		}
 		return task.tearUp()
 	}
-
-	task.gen = docgenerator.ConfigGenerator(task.OperationConfig.DocType, task.OperationConfig.KeyPrefix,
-		task.OperationConfig.KeySuffix, task.State.SeedStart, task.State.SeedEnd,
-		template.InitialiseTemplate(task.OperationConfig.TemplateName))
 
 	validateDocuments(task, collection)
 
@@ -192,7 +195,7 @@ func validateDocuments(task *ValidateTask, collection *gocb.Collection) {
 			}
 
 			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
-			originalDocument, err := task.gen.Template.GenerateDocument(&fake, task.State.DocumentSize)
+			originalDocument, err := task.gen.Template.GenerateDocument(&fake, task.OperationConfig.DocSize)
 			if err != nil {
 				task.result.IncrementFailure(docId, originalDocument, err)
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}

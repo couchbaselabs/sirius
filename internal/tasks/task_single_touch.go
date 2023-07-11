@@ -73,11 +73,13 @@ func (task *SingleTouchTask) Config(req *Request, seed int, seedEnd int, reRun b
 		}
 
 		if err := configInsertOptions(task.InsertOptions); err != nil {
-			task.result.ErrorOther = err.Error()
+			task.TaskPending = false
+			return 0, fmt.Errorf(err.Error())
 		}
 
 		if err := configSingleOperationConfig(task.OperationConfig); err != nil {
-			task.result.ErrorOther = err.Error()
+			task.TaskPending = false
+			return 0, fmt.Errorf(err.Error())
 		}
 	} else {
 		log.Println("retrying :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
@@ -109,6 +111,11 @@ func (task *SingleTouchTask) Do() error {
 
 	if err1 != nil {
 		task.result.ErrorOther = err1.Error()
+		var docIds []string
+		for _, kV := range task.OperationConfig.KeyValue {
+			docIds = append(docIds, kV.Key)
+		}
+		task.result.FailWholeSingleOperation(docIds, err1)
 		if err := task.result.SaveResultIntoFile(); err != nil {
 			log.Println("not able to save result into ", task.ResultSeed)
 			return err

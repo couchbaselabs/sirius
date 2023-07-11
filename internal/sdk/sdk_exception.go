@@ -16,6 +16,7 @@ func RegisteredErrors() map[error]struct{} {
 		gocb.ErrDocumentLocked:         {},
 		gocb.ErrDurabilityAmbiguous:    {},
 		gocb.ErrDurabilityImpossible:   {},
+		gocb.ErrUnambiguousTimeout:     {},
 		gocb.ErrDurableWriteInProgress: {},
 		gocb.ErrFeatureNotAvailable:    {},
 		gocb.ErrTimeout:                {},
@@ -43,5 +44,5 @@ func CheckSDKException(err error) (string, string) {
 			return e.Error(), err.Error()
 		}
 	}
-	return "unknown exceptions", err.Error()
+	return err.Error(), err.Error()
 }
