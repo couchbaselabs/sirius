@@ -123,13 +123,13 @@ func configureOperationConfig(o *OperationConfig) error {
 		o.DocType = docgenerator.JsonDocument
 	}
 
-	if o.KeySize == 0 || o.KeySize > docgenerator.DefaultKeySize {
+	if o.KeySize <= 0 || o.KeySize > docgenerator.DefaultKeySize {
 		o.KeySize = docgenerator.DefaultKeySize
 	}
-	if o.Count == 0 {
+	if o.Count <= 0 {
 		o.Count = 1
 	}
-	if o.DocSize == 0 {
+	if o.DocSize <= 0 {
 		o.DocSize = docgenerator.DefaultDocSize
 	}
 	if o.Start < 0 {
