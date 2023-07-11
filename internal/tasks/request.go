@@ -28,7 +28,7 @@ type Request struct {
 	lock              sync.Mutex             `json:"-" doc:"false"`
 }
 
-// NewRequest return  a instance of Request
+// NewRequest return  an instance of Request
 func NewRequest(identifier string) *Request {
 	seed := int(time.Now().UnixNano())
 	return &Request{
@@ -66,7 +66,7 @@ func (r *Request) ClearAllTask() {
 	}
 }
 
-// retracePreviousMutations returns a updated document after mutating the original documents.
+// retracePreviousMutations returns an updated document after mutating the original documents.
 func (r *Request) retracePreviousMutations(offset int, doc interface{}, gen docgenerator.Generator,
 	fake *faker.Faker, resultSeed int) (interface{}, error) {
 	defer r.lock.Unlock()

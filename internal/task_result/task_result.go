@@ -3,8 +3,11 @@ package task_result
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/couchbaselabs/sirius/internal/docgenerator"
 	"github.com/couchbaselabs/sirius/internal/sdk"
+	"github.com/jaswdr/faker"
 	"log"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"sync"
@@ -34,12 +37,12 @@ type FailedQuery struct {
 type TaskResult struct {
 	ResultSeed      int                              `json:"resultSeed"`
 	Operation       string                           `json:"operation"`
-	ErrorOther      string                           `json:"otherErrors,omitempty"`
+	ErrorOther      string                           `json:"otherErrors"`
 	Success         int                              `json:"success"`
 	Failure         int                              `json:"failure"`
-	ValidationError []string                         `json:"validationErrors,omitempty"`
+	ValidationError []string                         `json:"validationErrors"`
 	BulkError       map[string][]FailedDocument      `json:"bulkErrors"`
-	QueryError      map[string][]FailedQuery         `json:"queryErrors,omitempty"`
+	QueryError      map[string][]FailedQuery         `json:"queryErrors"`
 	SingleResult    map[string]SingleOperationResult `json:"singleResult"`
 	lock            sync.Mutex                       `json:"-"`
 }
@@ -136,5 +139,21 @@ func (t *TaskResult) CreateSingleErrorResult(docId string, errorString string, s
 		ErrorString: errorString,
 		Status:      status,
 		Cas:         cas,
+	}
+}
+
+func (t *TaskResult) FailWholeBulkOperation(start, end, docSize int, gen *docgenerator.Generator, err error) {
+	for i := start; i < end; i++ {
+		docId, key := gen.GetDocIdAndKey(i)
+		fake := faker.NewWithSeed(rand.NewSource(int64(key)))
+		originalDoc, _ := gen.Template.GenerateDocument(&fake, docSize)
+		t.IncrementFailure(docId, originalDoc, err)
+	}
+}
+
+func (t *TaskResult) FailWholeSingleOperation(docIds []string, err error) {
+	t.Failure = len(docIds)
+	for _, docId := range docIds {
+		t.CreateSingleErrorResult(docId, err.Error(), false, 0)
 	}
 }
