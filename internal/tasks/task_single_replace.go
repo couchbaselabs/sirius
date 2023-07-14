@@ -20,7 +20,7 @@ type SingleReplaceTask struct {
 	ReplaceOptions  *ReplaceOptions         `json:"replaceOptions,omitempty" doc:"true"`
 	OperationConfig *SingleOperationConfig  `json:"singleOperationConfig" doc:"true"`
 	Operation       string                  `json:"operation" doc:"false"`
-	ResultSeed      int                     `json:"resultSeed" doc:"false"`
+	ResultSeed      int64                   `json:"resultSeed" doc:"false"`
 	TaskPending     bool                    `json:"taskPending" doc:"false"`
 	result          *task_result.TaskResult `json:"-" doc:"false"`
 	req             *Request                `json:"-" doc:"false"`
@@ -37,12 +37,16 @@ func (task *SingleReplaceTask) BuildIdentifier() string {
 	return task.IdentifierToken
 }
 
+func (task *SingleReplaceTask) CollectionIdentifier() string {
+	return task.IdentifierToken + task.ClusterConfig.ConnectionString + task.Bucket + task.Scope + task.Collection
+}
+
 func (task *SingleReplaceTask) CheckIfPending() bool {
 	return task.TaskPending
 }
 
 // Config configures  the insert task
-func (task *SingleReplaceTask) Config(req *Request, seed int, seedEnd int, reRun bool) (int, error) {
+func (task *SingleReplaceTask) Config(req *Request, reRun bool) (int64, error) {
 	task.TaskPending = true
 	task.req = req
 
@@ -58,9 +62,8 @@ func (task *SingleReplaceTask) Config(req *Request, seed int, seedEnd int, reRun
 	}
 
 	if !reRun {
-		task.ResultSeed = int(time.Now().UnixNano())
+		task.ResultSeed = int64(time.Now().UnixNano())
 		task.Operation = SingleReplaceOperation
-		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
 		if task.Bucket == "" {
 			task.Bucket = DefaultBucket
@@ -74,12 +77,12 @@ func (task *SingleReplaceTask) Config(req *Request, seed int, seedEnd int, reRun
 
 		if err := configReplaceOptions(task.ReplaceOptions); err != nil {
 			task.TaskPending = false
-			return 0, fmt.Errorf(err.Error())
+			return 0, err
 		}
 
 		if err := configSingleOperationConfig(task.OperationConfig); err != nil {
 			task.TaskPending = false
-			return 0, fmt.Errorf(err.Error())
+			return 0, err
 		}
 	} else {
 		log.Println("retrying :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
@@ -88,6 +91,9 @@ func (task *SingleReplaceTask) Config(req *Request, seed int, seedEnd int, reRun
 }
 
 func (task *SingleReplaceTask) tearUp() error {
+	if err := task.result.SaveResultIntoFile(); err != nil {
+		log.Println("not able to save result into ", task.ResultSeed)
+	}
 	task.result = nil
 	task.TaskPending = false
 	return task.req.SaveRequestIntoFile()
@@ -95,18 +101,9 @@ func (task *SingleReplaceTask) tearUp() error {
 
 func (task *SingleReplaceTask) Do() error {
 
-	if task.result != nil && task.result.ErrorOther != "" {
-		log.Println(task.result.ErrorOther)
-		if err := task.result.SaveResultIntoFile(); err != nil {
-			log.Println("not able to save result into ", task.ResultSeed)
-			return err
-		}
-		return task.tearUp()
-	} else {
-		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
-	}
+	task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
-	collection, err1 := task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
+	collectionObject, err1 := task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
 		task.Collection)
 
 	if err1 != nil {
@@ -116,27 +113,18 @@ func (task *SingleReplaceTask) Do() error {
 			docIds = append(docIds, kV.Key)
 		}
 		task.result.FailWholeSingleOperation(docIds, err1)
-		if err := task.result.SaveResultIntoFile(); err != nil {
-			log.Println("not able to save result into ", task.ResultSeed)
-			return err
-		}
 		return task.tearUp()
 	}
 
-	singleReplaceDocuments(task, collection)
+	singleReplaceDocuments(task, collectionObject)
 
-	task.result.Success = (len(task.OperationConfig.KeyValue)) - task.result.Failure
-
-	if err := task.result.SaveResultIntoFile(); err != nil {
-		log.Println("not able to save result into ", task.ResultSeed)
-	}
-
+	task.result.Success = int64(len(task.OperationConfig.KeyValue)) - task.result.Failure
 	return task.tearUp()
 }
 
 // singleReplaceDocuments uploads new documents in a bucket.scope.
 // collection in a defined batch size at multiple iterations.
-func singleReplaceDocuments(task *SingleReplaceTask, collection *gocb.Collection) {
+func singleReplaceDocuments(task *SingleReplaceTask, collectionObject *sdk.CollectionObject) {
 
 	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
 	dataChannel := make(chan interface{}, MaxConcurrentRoutines)
@@ -152,12 +140,12 @@ func singleReplaceDocuments(task *SingleReplaceTask, collection *gocb.Collection
 			kV, ok := keyValue.(KeyValue)
 			if !ok {
 				task.result.IncrementFailure("unknownDocId", struct{}{},
-					errors.New("unable to decode Key Value for single crud"))
+					errors.New("unable to decode Key Value for single crud"), false, 0)
 				<-routineLimiter
 				return errors.New("unable to decode Key Value for single crud")
 			}
 
-			result, err := collection.Replace(kV.Key, kV.Doc, &gocb.ReplaceOptions{
+			result, err := collectionObject.Collection.Replace(kV.Key, kV.Doc, &gocb.ReplaceOptions{
 				Expiry:          time.Duration(task.ReplaceOptions.Expiry) * time.Second,
 				Cas:             gocb.Cas(task.ReplaceOptions.Cas),
 				PersistTo:       task.ReplaceOptions.PersistTo,
@@ -168,7 +156,7 @@ func singleReplaceDocuments(task *SingleReplaceTask, collection *gocb.Collection
 
 			if err != nil {
 				task.result.CreateSingleErrorResult(kV.Key, err.Error(), false, 0)
-				task.result.IncrementFailure(kV.Key, kV.Doc, err)
+				task.result.IncrementFailure(kV.Key, kV.Doc, err, false, 0)
 				<-routineLimiter
 				return err
 			}

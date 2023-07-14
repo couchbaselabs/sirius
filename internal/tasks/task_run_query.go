@@ -21,7 +21,7 @@ type QueryTask struct {
 	QueryOperationConfig *QueryOperationConfig        `json:"operationConfig,omitempty" doc:"true"`
 	Template             template.Template            `json:"-" doc:"false"`
 	Operation            string                       `json:"operation" doc:"false"`
-	ResultSeed           int                          `json:"resultSeed" doc:"false"`
+	ResultSeed           int64                        `json:"resultSeed" doc:"false"`
 	TaskPending          bool                         `json:"taskPending" doc:"false"`
 	BuildIndex           bool                         `json:"buildIndex" doc:"false"`
 	result               *task_result.TaskResult      `json:"-" doc:"false"`
@@ -40,11 +40,15 @@ func (task *QueryTask) BuildIdentifier() string {
 	return task.IdentifierToken
 }
 
+func (task *QueryTask) CollectionIdentifier() string {
+	return task.IdentifierToken + task.ClusterConfig.ConnectionString + task.Bucket + task.Scope + task.Collection
+}
+
 func (task *QueryTask) CheckIfPending() bool {
 	return task.TaskPending
 }
 
-func (task *QueryTask) Config(req *Request, seed int, seedEnd int, reRun bool) (int, error) {
+func (task *QueryTask) Config(req *Request, reRun bool) (int64, error) {
 	task.TaskPending = true
 	task.BuildIndex = false
 	task.req = req
@@ -61,9 +65,8 @@ func (task *QueryTask) Config(req *Request, seed int, seedEnd int, reRun bool) (
 	}
 
 	if !reRun {
-		task.ResultSeed = int(time.Now().UnixNano())
+		task.ResultSeed = int64(time.Now().UnixNano())
 		task.Operation = QueryOperation
-		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 		task.BuildIndex = true
 
 		if task.Bucket == "" {
@@ -89,40 +92,27 @@ func (task *QueryTask) Config(req *Request, seed int, seedEnd int, reRun bool) (
 }
 
 func (task *QueryTask) tearUp() error {
+	if err := task.result.SaveResultIntoFile(); err != nil {
+		log.Println("not able to save result into ", task.ResultSeed)
+	}
 	task.result = nil
 	task.TaskPending = false
 	return task.req.SaveRequestIntoFile()
 }
 
 func (task *QueryTask) Do() error {
-	if task.result != nil && task.result.ErrorOther != "" {
-		log.Println(task.result.ErrorOther)
-		if err := task.result.SaveResultIntoFile(); err != nil {
-			log.Println("not able to save result into ", task.ResultSeed)
-			return err
-		}
-		return task.tearUp()
-	} else {
-		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
-	}
+
+	task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
 	cluster, err := task.req.connectionManager.GetCluster(task.ClusterConfig)
 	if err != nil {
 		task.result.ErrorOther = err.Error()
-		if err := task.result.SaveResultIntoFile(); err != nil {
-			log.Println("not able to save result into ", task.ResultSeed)
-			return err
-		}
 		return task.tearUp()
 	}
 
 	s, err1 := task.req.connectionManager.GetScope(task.ClusterConfig, task.Bucket, task.Scope)
 	if err1 != nil {
 		task.result.ErrorOther = err1.Error()
-		if err := task.result.SaveResultIntoFile(); err != nil {
-			log.Println("not able to save result into ", task.ResultSeed)
-			return err
-		}
 		return task.tearUp()
 	}
 
@@ -140,14 +130,14 @@ func (task *QueryTask) Do() error {
 	// check if indexes needs to be build
 	if task.BuildIndex {
 		if task.QueryOperationConfig.BuildIndexViaSDK {
-			buildIndexWithSDKs(task, cluster, s, c)
+			buildIndexWithSDKs(task, cluster, s, c.Collection)
 		} else {
-			buildIndexViaN1QL(task, cluster, s, c)
+			buildIndexViaN1QL(task, cluster, s, c.Collection)
 		}
 		task.BuildIndex = false
 	}
 
-	runN1qlQuery(task, cluster, s, c)
+	runN1qlQuery(task, cluster, s, c.Collection)
 
 	if err := task.result.SaveResultIntoFile(); err != nil {
 		log.Println("not able to save result into ", task.ResultSeed)

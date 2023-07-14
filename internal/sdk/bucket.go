@@ -19,7 +19,7 @@ func (b *BucketObject) getScopeObject(scopeName string) (*ScopeObject, error) {
 		s := b.bucket.Scope(scopeName)
 		sObj := &ScopeObject{
 			scope:       s,
-			collections: make(map[string]*gocb.Collection),
+			collections: make(map[string]*CollectionObject),
 		}
 		b.setScopeObject(scopeName, sObj)
 		return sObj, nil

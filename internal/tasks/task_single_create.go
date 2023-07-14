@@ -22,7 +22,7 @@ type SingleInsertTask struct {
 	InsertOptions   *InsertOptions          `json:"insertOptions,omitempty" doc:"true"`
 	OperationConfig *SingleOperationConfig  `json:"singleOperationConfig" doc:"true"`
 	Operation       string                  `json:"operation" doc:"false"`
-	ResultSeed      int                     `json:"resultSeed" doc:"false"`
+	ResultSeed      int64                   `json:"resultSeed" doc:"false"`
 	TaskPending     bool                    `json:"taskPending" doc:"false"`
 	result          *task_result.TaskResult `json:"result" doc:"false"`
 	req             *Request                `json:"-" doc:"false"`
@@ -39,12 +39,16 @@ func (task *SingleInsertTask) BuildIdentifier() string {
 	return task.IdentifierToken
 }
 
+func (task *SingleInsertTask) CollectionIdentifier() string {
+	return task.IdentifierToken + task.ClusterConfig.ConnectionString + task.Bucket + task.Scope + task.Collection
+}
+
 func (task *SingleInsertTask) CheckIfPending() bool {
 	return task.TaskPending
 }
 
 // Config configures  the insert task
-func (task *SingleInsertTask) Config(req *Request, seed int, seedEnd int, reRun bool) (int, error) {
+func (task *SingleInsertTask) Config(req *Request, reRun bool) (int64, error) {
 	task.TaskPending = true
 	task.req = req
 
@@ -60,9 +64,8 @@ func (task *SingleInsertTask) Config(req *Request, seed int, seedEnd int, reRun 
 	}
 
 	if !reRun {
-		task.ResultSeed = int(time.Now().UnixNano())
+		task.ResultSeed = int64(time.Now().UnixNano())
 		task.Operation = SingleInsertOperation
-		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
 		if task.Bucket == "" {
 			task.Bucket = DefaultBucket
@@ -76,13 +79,14 @@ func (task *SingleInsertTask) Config(req *Request, seed int, seedEnd int, reRun 
 
 		if err := configInsertOptions(task.InsertOptions); err != nil {
 			task.TaskPending = false
-			return 0, fmt.Errorf(err.Error())
+			return 0, err
 		}
 
 		if err := configSingleOperationConfig(task.OperationConfig); err != nil {
 			task.TaskPending = false
-			return 0, fmt.Errorf(err.Error())
+			return 0, err
 		}
+
 	} else {
 		log.Println("retrying :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 	}
@@ -90,6 +94,9 @@ func (task *SingleInsertTask) Config(req *Request, seed int, seedEnd int, reRun 
 }
 
 func (task *SingleInsertTask) tearUp() error {
+	if err := task.result.SaveResultIntoFile(); err != nil {
+		log.Println("not able to save result into ", task.ResultSeed)
+	}
 	task.result = nil
 	task.TaskPending = false
 	return task.req.SaveRequestIntoFile()
@@ -97,18 +104,9 @@ func (task *SingleInsertTask) tearUp() error {
 
 func (task *SingleInsertTask) Do() error {
 
-	if task.result != nil && task.result.ErrorOther != "" {
-		log.Println(task.result.ErrorOther)
-		if err := task.result.SaveResultIntoFile(); err != nil {
-			log.Println("not able to save result into ", task.ResultSeed)
-			return err
-		}
-		return task.tearUp()
-	} else {
-		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
-	}
+	task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
-	collection, err1 := task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
+	collectionObject, err1 := task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
 		task.Collection)
 
 	if err1 != nil {
@@ -118,26 +116,17 @@ func (task *SingleInsertTask) Do() error {
 			docIds = append(docIds, kV.Key)
 		}
 		task.result.FailWholeSingleOperation(docIds, err1)
-		if err := task.result.SaveResultIntoFile(); err != nil {
-			log.Println("not able to save result into ", task.ResultSeed)
-			return err
-		}
 		return task.tearUp()
 	}
 
-	singleInsertDocuments(task, collection)
+	singleInsertDocuments(task, collectionObject)
 
-	task.result.Success = (len(task.OperationConfig.KeyValue)) - task.result.Failure
-
-	if err := task.result.SaveResultIntoFile(); err != nil {
-		log.Println("not able to save result into ", task.ResultSeed)
-	}
-
+	task.result.Success = int64(len(task.OperationConfig.KeyValue)) - task.result.Failure
 	return task.tearUp()
 }
 
 // singleInsertDocuments uploads new documents in a bucket.scope.collection in a defined batch size at multiple iterations.
-func singleInsertDocuments(task *SingleInsertTask, collection *gocb.Collection) {
+func singleInsertDocuments(task *SingleInsertTask, collectionObject *sdk.CollectionObject) {
 
 	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
 	dataChannel := make(chan interface{}, MaxConcurrentRoutines)
@@ -153,12 +142,12 @@ func singleInsertDocuments(task *SingleInsertTask, collection *gocb.Collection) 
 			kV, ok := keyValue.(KeyValue)
 			if !ok {
 				task.result.IncrementFailure("unknownDocId", struct{}{},
-					errors.New("unable to decode Key Value for single crud"))
+					errors.New("internal error"), false, 0)
 				<-routineLimiter
 				return errors.New("unable to decode Key Value for single crud")
 			}
 
-			m, err := collection.Insert(kV.Key, kV.Doc, &gocb.InsertOptions{
+			m, err := collectionObject.Collection.Insert(kV.Key, kV.Doc, &gocb.InsertOptions{
 				DurabilityLevel: getDurability(task.InsertOptions.Durability),
 				PersistTo:       task.InsertOptions.PersistTo,
 				ReplicateTo:     task.InsertOptions.ReplicateTo,
@@ -167,18 +156,18 @@ func singleInsertDocuments(task *SingleInsertTask, collection *gocb.Collection) 
 			})
 			if task.OperationConfig.ReadYourOwnWrite {
 				var resultFromHost map[string]any
-				result, err := collection.Get(kV.Key, nil)
+				result, err := collectionObject.Collection.Get(kV.Key, nil)
 				if err != nil {
 					task.result.CreateSingleErrorResult(kV.Key, "document validation failed on read your own write",
 						false, 0)
-					task.result.IncrementFailure(kV.Key, kV.Doc, err)
+					task.result.IncrementFailure(kV.Key, kV.Doc, err, false, 0)
 					<-routineLimiter
 					return err
 				}
 				if err := result.Content(&resultFromHost); err != nil {
 					task.result.CreateSingleErrorResult(kV.Key, "document validation failed on read your own write",
 						false, 0)
-					task.result.IncrementFailure(kV.Key, kV.Doc, err)
+					task.result.IncrementFailure(kV.Key, kV.Doc, err, false, 0)
 					<-routineLimiter
 					return err
 				}
@@ -187,7 +176,7 @@ func singleInsertDocuments(task *SingleInsertTask, collection *gocb.Collection) 
 				if err != nil {
 					task.result.CreateSingleErrorResult(kV.Key, "document validation failed on read your own write",
 						false, 0)
-					task.result.IncrementFailure(kV.Key, kV.Doc, err)
+					task.result.IncrementFailure(kV.Key, kV.Doc, err, false, 0)
 					<-routineLimiter
 					return err
 				}
@@ -195,22 +184,22 @@ func singleInsertDocuments(task *SingleInsertTask, collection *gocb.Collection) 
 				if err != nil {
 					task.result.CreateSingleErrorResult(kV.Key, "document validation failed on read your own write",
 						false, 0)
-					task.result.IncrementFailure(kV.Key, kV.Doc, err)
+					task.result.IncrementFailure(kV.Key, kV.Doc, err, false, 0)
 					<-routineLimiter
 					return err
 				}
 
 				if !bytes.Equal(resultFromHostBytes, resultFromDocBytes) {
-					task.result.CreateSingleErrorResult(kV.Key, "document validation failed on read your own write",
+					task.result.CreateSingleErrorResult(kV.Key, "integrity lost",
 						false, 0)
-					task.result.IncrementFailure(kV.Key, kV.Doc, errors.New("document validation failed on read your own write"))
+					task.result.IncrementFailure(kV.Key, kV.Doc, errors.New("integrity lost"), false, 0)
 					<-routineLimiter
 					return err
 				}
 			} else {
 				if err != nil {
 					if errors.Is(err, gocb.ErrDocumentExists) {
-						if tempResult, err1 := collection.Get(kV.Key, nil); err1 != nil {
+						if tempResult, err1 := collectionObject.Collection.Get(kV.Key, nil); err1 != nil {
 							task.result.CreateSingleErrorResult(kV.Key, "unable to get CAS Value", false,
 								0)
 						} else {
@@ -220,7 +209,7 @@ func singleInsertDocuments(task *SingleInsertTask, collection *gocb.Collection) 
 						return nil
 					} else {
 						task.result.CreateSingleErrorResult(kV.Key, err.Error(), false, 0)
-						task.result.IncrementFailure(kV.Key, kV.Doc, err)
+						task.result.IncrementFailure(kV.Key, kV.Doc, err, false, 0)
 						<-routineLimiter
 						return err
 					}

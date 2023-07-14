@@ -20,6 +20,8 @@ const ResultPath = "./internal/task_result/task_result_logs"
 type FailedDocument struct {
 	DocId       string      `json:"key" doc:"true"`
 	Doc         interface{} `json:"value"  doc:"true"`
+	Status      bool        `json:"status"  doc:"true"`
+	Cas         uint64      `json:"cas"  doc:"true"`
 	ErrorString string      `json:"errorString"  doc:"true"`
 }
 
@@ -35,22 +37,21 @@ type FailedQuery struct {
 }
 
 type TaskResult struct {
-	ResultSeed      int                              `json:"resultSeed"`
-	Operation       string                           `json:"operation"`
-	ErrorOther      string                           `json:"otherErrors"`
-	Success         int                              `json:"success"`
-	Failure         int                              `json:"failure"`
-	ValidationError []string                         `json:"validationErrors"`
-	BulkError       map[string][]FailedDocument      `json:"bulkErrors"`
-	QueryError      map[string][]FailedQuery         `json:"queryErrors"`
-	SingleResult    map[string]SingleOperationResult `json:"singleResult"`
-	lock            sync.Mutex                       `json:"-"`
+	ResultSeed   int64                            `json:"resultSeed"`
+	Operation    string                           `json:"operation"`
+	ErrorOther   string                           `json:"otherErrors"`
+	Success      int64                            `json:"success"`
+	Failure      int64                            `json:"failure"`
+	BulkError    map[string][]FailedDocument      `json:"bulkErrors"`
+	QueryError   map[string][]FailedQuery         `json:"queryErrors"`
+	SingleResult map[string]SingleOperationResult `json:"singleResult"`
+	lock         sync.Mutex                       `json:"-"`
 }
 
 // ConfigTaskResult returns a new instance of TaskResult
-func ConfigTaskResult(operation string, seed int) *TaskResult {
+func ConfigTaskResult(operation string, resultSeed int64) *TaskResult {
 	return &TaskResult{
-		ResultSeed:   seed,
+		ResultSeed:   resultSeed,
 		Operation:    operation,
 		BulkError:    make(map[string][]FailedDocument),
 		QueryError:   make(map[string][]FailedQuery),
@@ -60,13 +61,15 @@ func ConfigTaskResult(operation string, seed int) *TaskResult {
 }
 
 // IncrementFailure saves the failure count of doc loading operation.
-func (t *TaskResult) IncrementFailure(docId string, doc interface{}, err error) {
+func (t *TaskResult) IncrementFailure(docId string, doc interface{}, err error, status bool, cas uint64) {
 	t.lock.Lock()
 	t.Failure++
 	v, errorString := sdk.CheckSDKException(err)
 	t.BulkError[v] = append(t.BulkError[v], FailedDocument{
 		DocId:       docId,
 		Doc:         doc,
+		Status:      status,
+		Cas:         cas,
 		ErrorString: errorString,
 	})
 	t.lock.Unlock()
@@ -81,13 +84,6 @@ func (t *TaskResult) IncrementQueryFailure(query string, err error) {
 		Query:       query,
 		ErrorString: errorString,
 	})
-	t.lock.Unlock()
-}
-
-// ValidationFailures saves the failing validation of documents.
-func (t *TaskResult) ValidationFailures(docId string) {
-	t.lock.Lock()
-	t.ValidationError = append(t.ValidationError, docId)
 	t.lock.Unlock()
 }
 
@@ -142,17 +138,17 @@ func (t *TaskResult) CreateSingleErrorResult(docId string, errorString string, s
 	}
 }
 
-func (t *TaskResult) FailWholeBulkOperation(start, end, docSize int, gen *docgenerator.Generator, err error) {
+func (t *TaskResult) FailWholeBulkOperation(start, end int64, docSize int, gen *docgenerator.Generator, err error) {
 	for i := start; i < end; i++ {
 		docId, key := gen.GetDocIdAndKey(i)
 		fake := faker.NewWithSeed(rand.NewSource(int64(key)))
 		originalDoc, _ := gen.Template.GenerateDocument(&fake, docSize)
-		t.IncrementFailure(docId, originalDoc, err)
+		t.IncrementFailure(docId, originalDoc, err, false, 0)
 	}
 }
 
 func (t *TaskResult) FailWholeSingleOperation(docIds []string, err error) {
-	t.Failure = len(docIds)
+	t.Failure = int64(len(docIds))
 	for _, docId := range docIds {
 		t.CreateSingleErrorResult(docId, err.Error(), false, 0)
 	}

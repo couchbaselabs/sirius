@@ -20,12 +20,19 @@ func (task *ClearTask) Do() error {
 	return nil
 }
 
-func (task *ClearTask) Config(req *Request, seed int, seedEnd int, rerun bool) (int, error) {
+func (task *ClearTask) Config(_ *Request, _ bool) (int64, error) {
 	task.TaskPending = false
 	return 0, nil
 }
 
 func (task *ClearTask) BuildIdentifier() string {
+	if task.IdentifierToken == "" {
+		task.IdentifierToken = DefaultIdentifierToken
+	}
+	return task.IdentifierToken
+}
+
+func (task *ClearTask) CollectionIdentifier() string {
 	if task.IdentifierToken == "" {
 		task.IdentifierToken = DefaultIdentifierToken
 	}

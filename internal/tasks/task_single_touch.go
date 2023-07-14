@@ -20,7 +20,7 @@ type SingleTouchTask struct {
 	InsertOptions   *InsertOptions          `json:"insertOptions,omitempty" doc:"true"`
 	OperationConfig *SingleOperationConfig  `json:"singleOperationConfig" doc:"true"`
 	Operation       string                  `json:"operation" doc:"false"`
-	ResultSeed      int                     `json:"resultSeed" doc:"false"`
+	ResultSeed      int64                   `json:"resultSeed" doc:"false"`
 	TaskPending     bool                    `json:"taskPending" doc:"false"`
 	result          *task_result.TaskResult `json:"-" doc:"false"`
 	req             *Request                `json:"-" doc:"false"`
@@ -37,12 +37,16 @@ func (task *SingleTouchTask) BuildIdentifier() string {
 	return task.IdentifierToken
 }
 
+func (task *SingleTouchTask) CollectionIdentifier() string {
+	return task.IdentifierToken + task.ClusterConfig.ConnectionString + task.Bucket + task.Scope + task.Collection
+}
+
 func (task *SingleTouchTask) CheckIfPending() bool {
 	return task.TaskPending
 }
 
 // Config configures  the insert task
-func (task *SingleTouchTask) Config(req *Request, seed int, seedEnd int, reRun bool) (int, error) {
+func (task *SingleTouchTask) Config(req *Request, reRun bool) (int64, error) {
 	task.TaskPending = true
 	task.req = req
 
@@ -58,9 +62,8 @@ func (task *SingleTouchTask) Config(req *Request, seed int, seedEnd int, reRun b
 	}
 
 	if !reRun {
-		task.ResultSeed = int(time.Now().UnixNano())
+		task.ResultSeed = int64(time.Now().UnixNano())
 		task.Operation = SingleTouchOperation
-		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
 		if task.Bucket == "" {
 			task.Bucket = DefaultBucket
@@ -74,12 +77,12 @@ func (task *SingleTouchTask) Config(req *Request, seed int, seedEnd int, reRun b
 
 		if err := configInsertOptions(task.InsertOptions); err != nil {
 			task.TaskPending = false
-			return 0, fmt.Errorf(err.Error())
+			return 0, err
 		}
 
 		if err := configSingleOperationConfig(task.OperationConfig); err != nil {
 			task.TaskPending = false
-			return 0, fmt.Errorf(err.Error())
+			return 0, err
 		}
 	} else {
 		log.Println("retrying :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
@@ -88,6 +91,9 @@ func (task *SingleTouchTask) Config(req *Request, seed int, seedEnd int, reRun b
 }
 
 func (task *SingleTouchTask) tearUp() error {
+	if err := task.result.SaveResultIntoFile(); err != nil {
+		log.Println("not able to save result into ", task.ResultSeed)
+	}
 	task.result = nil
 	task.TaskPending = false
 	return task.req.SaveRequestIntoFile()
@@ -95,18 +101,9 @@ func (task *SingleTouchTask) tearUp() error {
 
 func (task *SingleTouchTask) Do() error {
 
-	if task.result != nil && task.result.ErrorOther != "" {
-		log.Println(task.result.ErrorOther)
-		if err := task.result.SaveResultIntoFile(); err != nil {
-			log.Println("not able to save result into ", task.ResultSeed)
-			return err
-		}
-		return task.tearUp()
-	} else {
-		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
-	}
+	task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
-	collection, err1 := task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
+	collectionObject, err1 := task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
 		task.Collection)
 
 	if err1 != nil {
@@ -116,27 +113,18 @@ func (task *SingleTouchTask) Do() error {
 			docIds = append(docIds, kV.Key)
 		}
 		task.result.FailWholeSingleOperation(docIds, err1)
-		if err := task.result.SaveResultIntoFile(); err != nil {
-			log.Println("not able to save result into ", task.ResultSeed)
-			return err
-		}
 		return task.tearUp()
 	}
 
-	singleTouchDocuments(task, collection)
+	singleTouchDocuments(task, collectionObject)
 
-	task.result.Success = (len(task.OperationConfig.KeyValue)) - task.result.Failure
-
-	if err := task.result.SaveResultIntoFile(); err != nil {
-		log.Println("not able to save result into ", task.ResultSeed)
-	}
-
+	task.result.Success = int64(len(task.OperationConfig.KeyValue)) - task.result.Failure
 	return task.tearUp()
 }
 
 // singleTouchDocuments uploads new documents in a bucket.scope.
 // collection in a defined batch size at multiple iterations.
-func singleTouchDocuments(task *SingleTouchTask, collection *gocb.Collection) {
+func singleTouchDocuments(task *SingleTouchTask, collectionObject *sdk.CollectionObject) {
 
 	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
 	dataChannel := make(chan interface{}, MaxConcurrentRoutines)
@@ -152,19 +140,20 @@ func singleTouchDocuments(task *SingleTouchTask, collection *gocb.Collection) {
 			kV, ok := keyValue.(KeyValue)
 			if !ok {
 				task.result.IncrementFailure("unknownDocId", struct{}{},
-					errors.New("unable to decode Key Value for single crud"))
+					errors.New("unable to decode Key Value for single crud"), false, 0)
 				<-routineLimiter
 				return errors.New("unable to decode Key Value for single crud")
 			}
 
-			result, err := collection.Touch(kV.Key, time.Duration(task.InsertOptions.Timeout)*time.Second,
+			result, err := collectionObject.Collection.Touch(kV.Key, time.Duration(task.InsertOptions.Timeout)*time.
+				Second,
 				&gocb.TouchOptions{
 					Timeout: time.Duration(task.InsertOptions.Timeout) * time.Second,
 				})
 
 			if err != nil {
 				task.result.CreateSingleErrorResult(kV.Key, err.Error(), false, 0)
-				task.result.IncrementFailure(kV.Key, kV.Doc, err)
+				task.result.IncrementFailure(kV.Key, kV.Doc, err, false, 0)
 				<-routineLimiter
 				return err
 			}

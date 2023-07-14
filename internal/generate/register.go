@@ -17,7 +17,6 @@ type Register struct {
 func (r *Register) RegisteredTasks() map[string]TaskRegister {
 	return map[string]TaskRegister{
 		"/bulk-create":        {"POST", &tasks.InsertTask{}},
-		"/fast-create":        {"Post", &tasks.FastInsertTask{}},
 		"/bulk-delete":        {"POST", &tasks.DeleteTask{}},
 		"/bulk-upsert":        {"POST", &tasks.UpsertTask{}},
 		"/validate":           {"POST", &tasks.ValidateTask{}},

@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	MaxConcurrentRoutines         = 16
+	MaxConcurrentRoutines         = 45
 	DefaultIdentifierToken        = "default"
 	MaxQueryRuntime        int    = 86400
 	DefaultQueryRunTime    int    = 100
@@ -56,24 +56,22 @@ func getDurability(durability string) gocb.DurabilityLevel {
 
 // OperationConfig contains all the configuration for document operation.
 type OperationConfig struct {
-	Count            int      `json:"count,omitempty" doc:"true"`
+	Count            int64    `json:"count,omitempty" doc:"true"`
 	DocSize          int      `json:"docSize" doc:"true"`
 	DocType          string   `json:"docType,omitempty" doc:"true"`
 	KeySize          int      `json:"keySize,omitempty" doc:"true"`
 	KeyPrefix        string   `json:"keyPrefix" doc:"true"`
 	KeySuffix        string   `json:"keySuffix" doc:"true"`
-	RandomDocSize    bool     `json:"randomDocSize,omitempty" doc:"true"`
-	RandomKeySize    bool     `json:"randomKeySize,omitempty" doc:"true"`
 	ReadYourOwnWrite bool     `json:"readYourOwnWrite,omitempty" doc:"true"`
 	TemplateName     string   `json:"template" doc:"true"`
-	Start            int      `json:"start" doc:"true"`
-	End              int      `json:"end" doc:"true"`
+	Start            int64    `json:"start" doc:"true"`
+	End              int64    `json:"end" doc:"true"`
 	FieldsToChange   []string `json:"fieldsToChange" doc:"true"`
 }
 
 type KeyValue struct {
 	Key string      `json:"key" doc:"true"`
-	Doc interface{} `json:"value" doc:"true"`
+	Doc interface{} `json:"value,omitempty" doc:"true"`
 }
 
 type SingleOperationConfig struct {
