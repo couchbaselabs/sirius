@@ -35,16 +35,15 @@ type FailedQuery struct {
 }
 
 type TaskResult struct {
-	ResultSeed      int                              `json:"resultSeed"`
-	Operation       string                           `json:"operation"`
-	ErrorOther      string                           `json:"otherErrors"`
-	Success         int                              `json:"success"`
-	Failure         int                              `json:"failure"`
-	ValidationError []string                         `json:"validationErrors"`
-	BulkError       map[string][]FailedDocument      `json:"bulkErrors"`
-	QueryError      map[string][]FailedQuery         `json:"queryErrors"`
-	SingleResult    map[string]SingleOperationResult `json:"singleResult"`
-	lock            sync.Mutex                       `json:"-"`
+	ResultSeed   int                              `json:"resultSeed"`
+	Operation    string                           `json:"operation"`
+	ErrorOther   string                           `json:"otherErrors"`
+	Success      int                              `json:"success"`
+	Failure      int                              `json:"failure"`
+	BulkError    map[string][]FailedDocument      `json:"bulkErrors"`
+	QueryError   map[string][]FailedQuery         `json:"queryErrors"`
+	SingleResult map[string]SingleOperationResult `json:"singleResult"`
+	lock         sync.Mutex                       `json:"-"`
 }
 
 // ConfigTaskResult returns a new instance of TaskResult
@@ -81,13 +80,6 @@ func (t *TaskResult) IncrementQueryFailure(query string, err error) {
 		Query:       query,
 		ErrorString: errorString,
 	})
-	t.lock.Unlock()
-}
-
-// ValidationFailures saves the failing validation of documents.
-func (t *TaskResult) ValidationFailures(docId string) {
-	t.lock.Lock()
-	t.ValidationError = append(t.ValidationError, docId)
 	t.lock.Unlock()
 }
 

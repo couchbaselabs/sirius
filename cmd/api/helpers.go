@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/couchbaselabs/sirius/internal/generate"
 	"github.com/couchbaselabs/sirius/internal/server_requests"
+	"github.com/couchbaselabs/sirius/internal/task_meta_data"
 	"github.com/couchbaselabs/sirius/internal/task_result"
 	"github.com/couchbaselabs/sirius/internal/task_state"
 	"github.com/couchbaselabs/sirius/internal/tasks"
@@ -66,12 +67,12 @@ func (app *Config) errorJSON(w http.ResponseWriter, err error, status ...int) er
 func registerInterfaces() {
 	gob.Register(&[]interface{}{})
 	gob.Register(&map[string]interface{}{})
+	gob.Register(&map[string]any{})
 	gob.Register(&tasks.Request{})
 	gob.Register(&template.Person{})
 	gob.Register(&template.SmallTemplate{})
 	gob.Register(&server_requests.ServerRequests{})
 	gob.Register(&tasks.InsertTask{})
-	gob.Register(&tasks.FastInsertTask{})
 	gob.Register(&tasks.UpsertTask{})
 	gob.Register(&tasks.TaskResult{})
 	gob.Register(&tasks.DeleteTask{})
@@ -79,13 +80,15 @@ func registerInterfaces() {
 	gob.Register(&task_result.TaskResult{})
 	gob.Register(&task_state.TaskState{})
 	gob.Register(&tasks.ReadTask{})
-	gob.Register(&tasks.SingleInsertTask{})
-	gob.Register(&tasks.SingleDeleteTask{})
-	gob.Register(&tasks.SingleUpsertTask{})
-	gob.Register(&tasks.SingleReadTask{})
-	gob.Register(&tasks.SingleTouchTask{})
-	gob.Register(&tasks.SingleReplaceTask{})
-	gob.Register(&tasks.QueryTask{})
+	//gob.Register(&tasks.SingleInsertTask{})
+	//gob.Register(&tasks.SingleDeleteTask{})
+	//gob.Register(&tasks.SingleUpsertTask{})
+	//gob.Register(&tasks.SingleReadTask{})
+	//gob.Register(&tasks.SingleTouchTask{})
+	//gob.Register(&tasks.SingleReplaceTask{})
+	//gob.Register(&tasks.QueryTask{})
+	gob.Register(&task_meta_data.MetaData{})
+	gob.Register(&task_meta_data.CollectionMetaData{})
 
 	r := generate.Register{}
 	for _, i := range r.HelperStruct() {

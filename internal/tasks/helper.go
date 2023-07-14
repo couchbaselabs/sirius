@@ -62,8 +62,6 @@ type OperationConfig struct {
 	KeySize          int      `json:"keySize,omitempty" doc:"true"`
 	KeyPrefix        string   `json:"keyPrefix" doc:"true"`
 	KeySuffix        string   `json:"keySuffix" doc:"true"`
-	RandomDocSize    bool     `json:"randomDocSize,omitempty" doc:"true"`
-	RandomKeySize    bool     `json:"randomKeySize,omitempty" doc:"true"`
 	ReadYourOwnWrite bool     `json:"readYourOwnWrite,omitempty" doc:"true"`
 	TemplateName     string   `json:"template" doc:"true"`
 	Start            int      `json:"start" doc:"true"`

@@ -20,6 +20,7 @@ type Config struct {
 
 func main() {
 	registerInterfaces()
+
 	app := Config{
 		taskManager:    tasks_manager.NewTasKManager(TaskQueueSize),
 		serverRequests: server_requests.NewServerRequests(),

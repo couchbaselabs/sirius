@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
+	"github.com/couchbaselabs/sirius/internal/task_meta_data"
 	"github.com/couchbaselabs/sirius/internal/template"
 	"github.com/jaswdr/faker"
 	"log"
@@ -15,10 +16,11 @@ func TestConfigConnectionManager(t *testing.T) {
 	cConfig := &ClusterConfig{
 		Username:          "Administrator",
 		Password:          "password",
-		ConnectionString:  "couchbase://172.23.136.202,172.23.136.205,172.23.136.203",
+		ConnectionString:  "couchbase://172.23.138.142",
 		CompressionConfig: CompressionConfig{},
 		TimeoutsConfig:    TimeoutsConfig{},
 	}
+
 	cmObj := ConfigConnectionManager()
 	if _, err := cmObj.GetBucket(cConfig, "lol"); err != nil {
 		log.Println(err)
@@ -43,10 +45,20 @@ func TestConfigConnectionManager(t *testing.T) {
 		}
 		t.Error(err)
 	} else {
-		temp := template.InitialiseTemplate("person")
+
+		m := task_meta_data.NewMetaData()
+		cm1 := m.GetCollectionMetadata("x", 255, 1024, "json", "", "", "person")
+
+		cm2 := m.GetCollectionMetadata("x", 255, 1024, "json", "", "", "person")
+
+		if cm1.Seed != cm2.Seed {
+			t.Fail()
+		}
+
+		temp := template.InitialiseTemplate(cm1.TemplateName)
 		g := docgenerator.Generator{
-			Seed:     1678383842563225000,
-			SeedEnd:  1678383842563225000,
+			Seed:     cm1.Seed,
+			SeedEnd:  cm1.Seed,
 			Template: temp,
 		}
 		for i := 0; i < 10; i++ {
@@ -54,7 +66,7 @@ func TestConfigConnectionManager(t *testing.T) {
 			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
 			doc, _ := g.Template.GenerateDocument(&fake, 1024)
 			log.Println(docId, doc)
-			_, e := c.Upsert(docId, doc, nil)
+			_, e := c.Collection.Upsert(docId, doc, nil)
 			if e != nil {
 				log.Println(e.Error())
 				t.Error(e)
@@ -62,7 +74,7 @@ func TestConfigConnectionManager(t *testing.T) {
 		}
 		for i := 0; i < 10; i++ {
 			docId, _ := g.GetDocIdAndKey(i)
-			r, e := c.Get(docId, nil)
+			r, e := c.Collection.Get(docId, nil)
 			if e != nil {
 				t.Error(e)
 			} else {

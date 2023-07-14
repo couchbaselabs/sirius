@@ -29,13 +29,9 @@ type KeyStates struct {
 }
 
 type TaskState struct {
-	TemplateName string             `json:"templateName"`
-	DocumentSize int                `json:"documentSize"`
 	SeedStart    int                `json:"seedStart"`
 	SeedEnd      int                `json:"seedEnd"`
 	ResultSeed   int                `json:"resultSeed"`
-	KeyPrefix    string             `json:"keyPrefix"`
-	KeySuffix    string             `json:"keySuffix"`
 	KeyStates    KeyStates          `json:"keyStates"`
 	StateChannel chan StateHelper   `json:"-"`
 	ctx          context.Context    `json:"-"`
@@ -44,15 +40,12 @@ type TaskState struct {
 }
 
 // ConfigTaskState returns an instance of TaskState
-func ConfigTaskState(templateName, keyPrefix, keySuffix string, docSize, seed, seedEnd, resultSeed int) *TaskState {
+func ConfigTaskState(seed, seedEnd, resultSeed int) *TaskState {
 	ctx, cancel := context.WithCancel(context.Background())
 	ts := &TaskState{
-		TemplateName: templateName,
 		SeedStart:    seed,
 		SeedEnd:      seedEnd,
 		ResultSeed:   resultSeed,
-		KeyPrefix:    keyPrefix,
-		KeySuffix:    keySuffix,
 		StateChannel: make(chan StateHelper, StateChannelLimit),
 		ctx:          ctx,
 		cancel:       cancel,

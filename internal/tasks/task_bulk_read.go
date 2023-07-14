@@ -2,10 +2,11 @@ package tasks
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
-	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
 	"github.com/couchbaselabs/sirius/internal/sdk"
+	"github.com/couchbaselabs/sirius/internal/task_meta_data"
 	"github.com/couchbaselabs/sirius/internal/task_result"
 	"github.com/couchbaselabs/sirius/internal/task_state"
 	"github.com/couchbaselabs/sirius/internal/template"
@@ -17,20 +18,20 @@ import (
 )
 
 type ReadTask struct {
-	IdentifierToken string                  `json:"identifierToken" doc:"true"`
-	ClusterConfig   *sdk.ClusterConfig      `json:"clusterConfig" doc:"true"`
-	Bucket          string                  `json:"bucket" doc:"true"`
-	Scope           string                  `json:"scope,omitempty" doc:"true"`
-	Collection      string                  `json:"collection,omitempty" doc:"true"`
-	OperationConfig *OperationConfig        `json:"operationConfig,omitempty" doc:"true"`
-	Template        interface{}             `json:"-" doc:"false"`
-	Operation       string                  `json:"operation" doc:"false"`
-	ResultSeed      int                     `json:"resultSeed" doc:"false"`
-	TaskPending     bool                    `json:"taskPending" doc:"false"`
-	State           *task_state.TaskState   `json:"State" doc:"false"`
-	result          *task_result.TaskResult `json:"result" doc:"false"`
-	gen             *docgenerator.Generator `json:"-" doc:"false"`
-	req             *Request                `json:"-" doc:"false"`
+	IdentifierToken string                             `json:"identifierToken" doc:"true"`
+	ClusterConfig   *sdk.ClusterConfig                 `json:"clusterConfig" doc:"true"`
+	Bucket          string                             `json:"bucket" doc:"true"`
+	Scope           string                             `json:"scope,omitempty" doc:"true"`
+	Collection      string                             `json:"collection,omitempty" doc:"true"`
+	OperationConfig *OperationConfig                   `json:"operationConfig,omitempty" doc:"true"`
+	Operation       string                             `json:"operation" doc:"false"`
+	ResultSeed      int                                `json:"resultSeed" doc:"false"`
+	TaskPending     bool                               `json:"taskPending" doc:"false"`
+	State           *task_state.TaskState              `json:"State" doc:"false"`
+	MetaData        *task_meta_data.CollectionMetaData `json:"metaData" doc:"false"`
+	result          *task_result.TaskResult            `json:"result" doc:"false"`
+	gen             *docgenerator.Generator            `json:"-" doc:"false"`
+	req             *Request                           `json:"-" doc:"false"`
 }
 
 func (task *ReadTask) BuildIdentifier() string {
@@ -44,18 +45,25 @@ func (task *ReadTask) Describe() string {
 	return "Read Task get documents from bucket and validate them with the expected ones"
 }
 
+func (task *ReadTask) CollectionIdentifier() string {
+	return task.ClusterConfig.ConnectionString + task.Bucket + task.Scope + task.Collection
+}
+
 func (task *ReadTask) CheckIfPending() bool {
 	return task.TaskPending
 }
 
 func (task *ReadTask) tearUp() error {
+	if err := task.result.SaveResultIntoFile(); err != nil {
+		log.Println("not able to save result into ", task.ResultSeed, task.Operation)
+	}
 	task.result = nil
 	task.State.StopStoringState()
 	task.TaskPending = false
 	return task.req.SaveRequestIntoFile()
 }
 
-func (task *ReadTask) Config(req *Request, seed int, seedEnd int, reRun bool) (int, error) {
+func (task *ReadTask) Config(req *Request, reRun bool) (int, error) {
 	task.TaskPending = true
 	task.req = req
 
@@ -73,7 +81,6 @@ func (task *ReadTask) Config(req *Request, seed int, seedEnd int, reRun bool) (i
 	if !reRun {
 		task.ResultSeed = int(time.Now().UnixNano())
 		task.Operation = ReadOperation
-		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
 		if task.Bucket == "" {
 			task.Bucket = DefaultBucket
@@ -90,10 +97,12 @@ func (task *ReadTask) Config(req *Request, seed int, seedEnd int, reRun bool) (i
 			return 0, fmt.Errorf(err.Error())
 		}
 
-		task.Template = template.InitialiseTemplate(task.OperationConfig.TemplateName)
+		task.MetaData = task.req.MetaData.GetCollectionMetadata(task.CollectionIdentifier(),
+			task.OperationConfig.KeySize, task.OperationConfig.DocSize, task.OperationConfig.DocType, task.OperationConfig.KeyPrefix,
+			task.OperationConfig.KeySuffix, task.OperationConfig.TemplateName)
 
-		task.State = task_state.ConfigTaskState(task.OperationConfig.TemplateName, task.OperationConfig.KeyPrefix,
-			task.OperationConfig.KeySuffix, task.OperationConfig.DocSize, seed, seedEnd, task.ResultSeed)
+		task.State = task_state.ConfigTaskState(task.MetaData.Seed, task.MetaData.SeedEnd, task.ResultSeed)
+
 	} else {
 		if task.State == nil {
 			return task.ResultSeed, fmt.Errorf("task State is nil")
@@ -108,48 +117,32 @@ func (task *ReadTask) Config(req *Request, seed int, seedEnd int, reRun bool) (i
 
 func (task *ReadTask) Do() error {
 
-	if task.result != nil && task.result.ErrorOther != "" {
-		log.Println(task.result.ErrorOther)
-		if err := task.result.SaveResultIntoFile(); err != nil {
-			log.Println("not able to save result into ", task.ResultSeed)
-			return err
-		}
-		return task.tearUp()
-	} else {
-		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
-	}
+	task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
-	collection, err1 := task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
+	collectionObject, err1 := task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
 		task.Collection)
 
-	task.gen = docgenerator.ConfigGenerator(task.OperationConfig.DocType, task.OperationConfig.KeyPrefix,
-		task.OperationConfig.KeySuffix, task.State.SeedStart, task.State.SeedEnd,
-		template.InitialiseTemplate(task.OperationConfig.TemplateName))
+	task.gen = docgenerator.ConfigGenerator(task.MetaData.DocType, task.MetaData.KeyPrefix,
+		task.MetaData.KeySuffix, task.State.SeedStart, task.State.SeedEnd,
+		template.InitialiseTemplate(task.MetaData.TemplateName))
 
 	if err1 != nil {
 		task.result.ErrorOther = err1.Error()
 		task.result.FailWholeBulkOperation(task.OperationConfig.Start, task.OperationConfig.End,
 			task.OperationConfig.DocSize, task.gen, err1)
-		if err := task.result.SaveResultIntoFile(); err != nil {
-			log.Println("not able to save result into ", task.ResultSeed)
-			return err
-		}
 		return task.tearUp()
 	}
 
-	getDocuments(task, collection)
+	getDocuments(task, collectionObject)
 	task.result.Success = task.OperationConfig.End - task.OperationConfig.Start - task.result.Failure
 
-	if err := task.result.SaveResultIntoFile(); err != nil {
-		log.Println("not able to save result into ", task.ResultSeed)
-	}
 	task.State.ClearErrorKeyStates()
 	task.State.ClearCompletedKeyStates()
 	return task.tearUp()
 }
 
 // getDocuments reads the documents in the bucket
-func getDocuments(task *ReadTask, collection *gocb.Collection) {
+func getDocuments(task *ReadTask, collectionObject *sdk.CollectionObject) {
 	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
 	dataChannel := make(chan int, MaxConcurrentRoutines)
 	skip := make(map[int]struct{})
@@ -159,11 +152,11 @@ func getDocuments(task *ReadTask, collection *gocb.Collection) {
 	for _, offset := range task.State.KeyStates.Err {
 		skip[offset] = struct{}{}
 	}
-	deletedOffset, err1 := task.req.retracePreviousDeletions(task.ResultSeed)
-	if err1 != nil {
-		return
-	}
-	insertErrorOffset, err2 := task.req.retracePreviousFailedInsertions(task.ResultSeed)
+	//deletedOffset, err1 := task.req.retracePreviousDeletions(task.CollectionIdentifier(), task.ResultSeed)
+	//if err1 != nil {
+	//	return
+	//}
+	insertErrorOffset, err2 := task.req.retracePreviousFailedInsertions(task.CollectionIdentifier(), task.ResultSeed)
 	if err2 != nil {
 		return
 	}
@@ -174,16 +167,16 @@ func getDocuments(task *ReadTask, collection *gocb.Collection) {
 		dataChannel <- i
 		group.Go(func() error {
 			offset := <-dataChannel
-			key := task.req.Seed + offset
+			key := task.State.SeedStart + offset
 			docId := task.gen.BuildKey(key)
 			if _, ok := skip[offset]; ok {
 				<-routineLimiter
 				return fmt.Errorf("alreday performed operation on " + docId)
 			}
-			if _, ok := deletedOffset[offset]; ok {
-				<-routineLimiter
-				return fmt.Errorf("alreday deleted docID on " + docId)
-			}
+			//if _, ok := deletedOffset[offset]; ok {
+			//	<-routineLimiter
+			//	return fmt.Errorf("alreday deleted docID on " + docId)
+			//}
 			if _, ok := insertErrorOffset[offset]; ok {
 				<-routineLimiter
 				return fmt.Errorf("error in insertion of docID on " + docId)
@@ -197,7 +190,9 @@ func getDocuments(task *ReadTask, collection *gocb.Collection) {
 				<-routineLimiter
 				return err
 			}
-			originalDocument, err = task.req.retracePreviousMutations(offset, originalDocument, *task.gen, &fake,
+			originalDocument, err = task.req.retracePreviousMutations(task.CollectionIdentifier(), offset,
+				originalDocument, *task.gen,
+				&fake,
 				task.ResultSeed)
 			if err != nil {
 				task.result.IncrementFailure(docId, originalDocument, err)
@@ -207,8 +202,8 @@ func getDocuments(task *ReadTask, collection *gocb.Collection) {
 			}
 
 			var resultFromHost map[string]any
-			documentFromHost := template.InitialiseTemplate(task.State.TemplateName)
-			result, err := collection.Get(docId, nil)
+			documentFromHost := template.InitialiseTemplate(task.MetaData.TemplateName)
+			result, err := collectionObject.Collection.Get(docId, nil)
 			if err != nil {
 				task.result.IncrementFailure(docId, originalDocument, err)
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
@@ -232,8 +227,7 @@ func getDocuments(task *ReadTask, collection *gocb.Collection) {
 
 			ok, err := task.gen.Template.Compare(documentFromHost, originalDocument)
 			if err != nil || !ok {
-				task.result.IncrementFailure(docId, originalDocument, err)
-				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
+				task.result.IncrementFailure(docId, documentFromHost, errors.New("integrity lost"))
 				<-routineLimiter
 				return err
 			}

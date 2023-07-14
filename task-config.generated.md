@@ -9,15 +9,7 @@ configuration that is also available on a per-task basis:
  * [/bulk-read](#bulk-read)
  * [/bulk-upsert](#bulk-upsert)
  * [/clear_data](#clear_data)
- * [/fast-create](#fast-create)
  * [/result](#result)
- * [/run-template-query](#run-template-query)
- * [/single-create](#single-create)
- * [/single-delete](#single-delete)
- * [/single-read](#single-read)
- * [/single-replace](#single-replace)
- * [/single-touch](#single-touch)
- * [/single-upsert](#single-upsert)
  * [/validate](#validate)
 
 ---
@@ -108,25 +100,6 @@ the test was executed.
 | `IdentifierToken` | `string` | `json:identifierToken`  |
 
 ---
-#### /fast-create
-
- REST : Post
-
-Description : Fast Insert task uploads documents in bulk into a bucket without maintaining intermediate state of task 
-During fast operations, An incomplete task will be retied as whole if server dies in between of the operation.
- 
-
-| Name | Type | JSON Tag |
-| ---- | ---- | -------- |
-| `IdentifierToken` | `string` | `json:identifierToken`  |
-| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
-| `Bucket` | `string` | `json:bucket`  |
-| `Scope` | `string` | `json:scope,omitempty`  |
-| `Collection` | `string` | `json:collection,omitempty`  |
-| `InsertOptions` | `ptr` | `json:insertOptions,omitempty`  |
-| `OperationConfig` | `ptr` | `json:operationConfig,omitempty`  |
-
----
 #### /result
 
  REST : POST
@@ -138,130 +111,6 @@ Description :  Task result is retrieved via this endpoint.
 | ---- | ---- | -------- |
 | `Seed` | `string` | `json:seed`  |
 | `DeleteRecord` | `bool` | `json:deleteRecord`  |
-
----
-#### /run-template-query
-
- REST : POST
-
-Description :  Query task runs N1QL query over a period of time over a bucket.
-
-
-| Name | Type | JSON Tag |
-| ---- | ---- | -------- |
-| `IdentifierToken` | `string` | `json:identifierToken`  |
-| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
-| `Bucket` | `string` | `json:bucket`  |
-| `Scope` | `string` | `json:scope,omitempty`  |
-| `Collection` | `string` | `json:collection,omitempty`  |
-| `QueryOperationConfig` | `ptr` | `json:operationConfig,omitempty`  |
-
----
-#### /single-create
-
- REST : POST
-
-Description : Single insert task create key value in Couchbase.
-
-
-| Name | Type | JSON Tag |
-| ---- | ---- | -------- |
-| `IdentifierToken` | `string` | `json:identifierToken`  |
-| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
-| `Bucket` | `string` | `json:bucket`  |
-| `Scope` | `string` | `json:scope,omitempty`  |
-| `Collection` | `string` | `json:collection,omitempty`  |
-| `InsertOptions` | `ptr` | `json:insertOptions,omitempty`  |
-| `OperationConfig` | `ptr` | `json:singleOperationConfig`  |
-
----
-#### /single-delete
-
- REST : POST
-
-Description : Single delete task deletes key in Couchbase.
-
-
-| Name | Type | JSON Tag |
-| ---- | ---- | -------- |
-| `IdentifierToken` | `string` | `json:identifierToken`  |
-| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
-| `Bucket` | `string` | `json:bucket`  |
-| `Scope` | `string` | `json:scope,omitempty`  |
-| `Collection` | `string` | `json:collection,omitempty`  |
-| `RemoveOptions` | `ptr` | `json:insertOptions,omitempty`  |
-| `OperationConfig` | `ptr` | `json:singleOperationConfig`  |
-
----
-#### /single-read
-
- REST : POST
-
-Description : Single read task reads key value in couchbase and validates.
-
-
-| Name | Type | JSON Tag |
-| ---- | ---- | -------- |
-| `IdentifierToken` | `string` | `json:identifierToken`  |
-| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
-| `Bucket` | `string` | `json:bucket`  |
-| `Scope` | `string` | `json:scope,omitempty`  |
-| `Collection` | `string` | `json:collection,omitempty`  |
-| `OperationConfig` | `ptr` | `json:singleOperationConfig`  |
-
----
-#### /single-replace
-
- REST : POST
-
-Description : Single replace task a document in the collection in Couchbase.
-
-
-| Name | Type | JSON Tag |
-| ---- | ---- | -------- |
-| `IdentifierToken` | `string` | `json:identifierToken`  |
-| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
-| `Bucket` | `string` | `json:bucket`  |
-| `Scope` | `string` | `json:scope,omitempty`  |
-| `Collection` | `string` | `json:collection,omitempty`  |
-| `ReplaceOptions` | `ptr` | `json:replaceOptions,omitempty`  |
-| `OperationConfig` | `ptr` | `json:singleOperationConfig`  |
-
----
-#### /single-touch
-
- REST : POST
-
-Description : Single touch task specifies a new expiry time for a document in Couchbase.
-
-
-| Name | Type | JSON Tag |
-| ---- | ---- | -------- |
-| `IdentifierToken` | `string` | `json:identifierToken`  |
-| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
-| `Bucket` | `string` | `json:bucket`  |
-| `Scope` | `string` | `json:scope,omitempty`  |
-| `Collection` | `string` | `json:collection,omitempty`  |
-| `InsertOptions` | `ptr` | `json:insertOptions,omitempty`  |
-| `OperationConfig` | `ptr` | `json:singleOperationConfig`  |
-
----
-#### /single-upsert
-
- REST : POST
-
-Description : Single insert task updates key value in Couchbase.
-
-
-| Name | Type | JSON Tag |
-| ---- | ---- | -------- |
-| `IdentifierToken` | `string` | `json:identifierToken`  |
-| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
-| `Bucket` | `string` | `json:bucket`  |
-| `Scope` | `string` | `json:scope,omitempty`  |
-| `Collection` | `string` | `json:collection,omitempty`  |
-| `InsertOptions` | `ptr` | `json:insertOptions,omitempty`  |
-| `OperationConfig` | `ptr` | `json:singleOperationConfig`  |
 
 ---
 #### /validate
@@ -344,8 +193,6 @@ Description : Validates every document in the cluster's bucket
 | `KeySize` | `int` | `json:keySize,omitempty`  |
 | `KeyPrefix` | `string` | `json:keyPrefix`  |
 | `KeySuffix` | `string` | `json:keySuffix`  |
-| `RandomDocSize` | `bool` | `json:randomDocSize,omitempty`  |
-| `RandomKeySize` | `bool` | `json:randomKeySize,omitempty`  |
 | `ReadYourOwnWrite` | `bool` | `json:readYourOwnWrite,omitempty`  |
 | `TemplateName` | `string` | `json:template`  |
 | `Start` | `int` | `json:start`  |
@@ -418,7 +265,6 @@ Description : Validates every document in the cluster's bucket
 | `ErrorOther` | `string` | `json:otherErrors`  |
 | `Success` | `int` | `json:success`  |
 | `Failure` | `int` | `json:failure`  |
-| `ValidationError` | `slice` | `json:validationErrors`  |
 | `BulkError` | `map` | `json:bulkErrors`  |
 | `QueryError` | `map` | `json:queryErrors`  |
 | `SingleResult` | `map` | `json:singleResult`  |
