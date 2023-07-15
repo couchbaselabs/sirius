@@ -86,7 +86,7 @@ func registerInterfaces() {
 	gob.Register(&tasks.SingleReadTask{})
 	gob.Register(&tasks.SingleTouchTask{})
 	gob.Register(&tasks.SingleReplaceTask{})
-	//gob.Register(&tasks.QueryTask{})
+	gob.Register(&tasks.QueryTask{})
 	gob.Register(&task_meta_data.MetaData{})
 	gob.Register(&task_meta_data.CollectionMetaData{})
 

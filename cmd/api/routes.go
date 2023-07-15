@@ -39,7 +39,7 @@ func (app *Config) routes() http.Handler {
 	mux.Post("/single-read", app.singleReadTask)
 	mux.Post("/single-touch", app.singleTouchTask)
 	mux.Post("/single-replace", app.singleReplaceTask)
-	//mux.Post("/run-template-query", app.runQueryTask)
+	mux.Post("/run-template-query", app.runQueryTask)
 
 	return mux
 }

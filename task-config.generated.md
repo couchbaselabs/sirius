@@ -10,6 +10,7 @@ configuration that is also available on a per-task basis:
  * [/bulk-upsert](#bulk-upsert)
  * [/clear_data](#clear_data)
  * [/result](#result)
+ * [/run-template-query](#run-template-query)
  * [/single-create](#single-create)
  * [/single-delete](#single-delete)
  * [/single-read](#single-read)
@@ -117,6 +118,23 @@ Description :  Task result is retrieved via this endpoint.
 | ---- | ---- | -------- |
 | `Seed` | `string` | `json:seed`  |
 | `DeleteRecord` | `bool` | `json:deleteRecord`  |
+
+---
+#### /run-template-query
+
+ REST : POST
+
+Description :  Query task runs N1QL query over a period of time over a bucket.
+
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `QueryOperationConfig` | `ptr` | `json:operationConfig,omitempty`  |
 
 ---
 #### /single-create
