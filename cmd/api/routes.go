@@ -33,12 +33,12 @@ func (app *Config) routes() http.Handler {
 	mux.Post("/validate", app.validateTask)
 	mux.Post("/clear_data", app.clearRequestFromServer)
 	mux.Post("/bulk-read", app.readTask)
-	//mux.Post("/single-create", app.singleInsertTask)
-	//mux.Post("/single-delete", app.singleDeleteTask)
-	//mux.Post("/single-upsert", app.singleUpsertTask)
-	//mux.Post("/single-read", app.singleReadTask)
-	//mux.Post("/single-touch", app.singleTouchTask)
-	//mux.Post("/single-replace", app.singleReplaceTask)
+	mux.Post("/single-create", app.singleInsertTask)
+	mux.Post("/single-delete", app.singleDeleteTask)
+	mux.Post("/single-upsert", app.singleUpsertTask)
+	mux.Post("/single-read", app.singleReadTask)
+	mux.Post("/single-touch", app.singleTouchTask)
+	mux.Post("/single-replace", app.singleReplaceTask)
 	//mux.Post("/run-template-query", app.runQueryTask)
 
 	return mux

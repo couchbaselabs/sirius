@@ -10,6 +10,12 @@ configuration that is also available on a per-task basis:
  * [/bulk-upsert](#bulk-upsert)
  * [/clear_data](#clear_data)
  * [/result](#result)
+ * [/single-create](#single-create)
+ * [/single-delete](#single-delete)
+ * [/single-read](#single-read)
+ * [/single-replace](#single-replace)
+ * [/single-touch](#single-touch)
+ * [/single-upsert](#single-upsert)
  * [/validate](#validate)
 
 ---
@@ -111,6 +117,113 @@ Description :  Task result is retrieved via this endpoint.
 | ---- | ---- | -------- |
 | `Seed` | `string` | `json:seed`  |
 | `DeleteRecord` | `bool` | `json:deleteRecord`  |
+
+---
+#### /single-create
+
+ REST : POST
+
+Description : Single insert task create key value in Couchbase.
+
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `InsertOptions` | `ptr` | `json:insertOptions,omitempty`  |
+| `OperationConfig` | `ptr` | `json:singleOperationConfig`  |
+
+---
+#### /single-delete
+
+ REST : POST
+
+Description : Single delete task deletes key in Couchbase.
+
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `RemoveOptions` | `ptr` | `json:insertOptions,omitempty`  |
+| `OperationConfig` | `ptr` | `json:singleOperationConfig`  |
+
+---
+#### /single-read
+
+ REST : POST
+
+Description : Single read task reads key value in couchbase and validates.
+
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `OperationConfig` | `ptr` | `json:singleOperationConfig`  |
+
+---
+#### /single-replace
+
+ REST : POST
+
+Description : Single replace task a document in the collection in Couchbase.
+
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `ReplaceOptions` | `ptr` | `json:replaceOptions,omitempty`  |
+| `OperationConfig` | `ptr` | `json:singleOperationConfig`  |
+
+---
+#### /single-touch
+
+ REST : POST
+
+Description : Single touch task specifies a new expiry time for a document in Couchbase.
+
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `InsertOptions` | `ptr` | `json:insertOptions,omitempty`  |
+| `OperationConfig` | `ptr` | `json:singleOperationConfig`  |
+
+---
+#### /single-upsert
+
+ REST : POST
+
+Description : Single insert task updates key value in Couchbase.
+
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `InsertOptions` | `ptr` | `json:insertOptions,omitempty`  |
+| `OperationConfig` | `ptr` | `json:singleOperationConfig`  |
 
 ---
 #### /validate

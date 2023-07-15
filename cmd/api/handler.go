@@ -247,228 +247,228 @@ func (app *Config) readTask(w http.ResponseWriter, r *http.Request) {
 	_ = app.writeJSON(w, http.StatusOK, resPayload)
 }
 
-//// singleInsertTask is used to insert document in a collection
-//func (app *Config) singleInsertTask(w http.ResponseWriter, r *http.Request) {
-//	task := &tasks.SingleInsertTask{}
-//	if err := app.readJSON(w, r, task); err != nil {
-//		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-//		return
-//	}
-//	log.Print(task, tasks.SingleInsertOperation)
-//	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SingleInsertOperation, task)
-//	if err != nil {
-//		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-//		return
-//	}
-//	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
-//	if err != nil {
-//		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-//		return
-//	}
-//	seedResult, err := task.Config(req, false)
-//	if err != nil {
-//		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-//		return
-//	}
-//	if err := app.taskManager.AddTask(task); err != nil {
-//		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-//	}
-//	respPayload := tasks.TaskResponse{
-//		Seed: fmt.Sprintf("%d", seedResult),
-//	}
-//	resPayload := jsonResponse{
-//		Error:   false,
-//		Message: "Successfully started requested doc loading",
-//		Data:    respPayload,
-//	}
-//	_ = app.writeJSON(w, http.StatusOK, resPayload)
-//}
-//
-//// singleDeleteTask is used to delete documents on a collection
-//func (app *Config) singleDeleteTask(w http.ResponseWriter, r *http.Request) {
-//	task := &tasks.SingleDeleteTask{}
-//	if err := app.readJSON(w, r, task); err != nil {
-//		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-//		return
-//	}
-//	log.Print(task, tasks.SingleDeleteOperation)
-//	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SingleDeleteOperation, task)
-//	if err != nil {
-//		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-//		return
-//	}
-//	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
-//	if err != nil {
-//		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-//		return
-//	}
-//	seedResult, err := task.Config(req, false)
-//	if err != nil {
-//		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-//		return
-//	}
-//	if err := app.taskManager.AddTask(task); err != nil {
-//		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-//	}
-//	respPayload := tasks.TaskResponse{
-//		Seed: fmt.Sprintf("%d", seedResult),
-//	}
-//	resPayload := jsonResponse{
-//		Error:   false,
-//		Message: "Successfully started requested doc loading",
-//		Data:    respPayload,
-//	}
-//	_ = app.writeJSON(w, http.StatusOK, resPayload)
-//}
-//
-//// singleUpsertTask is used to update the existing document in a collection
-//func (app *Config) singleUpsertTask(w http.ResponseWriter, r *http.Request) {
-//	task := &tasks.SingleUpsertTask{}
-//	if err := app.readJSON(w, r, task); err != nil {
-//		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-//		return
-//	}
-//	log.Print(task, tasks.SingleUpsertOperation)
-//	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SingleUpsertOperation, task)
-//	if err != nil {
-//		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-//		return
-//	}
-//	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
-//	if err != nil {
-//		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-//		return
-//	}
-//	seedResult, err := task.Config(req, false)
-//	if err != nil {
-//		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-//		return
-//	}
-//	if err := app.taskManager.AddTask(task); err != nil {
-//		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-//	}
-//	respPayload := tasks.TaskResponse{
-//		Seed: fmt.Sprintf("%d", seedResult),
-//	}
-//	resPayload := jsonResponse{
-//		Error:   false,
-//		Message: "Successfully started requested doc loading",
-//		Data:    respPayload,
-//	}
-//	_ = app.writeJSON(w, http.StatusOK, resPayload)
-//}
-//
-//// singleReadTask is used read documents and verify from a collection.
-//func (app *Config) singleReadTask(w http.ResponseWriter, r *http.Request) {
-//	task := &tasks.SingleReadTask{}
-//	if err := app.readJSON(w, r, task); err != nil {
-//		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-//		return
-//	}
-//	log.Print(task, tasks.SingleReadOperation)
-//	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SingleReadOperation, task)
-//	if err != nil {
-//		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-//		return
-//	}
-//	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
-//	if err != nil {
-//		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-//		return
-//	}
-//	seedResult, err := task.Config(req, false)
-//	if err != nil {
-//		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-//		return
-//	}
-//	if err := app.taskManager.AddTask(task); err != nil {
-//		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-//	}
-//	respPayload := tasks.TaskResponse{
-//		Seed: fmt.Sprintf("%d", seedResult),
-//	}
-//	resPayload := jsonResponse{
-//		Error:   false,
-//		Message: "Successfully started requested doc loading",
-//		Data:    respPayload,
-//	}
-//	_ = app.writeJSON(w, http.StatusOK, resPayload)
-//}
-//
-//// singleTouchTask is used to update expiry of documents in a collection
-//func (app *Config) singleTouchTask(w http.ResponseWriter, r *http.Request) {
-//	task := &tasks.SingleTouchTask{}
-//	if err := app.readJSON(w, r, task); err != nil {
-//		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-//		return
-//	}
-//	log.Print(task, tasks.SingleTouchOperation)
-//	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SingleTouchOperation, task)
-//	if err != nil {
-//		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-//		return
-//	}
-//	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
-//	if err != nil {
-//		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-//		return
-//	}
-//	seedResult, err := task.Config(req, false)
-//	if err != nil {
-//		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-//		return
-//	}
-//	if err := app.taskManager.AddTask(task); err != nil {
-//		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-//	}
-//	respPayload := tasks.TaskResponse{
-//		Seed: fmt.Sprintf("%d", seedResult),
-//	}
-//	resPayload := jsonResponse{
-//		Error:   false,
-//		Message: "Successfully started requested doc loading",
-//		Data:    respPayload,
-//	}
-//	_ = app.writeJSON(w, http.StatusOK, resPayload)
-//}
-//
-//// singleReplaceTask is used replace content of document on a collection
-//func (app *Config) singleReplaceTask(w http.ResponseWriter, r *http.Request) {
-//	task := &tasks.SingleReplaceTask{}
-//	if err := app.readJSON(w, r, task); err != nil {
-//		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-//		return
-//	}
-//	log.Print(task, tasks.SingleReplaceOperation)
-//	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SingleReplaceOperation, task)
-//	if err != nil {
-//		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-//		return
-//	}
-//	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
-//	if err != nil {
-//		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-//		return
-//	}
-//	seedResult, err := task.Config(req, false)
-//	if err != nil {
-//		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-//		return
-//	}
-//	if err := app.taskManager.AddTask(task); err != nil {
-//		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-//	}
-//	respPayload := tasks.TaskResponse{
-//		Seed: fmt.Sprintf("%d", seedResult),
-//	}
-//	resPayload := jsonResponse{
-//		Error:   false,
-//		Message: "Successfully started requested doc loading",
-//		Data:    respPayload,
-//	}
-//	_ = app.writeJSON(w, http.StatusOK, resPayload)
-//}
-//
+// singleInsertTask is used to insert document in a collection
+func (app *Config) singleInsertTask(w http.ResponseWriter, r *http.Request) {
+	task := &tasks.SingleInsertTask{}
+	if err := app.readJSON(w, r, task); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	log.Print(task, tasks.SingleInsertOperation)
+	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SingleInsertOperation, task)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	seedResult, err := task.Config(req, false)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	if err := app.taskManager.AddTask(task); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+	}
+	respPayload := tasks.TaskResponse{
+		Seed: fmt.Sprintf("%d", seedResult),
+	}
+	resPayload := jsonResponse{
+		Error:   false,
+		Message: "Successfully started requested doc loading",
+		Data:    respPayload,
+	}
+	_ = app.writeJSON(w, http.StatusOK, resPayload)
+}
+
+// singleDeleteTask is used to delete documents on a collection
+func (app *Config) singleDeleteTask(w http.ResponseWriter, r *http.Request) {
+	task := &tasks.SingleDeleteTask{}
+	if err := app.readJSON(w, r, task); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	log.Print(task, tasks.SingleDeleteOperation)
+	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SingleDeleteOperation, task)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	seedResult, err := task.Config(req, false)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	if err := app.taskManager.AddTask(task); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+	}
+	respPayload := tasks.TaskResponse{
+		Seed: fmt.Sprintf("%d", seedResult),
+	}
+	resPayload := jsonResponse{
+		Error:   false,
+		Message: "Successfully started requested doc loading",
+		Data:    respPayload,
+	}
+	_ = app.writeJSON(w, http.StatusOK, resPayload)
+}
+
+// singleUpsertTask is used to update the existing document in a collection
+func (app *Config) singleUpsertTask(w http.ResponseWriter, r *http.Request) {
+	task := &tasks.SingleUpsertTask{}
+	if err := app.readJSON(w, r, task); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	log.Print(task, tasks.SingleUpsertOperation)
+	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SingleUpsertOperation, task)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	seedResult, err := task.Config(req, false)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	if err := app.taskManager.AddTask(task); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+	}
+	respPayload := tasks.TaskResponse{
+		Seed: fmt.Sprintf("%d", seedResult),
+	}
+	resPayload := jsonResponse{
+		Error:   false,
+		Message: "Successfully started requested doc loading",
+		Data:    respPayload,
+	}
+	_ = app.writeJSON(w, http.StatusOK, resPayload)
+}
+
+// singleReadTask is used read documents and verify from a collection.
+func (app *Config) singleReadTask(w http.ResponseWriter, r *http.Request) {
+	task := &tasks.SingleReadTask{}
+	if err := app.readJSON(w, r, task); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	log.Print(task, tasks.SingleReadOperation)
+	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SingleReadOperation, task)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	seedResult, err := task.Config(req, false)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	if err := app.taskManager.AddTask(task); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+	}
+	respPayload := tasks.TaskResponse{
+		Seed: fmt.Sprintf("%d", seedResult),
+	}
+	resPayload := jsonResponse{
+		Error:   false,
+		Message: "Successfully started requested doc loading",
+		Data:    respPayload,
+	}
+	_ = app.writeJSON(w, http.StatusOK, resPayload)
+}
+
+// singleTouchTask is used to update expiry of documents in a collection
+func (app *Config) singleTouchTask(w http.ResponseWriter, r *http.Request) {
+	task := &tasks.SingleTouchTask{}
+	if err := app.readJSON(w, r, task); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	log.Print(task, tasks.SingleTouchOperation)
+	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SingleTouchOperation, task)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	seedResult, err := task.Config(req, false)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	if err := app.taskManager.AddTask(task); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+	}
+	respPayload := tasks.TaskResponse{
+		Seed: fmt.Sprintf("%d", seedResult),
+	}
+	resPayload := jsonResponse{
+		Error:   false,
+		Message: "Successfully started requested doc loading",
+		Data:    respPayload,
+	}
+	_ = app.writeJSON(w, http.StatusOK, resPayload)
+}
+
+// singleReplaceTask is used replace content of document on a collection
+func (app *Config) singleReplaceTask(w http.ResponseWriter, r *http.Request) {
+	task := &tasks.SingleReplaceTask{}
+	if err := app.readJSON(w, r, task); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	log.Print(task, tasks.SingleReplaceOperation)
+	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SingleReplaceOperation, task)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	seedResult, err := task.Config(req, false)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	if err := app.taskManager.AddTask(task); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+	}
+	respPayload := tasks.TaskResponse{
+		Seed: fmt.Sprintf("%d", seedResult),
+	}
+	resPayload := jsonResponse{
+		Error:   false,
+		Message: "Successfully started requested doc loading",
+		Data:    respPayload,
+	}
+	_ = app.writeJSON(w, http.StatusOK, resPayload)
+}
+
 //// runQueryTask runs the query workload for a duration of time
 //func (app *Config) runQueryTask(w http.ResponseWriter, r *http.Request) {
 //	task := &tasks.QueryTask{}
