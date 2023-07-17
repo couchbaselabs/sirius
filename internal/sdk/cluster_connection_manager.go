@@ -44,8 +44,6 @@ func (cm *ConnectionManager) setClusterObject(connectionString string, c *Cluste
 // getClusterObject returns ClusterObject if cluster is already setup.
 // If not, then set up a ClusterObject using ClusterConfig.
 func (cm *ConnectionManager) getClusterObject(clusterConfig *ClusterConfig) (*ClusterObject, error) {
-	defer cm.lock.Unlock()
-	cm.lock.Lock()
 
 	if clusterConfig == nil {
 		return nil, fmt.Errorf("unable to parse clusterConfig | %w", errors.New("clusterConfig is nil"))
@@ -94,9 +92,12 @@ func (cm *ConnectionManager) getClusterObject(clusterConfig *ClusterConfig) (*Cl
 	return cm.clusters[clusterConfig.ConnectionString], nil
 }
 
-// GetCollection return a *gocb.Collection which represents a single collection.
+// GetCollection return a *gocb.Collection which represents a single Collection.
 func (cm *ConnectionManager) GetCollection(clusterConfig *ClusterConfig, bucketName, scopeName,
-	collectionName string) (*gocb.Collection, error) {
+	collectionName string) (*CollectionObject,
+	error) {
+	defer cm.lock.Unlock()
+	cm.lock.Lock()
 	cObj, err1 := cm.getClusterObject(clusterConfig)
 	if err1 != nil {
 		return nil, err1
@@ -119,6 +120,8 @@ func (cm *ConnectionManager) GetCollection(clusterConfig *ClusterConfig, bucketN
 // GetScope return a *gocb.Scope which represents  a single scope within a bucket.
 func (cm *ConnectionManager) GetScope(clusterConfig *ClusterConfig, bucketName, scopeName string) (*gocb.Scope,
 	error) {
+	defer cm.lock.Unlock()
+	cm.lock.Lock()
 	cObj, err1 := cm.getClusterObject(clusterConfig)
 	if err1 != nil {
 		return nil, err1
@@ -137,6 +140,8 @@ func (cm *ConnectionManager) GetScope(clusterConfig *ClusterConfig, bucketName, 
 // GetBucket return a *gocb.Bucket which represents a single bucket within a Cluster.
 func (cm *ConnectionManager) GetBucket(clusterConfig *ClusterConfig, bucketName string) (*gocb.Bucket,
 	error) {
+	defer cm.lock.Unlock()
+	cm.lock.Lock()
 	cObj, err1 := cm.getClusterObject(clusterConfig)
 	if err1 != nil {
 		return nil, err1
@@ -151,6 +156,8 @@ func (cm *ConnectionManager) GetBucket(clusterConfig *ClusterConfig, bucketName 
 // GetCluster return a *gocb.Cluster which represents connection to a specific Couchbase Cluster.
 func (cm *ConnectionManager) GetCluster(clusterConfig *ClusterConfig) (*gocb.Cluster,
 	error) {
+	defer cm.lock.Unlock()
+	cm.lock.Lock()
 	cObj, err1 := cm.getClusterObject(clusterConfig)
 	if err1 != nil {
 		return nil, err1

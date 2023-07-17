@@ -21,12 +21,12 @@ type Generator struct {
 	DocType   string
 	KeyPrefix string
 	KeySuffix string
-	Seed      int
-	SeedEnd   int
+	Seed      int64
+	SeedEnd   int64
 	Template  template.Template
 }
 
-func ConfigGenerator(doctype, keyPrefix, keySuffix string, seed, seedEnd int, template template.Template) *Generator {
+func ConfigGenerator(doctype, keyPrefix, keySuffix string, seed, seedEnd int64, template template.Template) *Generator {
 	return &Generator{
 		DocType:   doctype,
 		KeyPrefix: keyPrefix,
@@ -48,12 +48,12 @@ func ConfigQueryGenerator(template template.Template) *QueryGenerator {
 }
 
 // GetDocIdAndKey will return key for the next document
-func (g *Generator) GetDocIdAndKey(iteration int) (string, int) {
+func (g *Generator) GetDocIdAndKey(iteration int64) (string, int64) {
 	newKey := iteration + g.SeedEnd
 	return fmt.Sprintf("%s%d%s", g.KeyPrefix, newKey, g.KeySuffix), newKey
 }
 
 // BuildKey returns the formatted key with unique identifier.
-func (g *Generator) BuildKey(key int) string {
+func (g *Generator) BuildKey(key int64) string {
 	return fmt.Sprintf("%s%d%s", g.KeyPrefix, key, g.KeySuffix)
 }

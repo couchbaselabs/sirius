@@ -9,7 +9,6 @@ configuration that is also available on a per-task basis:
  * [/bulk-read](#bulk-read)
  * [/bulk-upsert](#bulk-upsert)
  * [/clear_data](#clear_data)
- * [/fast-create](#fast-create)
  * [/result](#result)
  * [/run-template-query](#run-template-query)
  * [/single-create](#single-create)
@@ -108,25 +107,6 @@ the test was executed.
 | `IdentifierToken` | `string` | `json:identifierToken`  |
 
 ---
-#### /fast-create
-
- REST : Post
-
-Description : Fast Insert task uploads documents in bulk into a bucket without maintaining intermediate state of task 
-During fast operations, An incomplete task will be retied as whole if server dies in between of the operation.
- 
-
-| Name | Type | JSON Tag |
-| ---- | ---- | -------- |
-| `IdentifierToken` | `string` | `json:identifierToken`  |
-| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
-| `Bucket` | `string` | `json:bucket`  |
-| `Scope` | `string` | `json:scope,omitempty`  |
-| `Collection` | `string` | `json:collection,omitempty`  |
-| `InsertOptions` | `ptr` | `json:insertOptions,omitempty`  |
-| `OperationConfig` | `ptr` | `json:operationConfig,omitempty`  |
-
----
 #### /result
 
  REST : POST
@@ -189,7 +169,7 @@ Description : Single delete task deletes key in Couchbase.
 | `Bucket` | `string` | `json:bucket`  |
 | `Scope` | `string` | `json:scope,omitempty`  |
 | `Collection` | `string` | `json:collection,omitempty`  |
-| `RemoveOptions` | `ptr` | `json:insertOptions,omitempty`  |
+| `RemoveOptions` | `ptr` | `json:removeOptions,omitempty`  |
 | `OperationConfig` | `ptr` | `json:singleOperationConfig`  |
 
 ---
@@ -302,6 +282,8 @@ Description : Validates every document in the cluster's bucket
 | ---- | ---- | -------- |
 | `DocId` | `string` | `json:key`  |
 | `Doc` | `interface` | `json:value`  |
+| `Status` | `bool` | `json:status`  |
+| `Cas` | `uint64` | `json:cas`  |
 | `ErrorString` | `string` | `json:errorString`  |
 #### clusterConfig
 
@@ -333,23 +315,21 @@ Description : Validates every document in the cluster's bucket
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
 | `Key` | `string` | `json:key`  |
-| `Doc` | `interface` | `json:value`  |
+| `Doc` | `interface` | `json:value,omitempty`  |
 #### operationConfig
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
-| `Count` | `int` | `json:count,omitempty`  |
+| `Count` | `int64` | `json:count,omitempty`  |
 | `DocSize` | `int` | `json:docSize`  |
 | `DocType` | `string` | `json:docType,omitempty`  |
 | `KeySize` | `int` | `json:keySize,omitempty`  |
 | `KeyPrefix` | `string` | `json:keyPrefix`  |
 | `KeySuffix` | `string` | `json:keySuffix`  |
-| `RandomDocSize` | `bool` | `json:randomDocSize,omitempty`  |
-| `RandomKeySize` | `bool` | `json:randomKeySize,omitempty`  |
 | `ReadYourOwnWrite` | `bool` | `json:readYourOwnWrite,omitempty`  |
 | `TemplateName` | `string` | `json:template`  |
-| `Start` | `int` | `json:start`  |
-| `End` | `int` | `json:end`  |
+| `Start` | `int64` | `json:start`  |
+| `End` | `int64` | `json:end`  |
 | `FieldsToChange` | `slice` | `json:fieldsToChange`  |
 #### queryOperationConfig
 
@@ -413,12 +393,11 @@ Description : Validates every document in the cluster's bucket
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
-| `ResultSeed` | `int` | `json:resultSeed`  |
+| `ResultSeed` | `int64` | `json:resultSeed`  |
 | `Operation` | `string` | `json:operation`  |
 | `ErrorOther` | `string` | `json:otherErrors`  |
-| `Success` | `int` | `json:success`  |
-| `Failure` | `int` | `json:failure`  |
-| `ValidationError` | `slice` | `json:validationErrors`  |
+| `Success` | `int64` | `json:success`  |
+| `Failure` | `int64` | `json:failure`  |
 | `BulkError` | `map` | `json:bulkErrors`  |
 | `QueryError` | `map` | `json:queryErrors`  |
 | `SingleResult` | `map` | `json:singleResult`  |

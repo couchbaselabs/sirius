@@ -60,7 +60,7 @@ func (app *Config) insertTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	seed, err := task.Config(req, req.Seed, req.SeedEnd, false)
+	resultSeed, err := task.Config(req, false)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -69,44 +69,7 @@ func (app *Config) insertTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
 	respPayload := tasks.TaskResponse{
-		Seed: fmt.Sprintf("%d", seed),
-	}
-	resPayload := jsonResponse{
-		Error:   false,
-		Message: "Successfully started requested doc loading",
-		Data:    respPayload,
-	}
-	_ = app.writeJSON(w, http.StatusOK, resPayload)
-}
-
-// fastInsertTask is used to bulk loading documents into buckets with-out maintaining state of the task
-func (app *Config) fastInsertTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.FastInsertTask{}
-	if err := app.readJSON(w, r, task); err != nil {
-		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-		return
-	}
-	log.Print(task, tasks.InsertOperation)
-	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.InsertOperation, task)
-	if err != nil {
-		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-		return
-	}
-	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
-	if err != nil {
-		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-		return
-	}
-	seed, err := task.Config(req, req.Seed, req.SeedEnd, false)
-	if err != nil {
-		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-		return
-	}
-	if err := app.taskManager.AddTask(task); err != nil {
-		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
-	}
-	respPayload := tasks.TaskResponse{
-		Seed: fmt.Sprintf("%d", seed),
+		Seed: fmt.Sprintf("%d", resultSeed),
 	}
 	resPayload := jsonResponse{
 		Error:   false,
@@ -134,7 +97,7 @@ func (app *Config) deleteTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	seed, err := task.Config(req, req.Seed, req.SeedEnd, false)
+	seedResult, err := task.Config(req, false)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -143,7 +106,7 @@ func (app *Config) deleteTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
 	respPayload := tasks.TaskResponse{
-		Seed: fmt.Sprintf("%d", seed),
+		Seed: fmt.Sprintf("%d", seedResult),
 	}
 	resPayload := jsonResponse{
 		Error:   false,
@@ -171,7 +134,7 @@ func (app *Config) upsertTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	seed, err := task.Config(req, req.Seed, req.SeedEnd, false)
+	resultSeed, err := task.Config(req, false)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -180,7 +143,7 @@ func (app *Config) upsertTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
 	respPayload := tasks.TaskResponse{
-		Seed: fmt.Sprintf("%d", seed),
+		Seed: fmt.Sprintf("%d", resultSeed),
 	}
 	resPayload := jsonResponse{
 		Error:   false,
@@ -208,7 +171,7 @@ func (app *Config) validateTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	seed, err := task.Config(req, req.Seed, req.SeedEnd, false)
+	seedResult, err := task.Config(req, false)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -217,7 +180,7 @@ func (app *Config) validateTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
 	respPayload := tasks.TaskResponse{
-		Seed: fmt.Sprintf("%d", seed),
+		Seed: fmt.Sprintf("%d", seedResult),
 	}
 	resPayload := jsonResponse{
 		Error:   false,
@@ -265,7 +228,7 @@ func (app *Config) readTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	seed, err := task.Config(req, req.Seed, req.SeedEnd, false)
+	seedResult, err := task.Config(req, false)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -274,7 +237,7 @@ func (app *Config) readTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
 	respPayload := tasks.TaskResponse{
-		Seed: fmt.Sprintf("%d", seed),
+		Seed: fmt.Sprintf("%d", seedResult),
 	}
 	resPayload := jsonResponse{
 		Error:   false,
@@ -302,7 +265,7 @@ func (app *Config) singleInsertTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	seed, err := task.Config(req, req.Seed, req.SeedEnd, false)
+	seedResult, err := task.Config(req, false)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -311,7 +274,7 @@ func (app *Config) singleInsertTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
 	respPayload := tasks.TaskResponse{
-		Seed: fmt.Sprintf("%d", seed),
+		Seed: fmt.Sprintf("%d", seedResult),
 	}
 	resPayload := jsonResponse{
 		Error:   false,
@@ -339,7 +302,7 @@ func (app *Config) singleDeleteTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	seed, err := task.Config(req, req.Seed, req.SeedEnd, false)
+	seedResult, err := task.Config(req, false)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -348,7 +311,7 @@ func (app *Config) singleDeleteTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
 	respPayload := tasks.TaskResponse{
-		Seed: fmt.Sprintf("%d", seed),
+		Seed: fmt.Sprintf("%d", seedResult),
 	}
 	resPayload := jsonResponse{
 		Error:   false,
@@ -376,7 +339,7 @@ func (app *Config) singleUpsertTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	seed, err := task.Config(req, req.Seed, req.SeedEnd, false)
+	seedResult, err := task.Config(req, false)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -385,7 +348,7 @@ func (app *Config) singleUpsertTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
 	respPayload := tasks.TaskResponse{
-		Seed: fmt.Sprintf("%d", seed),
+		Seed: fmt.Sprintf("%d", seedResult),
 	}
 	resPayload := jsonResponse{
 		Error:   false,
@@ -413,7 +376,7 @@ func (app *Config) singleReadTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	seed, err := task.Config(req, req.Seed, req.SeedEnd, false)
+	seedResult, err := task.Config(req, false)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -422,7 +385,7 @@ func (app *Config) singleReadTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
 	respPayload := tasks.TaskResponse{
-		Seed: fmt.Sprintf("%d", seed),
+		Seed: fmt.Sprintf("%d", seedResult),
 	}
 	resPayload := jsonResponse{
 		Error:   false,
@@ -450,7 +413,7 @@ func (app *Config) singleTouchTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	seed, err := task.Config(req, req.Seed, req.SeedEnd, false)
+	seedResult, err := task.Config(req, false)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -459,7 +422,7 @@ func (app *Config) singleTouchTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
 	respPayload := tasks.TaskResponse{
-		Seed: fmt.Sprintf("%d", seed),
+		Seed: fmt.Sprintf("%d", seedResult),
 	}
 	resPayload := jsonResponse{
 		Error:   false,
@@ -487,7 +450,7 @@ func (app *Config) singleReplaceTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	seed, err := task.Config(req, req.Seed, req.SeedEnd, false)
+	seedResult, err := task.Config(req, false)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -496,7 +459,7 @@ func (app *Config) singleReplaceTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
 	respPayload := tasks.TaskResponse{
-		Seed: fmt.Sprintf("%d", seed),
+		Seed: fmt.Sprintf("%d", seedResult),
 	}
 	resPayload := jsonResponse{
 		Error:   false,
@@ -524,7 +487,7 @@ func (app *Config) runQueryTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	seed, err := task.Config(req, req.Seed, req.SeedEnd, false)
+	seedResult, err := task.Config(req, false)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -533,7 +496,7 @@ func (app *Config) runQueryTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
 	respPayload := tasks.TaskResponse{
-		Seed: fmt.Sprintf("%d", seed),
+		Seed: fmt.Sprintf("%d", seedResult),
 	}
 	resPayload := jsonResponse{
 		Error:   false,

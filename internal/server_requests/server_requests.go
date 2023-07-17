@@ -34,7 +34,7 @@ func NewServerRequests() *ServerRequests {
 				_ = sr.add(identifier, r, false)
 				for _, t := range r.Tasks {
 					if t.Task.CheckIfPending() {
-						if _, err := t.Task.Config(r, r.Seed, r.SeedEnd, true); err == nil {
+						if _, err := t.Task.Config(r, true); err == nil {
 							go t.Task.Do()
 						} else {
 							log.Println(err.Error())

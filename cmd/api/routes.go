@@ -28,7 +28,6 @@ func (app *Config) routes() http.Handler {
 	mux.Get("/check-online", app.testServer)
 	mux.Post("/result", app.taskResult)
 	mux.Post("/bulk-create", app.insertTask)
-	mux.Post("/fast-create", app.fastInsertTask)
 	mux.Post("/bulk-delete", app.deleteTask)
 	mux.Post("/bulk-upsert", app.upsertTask)
 	mux.Post("/validate", app.validateTask)

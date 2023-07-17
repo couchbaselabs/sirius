@@ -20,12 +20,16 @@ func (r *TaskResult) Do() error {
 	return nil
 }
 
-func (r *TaskResult) Config(req *Request, seed int, seedEnd int, rerun bool) (int, error) {
+func (r *TaskResult) Config(req *Request, rerun bool) (int64, error) {
 	r.TaskPending = false
 	return 0, nil
 }
 
 func (r *TaskResult) BuildIdentifier() string {
+	return ""
+}
+
+func (r *TaskResult) CollectionIdentifier() string {
 	return ""
 }
 
