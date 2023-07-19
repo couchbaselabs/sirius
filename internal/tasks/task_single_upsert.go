@@ -160,14 +160,12 @@ func singleUpsertDocuments(task *SingleUpsertTask, collectionObject *sdk.Collect
 				if err != nil {
 					task.result.CreateSingleErrorResult(kV.Key, "document validation failed on read your own write",
 						false, 0)
-					task.result.IncrementFailure(kV.Key, kV.Doc, err, false, 0)
 					<-routineLimiter
 					return err
 				}
 				if err := result.Content(&resultFromHost); err != nil {
 					task.result.CreateSingleErrorResult(kV.Key, "document validation failed on read your own write",
 						false, 0)
-					task.result.IncrementFailure(kV.Key, kV.Doc, err, false, 0)
 					<-routineLimiter
 					return err
 				}
@@ -176,7 +174,6 @@ func singleUpsertDocuments(task *SingleUpsertTask, collectionObject *sdk.Collect
 				if err != nil {
 					task.result.CreateSingleErrorResult(kV.Key, "document validation failed on read your own write",
 						false, 0)
-					task.result.IncrementFailure(kV.Key, kV.Doc, err, false, 0)
 					<-routineLimiter
 					return err
 				}
@@ -184,7 +181,6 @@ func singleUpsertDocuments(task *SingleUpsertTask, collectionObject *sdk.Collect
 				if err != nil {
 					task.result.CreateSingleErrorResult(kV.Key, "document validation failed on read your own write",
 						false, 0)
-					task.result.IncrementFailure(kV.Key, kV.Doc, err, false, 0)
 					<-routineLimiter
 					return err
 				}
@@ -192,22 +188,13 @@ func singleUpsertDocuments(task *SingleUpsertTask, collectionObject *sdk.Collect
 				if !bytes.Equal(resultFromHostBytes, resultFromDocBytes) {
 					task.result.CreateSingleErrorResult(kV.Key, "document validation failed on read your own write",
 						false, 0)
-					task.result.IncrementFailure(kV.Key, kV.Doc,
-						errors.New("document validation failed on read your own write"), false, 0)
 					<-routineLimiter
 					return err
 				}
 			} else {
-				if err != nil {
-					if errors.Is(err, gocb.ErrDocumentExists) {
-						<-routineLimiter
-						return nil
-					} else {
-						task.result.IncrementFailure(kV.Key, kV.Doc, err, false, 0)
-						<-routineLimiter
-						return err
-					}
-				}
+				task.result.CreateSingleErrorResult(kV.Key, err.Error(), false, 0)
+				<-routineLimiter
+				return err
 			}
 
 			task.result.CreateSingleErrorResult(kV.Key, "", true, uint64(m.Cas()))

@@ -153,7 +153,6 @@ func singleTouchDocuments(task *SingleTouchTask, collectionObject *sdk.Collectio
 
 			if err != nil {
 				task.result.CreateSingleErrorResult(kV.Key, err.Error(), false, 0)
-				task.result.IncrementFailure(kV.Key, kV.Doc, err, false, 0)
 				<-routineLimiter
 				return err
 			}

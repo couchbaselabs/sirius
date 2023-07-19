@@ -160,14 +160,12 @@ func singleInsertDocuments(task *SingleInsertTask, collectionObject *sdk.Collect
 				if err != nil {
 					task.result.CreateSingleErrorResult(kV.Key, "document validation failed on read your own write",
 						false, 0)
-					task.result.IncrementFailure(kV.Key, kV.Doc, err, false, 0)
 					<-routineLimiter
 					return err
 				}
 				if err := result.Content(&resultFromHost); err != nil {
 					task.result.CreateSingleErrorResult(kV.Key, "document validation failed on read your own write",
 						false, 0)
-					task.result.IncrementFailure(kV.Key, kV.Doc, err, false, 0)
 					<-routineLimiter
 					return err
 				}
@@ -176,7 +174,6 @@ func singleInsertDocuments(task *SingleInsertTask, collectionObject *sdk.Collect
 				if err != nil {
 					task.result.CreateSingleErrorResult(kV.Key, "document validation failed on read your own write",
 						false, 0)
-					task.result.IncrementFailure(kV.Key, kV.Doc, err, false, 0)
 					<-routineLimiter
 					return err
 				}
@@ -184,7 +181,6 @@ func singleInsertDocuments(task *SingleInsertTask, collectionObject *sdk.Collect
 				if err != nil {
 					task.result.CreateSingleErrorResult(kV.Key, "document validation failed on read your own write",
 						false, 0)
-					task.result.IncrementFailure(kV.Key, kV.Doc, err, false, 0)
 					<-routineLimiter
 					return err
 				}
@@ -192,7 +188,6 @@ func singleInsertDocuments(task *SingleInsertTask, collectionObject *sdk.Collect
 				if !bytes.Equal(resultFromHostBytes, resultFromDocBytes) {
 					task.result.CreateSingleErrorResult(kV.Key, "integrity lost",
 						false, 0)
-					task.result.IncrementFailure(kV.Key, kV.Doc, errors.New("integrity lost"), false, 0)
 					<-routineLimiter
 					return err
 				}
@@ -209,7 +204,6 @@ func singleInsertDocuments(task *SingleInsertTask, collectionObject *sdk.Collect
 						return nil
 					} else {
 						task.result.CreateSingleErrorResult(kV.Key, err.Error(), false, 0)
-						task.result.IncrementFailure(kV.Key, kV.Doc, err, false, 0)
 						<-routineLimiter
 						return err
 					}
