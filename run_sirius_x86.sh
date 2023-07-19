@@ -16,9 +16,12 @@ mkdir -p ${TASK_STATE_PATH}
 mkdir -p ${SERVER_REQUESTS_PATH}
 mkdir -p ${TASK_REQUEST_PATH}
 
+docker container stop sirius
+docker container rm sirius
+
 docker run -d -p 4000:4000 \
 -v "$(pwd)/internal/tasks/request_logs:/internal/tasks/request_logs" \
 -v "$(pwd)/internal/task_result/task_result_logs:/internal/task_result/task_result_logs" \
 -v "$(pwd)/internal/server_requests/server_requests_logs:/internal/server_requests/server_requests_logs" \
 -v "$(pwd)/internal/task_state/task_state_logs:/internal/task_state/task_state_logs" \
--d sequoiatools/sirius:x86_64
+--pull=always --name sirius  -d sequoiatools/sirius:x86_64
