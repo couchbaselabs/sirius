@@ -58,8 +58,8 @@ func (r *Request) DisconnectConnectionManager() {
 
 // ClearAllTask will remove all task
 func (r *Request) ClearAllTask() {
-	for _, t := range r.Tasks {
-		t.Task = nil
+	for i := range r.Tasks {
+		r.Tasks[i].Task = nil
 	}
 }
 
@@ -68,7 +68,8 @@ func (r *Request) retracePreviousMutations(collectionIdentifier string, offset i
 	gen docgenerator.Generator, fake *faker.Faker, resultSeed int64) (interface{}, error) {
 	defer r.lock.Unlock()
 	r.lock.Lock()
-	for _, td := range r.Tasks {
+	for i := range r.Tasks {
+		td := r.Tasks[i]
 		if td.Operation == UpsertOperation {
 			u, ok := td.Task.(*UpsertTask)
 			if ok {
@@ -95,7 +96,8 @@ func (r *Request) retracePreviousDeletions(collectionIdentifier string, resultSe
 	defer r.lock.Unlock()
 	r.lock.Lock()
 	result := make(map[int64]struct{})
-	for _, td := range r.Tasks {
+	for i := range r.Tasks {
+		td := r.Tasks[i]
 		if td.Operation == DeleteOperation {
 			u, ok := td.Task.(*DeleteTask)
 			if ok {
@@ -120,7 +122,8 @@ func (r *Request) retracePreviousFailedInsertions(collectionIdentifier string, r
 	defer r.lock.Unlock()
 	r.lock.Lock()
 	result := make(map[int64]struct{})
-	for _, td := range r.Tasks {
+	for i := range r.Tasks {
+		td := r.Tasks[i]
 		if td.Operation == InsertOperation {
 			u, ok := td.Task.(*InsertTask)
 			if ok {

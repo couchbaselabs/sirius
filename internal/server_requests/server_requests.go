@@ -32,7 +32,8 @@ func NewServerRequests() *ServerRequests {
 			r, err := tasks.ReadRequestFromFile(identifier)
 			if r != nil && err == nil {
 				_ = sr.add(identifier, r, false)
-				for _, t := range r.Tasks {
+				for i := range r.Tasks {
+					t := r.Tasks[i]
 					if t.Task.CheckIfPending() {
 						if _, err := t.Task.Config(r, true); err == nil {
 							go t.Task.Do()
