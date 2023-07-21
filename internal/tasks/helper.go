@@ -7,26 +7,27 @@ import (
 )
 
 const (
-	MaxConcurrentRoutines         = 45
-	DefaultIdentifierToken        = "default"
-	MaxQueryRuntime        int    = 86400
-	DefaultQueryRunTime    int    = 100
-	WatchIndexDuration     int    = 120
-	InsertOperation        string = "insert"
-	QueryOperation         string = "query"
-	DeleteOperation        string = "delete"
-	UpsertOperation        string = "upsert"
-	ReadOperation          string = "read"
-	ValidateOperation      string = "validate"
-	SingleInsertOperation  string = "singleInsert"
-	SingleDeleteOperation  string = "singleDelete"
-	SingleUpsertOperation  string = "singleUpsert"
-	SingleReadOperation    string = "singleRead"
-	SingleTouchOperation   string = "singleTouch"
-	SingleReplaceOperation string = "singleReplace"
-	CreatePrimaryIndex     string = "createPrimaryIndex"
-	CreateIndex            string = "createIndex"
-	BuildIndex             string = "buildIndex"
+	MaxConcurrentRoutines          = 45
+	DefaultIdentifierToken         = "default"
+	MaxQueryRuntime         int    = 86400
+	DefaultQueryRunTime     int    = 100
+	WatchIndexDuration      int    = 120
+	InsertOperation         string = "insert"
+	QueryOperation          string = "query"
+	DeleteOperation         string = "delete"
+	UpsertOperation         string = "upsert"
+	ReadOperation           string = "read"
+	ValidateOperation       string = "validate"
+	SingleInsertOperation   string = "singleInsert"
+	SingleDeleteOperation   string = "singleDelete"
+	SingleUpsertOperation   string = "singleUpsert"
+	SingleReadOperation     string = "singleRead"
+	SingleTouchOperation    string = "singleTouch"
+	SingleReplaceOperation  string = "singleReplace"
+	CreatePrimaryIndex      string = "createPrimaryIndex"
+	CreateIndex             string = "createIndex"
+	BuildIndex              string = "buildIndex"
+	RetryExceptionOperation string = "retryException"
 )
 
 const (
@@ -56,17 +57,18 @@ func getDurability(durability string) gocb.DurabilityLevel {
 
 // OperationConfig contains all the configuration for document operation.
 type OperationConfig struct {
-	Count            int64    `json:"count,omitempty" doc:"true"`
-	DocSize          int      `json:"docSize" doc:"true"`
-	DocType          string   `json:"docType,omitempty" doc:"true"`
-	KeySize          int      `json:"keySize,omitempty" doc:"true"`
-	KeyPrefix        string   `json:"keyPrefix" doc:"true"`
-	KeySuffix        string   `json:"keySuffix" doc:"true"`
-	ReadYourOwnWrite bool     `json:"readYourOwnWrite,omitempty" doc:"true"`
-	TemplateName     string   `json:"template" doc:"true"`
-	Start            int64    `json:"start" doc:"true"`
-	End              int64    `json:"end" doc:"true"`
-	FieldsToChange   []string `json:"fieldsToChange" doc:"true"`
+	Count            int64      `json:"count,omitempty" doc:"true"`
+	DocSize          int        `json:"docSize" doc:"true"`
+	DocType          string     `json:"docType,omitempty" doc:"true"`
+	KeySize          int        `json:"keySize,omitempty" doc:"true"`
+	KeyPrefix        string     `json:"keyPrefix" doc:"true"`
+	KeySuffix        string     `json:"keySuffix" doc:"true"`
+	ReadYourOwnWrite bool       `json:"readYourOwnWrite,omitempty" doc:"true"`
+	TemplateName     string     `json:"template" doc:"true"`
+	Start            int64      `json:"start" doc:"true"`
+	End              int64      `json:"end" doc:"true"`
+	FieldsToChange   []string   `json:"fieldsToChange" doc:"true"`
+	Exceptions       Exceptions `json:"exceptions,omitempty" doc:"true"`
 }
 
 type KeyValue struct {
@@ -197,4 +199,15 @@ func configReplaceOptions(r *ReplaceOptions) error {
 		r.Timeout = 10
 	}
 	return nil
+}
+
+type Exceptions struct {
+	IgnoreExceptions []string `json:"ignoreExceptions,omitempty" doc:"true"`
+	RetryExceptions  []string `json:"retryExceptions,omitempty" doc:"true"`
+	RetryAttempts    int      `json:"retryAttempts,omitempty" doc:"true"`
+}
+
+type RetriedResult struct {
+	Status bool   `json:"status,omitempty" doc:"true"`
+	CAS    uint64 `json:"cas,omitempty" doc:"true"`
 }

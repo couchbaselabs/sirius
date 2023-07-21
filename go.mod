@@ -14,4 +14,5 @@ require (
 	github.com/couchbase/gocbcore/v10 v10.2.1 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/uuid v1.3.0 // indirect
+	golang.org/x/exp v0.0.0-20230801115018-d63ba01acd4b // indirect
 )

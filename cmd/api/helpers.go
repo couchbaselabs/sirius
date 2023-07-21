@@ -89,6 +89,7 @@ func registerInterfaces() {
 	gob.Register(&tasks.QueryTask{})
 	gob.Register(&task_meta_data.MetaData{})
 	gob.Register(&task_meta_data.CollectionMetaData{})
+	gob.Register(&tasks.RetryExceptions{})
 
 	r := generate.Register{}
 	for _, i := range r.HelperStruct() {

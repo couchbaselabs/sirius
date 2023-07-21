@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
 	"github.com/couchbaselabs/sirius/internal/sdk"
+	"github.com/couchbaselabs/sirius/internal/task_state"
 	"github.com/jaswdr/faker"
+	"golang.org/x/sync/errgroup"
 	"log"
 	"math/rand"
 	"os"
@@ -18,11 +20,11 @@ const ResultPath = "./internal/task_result/task_result_logs"
 // TaskResult defines the type of result stored in a response after an operation.
 
 type FailedDocument struct {
-	DocId       string      `json:"key" doc:"true"`
-	Doc         interface{} `json:"value"  doc:"true"`
-	Status      bool        `json:"status"  doc:"true"`
-	Cas         uint64      `json:"cas"  doc:"true"`
-	ErrorString string      `json:"errorString"  doc:"true"`
+	DocId       string `json:"key" doc:"true"`
+	Status      bool   `json:"status"  doc:"true"`
+	Cas         uint64 `json:"cas"  doc:"true"`
+	ErrorString string `json:"errorString"  doc:"true"`
+	Offset      int64  `json:"-" doc:"false"`
 }
 
 type SingleOperationResult struct {
@@ -43,6 +45,7 @@ type TaskResult struct {
 	Success      int64                            `json:"success"`
 	Failure      int64                            `json:"failure"`
 	BulkError    map[string][]FailedDocument      `json:"bulkErrors"`
+	RetriedError map[string][]FailedDocument      `json:"retriedError"`
 	QueryError   map[string][]FailedQuery         `json:"queryErrors"`
 	SingleResult map[string]SingleOperationResult `json:"singleResult"`
 	lock         sync.Mutex                       `json:"-"`
@@ -54,6 +57,7 @@ func ConfigTaskResult(operation string, resultSeed int64) *TaskResult {
 		ResultSeed:   resultSeed,
 		Operation:    operation,
 		BulkError:    make(map[string][]FailedDocument),
+		RetriedError: make(map[string][]FailedDocument),
 		QueryError:   make(map[string][]FailedQuery),
 		SingleResult: make(map[string]SingleOperationResult),
 		lock:         sync.Mutex{},
@@ -61,16 +65,17 @@ func ConfigTaskResult(operation string, resultSeed int64) *TaskResult {
 }
 
 // IncrementFailure saves the failure count of doc loading operation.
-func (t *TaskResult) IncrementFailure(docId string, doc interface{}, err error, status bool, cas uint64) {
+func (t *TaskResult) IncrementFailure(docId string, doc interface{}, err error, status bool, cas uint64, offset int64) {
 	t.lock.Lock()
 	t.Failure++
 	v, errorString := sdk.CheckSDKException(err)
 	t.BulkError[v] = append(t.BulkError[v], FailedDocument{
-		DocId:       docId,
-		Doc:         doc,
+		DocId: docId,
+		//Doc:         doc,
 		Status:      status,
 		Cas:         cas,
 		ErrorString: errorString,
+		Offset:      offset,
 	})
 	t.lock.Unlock()
 }
@@ -138,18 +143,52 @@ func (t *TaskResult) CreateSingleErrorResult(docId string, errorString string, s
 	}
 }
 
-func (t *TaskResult) FailWholeBulkOperation(start, end int64, docSize int, gen *docgenerator.Generator, err error) {
+func (t *TaskResult) FailWholeBulkOperation(start, end int64, docSize int, gen *docgenerator.Generator, err error,
+	state *task_state.TaskState) {
+
+	const routineLimit = 10
+	routineLimiter := make(chan struct{}, routineLimit)
+	dataChannel := make(chan int64, routineLimit)
+
+	wg := errgroup.Group{}
+
 	for i := start; i < end; i++ {
-		docId, key := gen.GetDocIdAndKey(i)
-		fake := faker.NewWithSeed(rand.NewSource(int64(key)))
-		originalDoc, _ := gen.Template.GenerateDocument(&fake, docSize)
-		t.IncrementFailure(docId, originalDoc, err, false, 0)
+		routineLimiter <- struct{}{}
+		dataChannel <- i
+
+		wg.Go(func() error {
+
+			offset := <-dataChannel
+			docId, key := gen.GetDocIdAndKey(offset)
+			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
+			originalDoc, _ := gen.Template.GenerateDocument(&fake, docSize)
+			t.IncrementFailure(docId, originalDoc, err, false, 0, offset)
+			state.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
+			<-routineLimiter
+			return nil
+		})
 	}
+	_ = wg.Wait()
 }
 
 func (t *TaskResult) FailWholeSingleOperation(docIds []string, err error) {
 	t.Failure = int64(len(docIds))
+
+	const routineLimit = 10
+	routineLimiter := make(chan struct{}, routineLimit)
+	dataChannel := make(chan string, routineLimit)
+
+	wg := errgroup.Group{}
+
 	for _, docId := range docIds {
-		t.CreateSingleErrorResult(docId, err.Error(), false, 0)
+		routineLimiter <- struct{}{}
+		dataChannel <- docId
+
+		wg.Go(func() error {
+			t.CreateSingleErrorResult(<-dataChannel, err.Error(), false, 0)
+			<-routineLimiter
+			return nil
+		})
 	}
+	_ = wg.Wait()
 }

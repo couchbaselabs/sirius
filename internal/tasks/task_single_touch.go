@@ -103,8 +103,7 @@ func (task *SingleTouchTask) Do() error {
 
 	task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
-	collectionObject, err1 := task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
-		task.Collection)
+	collectionObject, err1 := task.GetCollectionObject()
 
 	if err1 != nil {
 		task.result.ErrorOther = err1.Error()
@@ -139,8 +138,7 @@ func singleTouchDocuments(task *SingleTouchTask, collectionObject *sdk.Collectio
 			keyValue := <-dataChannel
 			kV, ok := keyValue.(KeyValue)
 			if !ok {
-				task.result.IncrementFailure("unknownDocId", struct{}{},
-					errors.New("unable to decode Key Value for single crud"), false, 0)
+				log.Println(task.Operation, task.CollectionIdentifier(), task.ResultSeed, errors.New("unable to decode Key Value for single crud"))
 				<-routineLimiter
 				return errors.New("unable to decode Key Value for single crud")
 			}
@@ -167,4 +165,20 @@ func singleTouchDocuments(task *SingleTouchTask, collectionObject *sdk.Collectio
 	close(routineLimiter)
 	close(dataChannel)
 	log.Println("completed :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
+}
+
+func (task *SingleTouchTask) PostTaskExceptionHandling(_ *sdk.CollectionObject) {
+	//TODO implement me
+}
+
+func (task *SingleTouchTask) GetResultSeed() string {
+	return fmt.Sprintf("%d", task.result.ResultSeed)
+}
+
+func (task *SingleTouchTask) GetCollectionObject() (*sdk.CollectionObject, error) {
+	return task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
+		task.Collection)
+}
+
+func (task *SingleTouchTask) SetException(exceptions Exceptions) {
 }

@@ -10,6 +10,7 @@ configuration that is also available on a per-task basis:
  * [/bulk-upsert](#bulk-upsert)
  * [/clear_data](#clear_data)
  * [/result](#result)
+ * [/retry-exceptions](#retry-exceptions)
  * [/run-template-query](#run-template-query)
  * [/single-create](#single-create)
  * [/single-delete](#single-delete)
@@ -118,6 +119,23 @@ Description :  Task result is retrieved via this endpoint.
 | ---- | ---- | -------- |
 | `Seed` | `string` | `json:seed`  |
 | `DeleteRecord` | `bool` | `json:deleteRecord`  |
+
+---
+#### /retry-exceptions
+
+ REST : POST
+
+Description : Retry Exception reties failed operations.
+IgnoreExceptions will ignore failed operation occurred in this category. 
+RetryExceptions will retry failed operation occurred in this category. 
+RetryAttempts is the number of retry attempts.
+
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ResultSeed` | `string` | `json:resultSeed`  |
+| `Exceptions` | `struct` | `json:exceptions`  |
 
 ---
 #### /run-template-query
@@ -265,12 +283,14 @@ Description : Validates every document in the cluster's bucket
  * [bulkError](#bulkerror)
  * [clusterConfig](#clusterconfig)
  * [compressionConfig](#compressionconfig)
+ * [exceptions](#exceptions)
  * [insertOptions](#insertoptions)
  * [keyValue](#keyvalue)
  * [operationConfig](#operationconfig)
  * [queryOperationConfig](#queryoperationconfig)
  * [removeOptions](#removeoptions)
  * [replaceOption](#replaceoption)
+ * [retriedError](#retriederror)
  * [singleOperationConfig](#singleoperationconfig)
  * [singleResult](#singleresult)
  * [timeoutsConfig](#timeoutsconfig)
@@ -281,7 +301,6 @@ Description : Validates every document in the cluster's bucket
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
 | `DocId` | `string` | `json:key`  |
-| `Doc` | `interface` | `json:value`  |
 | `Status` | `bool` | `json:status`  |
 | `Cas` | `uint64` | `json:cas`  |
 | `ErrorString` | `string` | `json:errorString`  |
@@ -301,6 +320,13 @@ Description : Validates every document in the cluster's bucket
 | `Disabled` | `bool` | `json:disabled,omitempty`  |
 | `MinSize` | `uint32` | `json:minSize,omitempty`  |
 | `MinRatio` | `float64` | `json:minRatio,omitempty`  |
+#### exceptions
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IgnoreExceptions` | `slice` | `json:ignoreExceptions,omitempty`  |
+| `RetryExceptions` | `slice` | `json:retryExceptions,omitempty`  |
+| `RetryAttempts` | `int` | `json:retryAttempts,omitempty`  |
 #### insertOptions
 
 | Name | Type | JSON Tag |
@@ -331,6 +357,7 @@ Description : Validates every document in the cluster's bucket
 | `Start` | `int64` | `json:start`  |
 | `End` | `int64` | `json:end`  |
 | `FieldsToChange` | `slice` | `json:fieldsToChange`  |
+| `Exceptions` | `struct` | `json:exceptions,omitempty`  |
 #### queryOperationConfig
 
 | Name | Type | JSON Tag |
@@ -358,6 +385,14 @@ Description : Validates every document in the cluster's bucket
 | `ReplicateTo` | `uint` | `json:replicateTo,omitempty`  |
 | `Durability` | `string` | `json:durability,omitempty`  |
 | `Timeout` | `int` | `json:timeout,omitempty`  |
+#### retriedError
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `DocId` | `string` | `json:key`  |
+| `Status` | `bool` | `json:status`  |
+| `Cas` | `uint64` | `json:cas`  |
+| `ErrorString` | `string` | `json:errorString`  |
 #### singleOperationConfig
 
 | Name | Type | JSON Tag |
@@ -399,6 +434,7 @@ Description : Validates every document in the cluster's bucket
 | `Success` | `int64` | `json:success`  |
 | `Failure` | `int64` | `json:failure`  |
 | `BulkError` | `map` | `json:bulkErrors`  |
+| `RetriedError` | `map` | `json:retriedError`  |
 | `QueryError` | `map` | `json:queryErrors`  |
 | `SingleResult` | `map` | `json:singleResult`  |
 

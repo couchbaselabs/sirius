@@ -4,4 +4,4 @@
 /internal/tasks/request_logs
 /internal/task_state/task_state_logs
 /sirius
-
+/vendor

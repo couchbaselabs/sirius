@@ -30,6 +30,7 @@ func (r *Register) RegisteredTasks() map[string]TaskRegister {
 		"/single-touch":       {"POST", &tasks.SingleTouchTask{}},
 		"/single-replace":     {"POST", &tasks.SingleReplaceTask{}},
 		"/run-template-query": {"POST", &tasks.QueryTask{}},
+		"/retry-exceptions":   {"POST", &tasks.RetryExceptions{}},
 	}
 }
 
@@ -45,8 +46,10 @@ func (r *Register) HelperStruct() map[string]any {
 		"singleOperationConfig": &tasks.SingleOperationConfig{},
 		"keyValue":              &tasks.KeyValue{},
 		"bulkError":             &task_result.FailedDocument{},
+		"retriedError":          &task_result.FailedDocument{},
 		"singleResult":          &task_result.SingleOperationResult{},
 		"queryOperationConfig":  &tasks.QueryOperationConfig{},
+		"exceptions":            &tasks.Exceptions{},
 	}
 
 }

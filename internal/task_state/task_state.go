@@ -129,8 +129,8 @@ func (t *TaskState) StoreState() {
 			select {
 			case <-t.ctx.Done():
 				{
-					t.storeCompleted(completed)
-					t.storeError(err)
+					t.StoreCompleted(completed)
+					t.StoreError(err)
 					err = err[:0]
 					completed = completed[:0]
 					close(t.StateChannel)
@@ -147,8 +147,8 @@ func (t *TaskState) StoreState() {
 				}
 			case <-d.C:
 				{
-					t.storeCompleted(completed)
-					t.storeError(err)
+					t.StoreCompleted(completed)
+					t.StoreError(err)
 					err = err[:0]
 					completed = completed[:0]
 				}
@@ -158,8 +158,8 @@ func (t *TaskState) StoreState() {
 
 }
 
-// storeCompleted appends a list of completed offset to Completed Key state
-func (t *TaskState) storeCompleted(completed []int64) {
+// StoreCompleted appends a list of completed offset to Completed Key state
+func (t *TaskState) StoreCompleted(completed []int64) {
 	t.lock.Lock()
 	for _, offset := range completed {
 		t.AddOffsetToCompleteSet(offset)
@@ -167,8 +167,8 @@ func (t *TaskState) storeCompleted(completed []int64) {
 	t.lock.Unlock()
 }
 
-// storeError appends a list of error offset to Error Key state
-func (t *TaskState) storeError(err []int64) {
+// StoreError appends a list of error offset to Error Key state
+func (t *TaskState) StoreError(err []int64) {
 	t.lock.Lock()
 	for _, offset := range err {
 		t.AddOffsetToErrSet(offset)
@@ -180,6 +180,7 @@ func (t *TaskState) storeError(err []int64) {
 // on dataChannel.
 func (t *TaskState) StopStoringState() {
 	t.cancel()
+	time.Sleep(2 * time.Second)
 }
 
 // ClearCompletedKeyStates clears the Completed key state
@@ -209,4 +210,22 @@ func (t *TaskState) SaveTaskSateOnDisk() error {
 		return err
 	}
 	return nil
+}
+
+func (t *TaskState) MakeCompleteKeyFromMap(maps map[int64]struct{}) {
+	defer t.lock.Unlock()
+	t.lock.Lock()
+	t.ClearCompletedKeyStates()
+	for offset, _ := range maps {
+		t.KeyStates.Completed = append(t.KeyStates.Completed, offset)
+	}
+}
+
+func (t *TaskState) MakeErrorKeyFromMap(maps map[int64]struct{}) {
+	defer t.lock.Unlock()
+	t.lock.Lock()
+	t.ClearErrorKeyStates()
+	for offset, _ := range maps {
+		t.KeyStates.Err = append(t.KeyStates.Err, offset)
+	}
 }

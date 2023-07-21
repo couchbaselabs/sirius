@@ -6,14 +6,14 @@ import (
 )
 
 type CollectionMetaData struct {
-	Seed         int64      `json:"_"`
-	SeedEnd      int64      `json:"-"`
-	DocType      string     `json:"-"`
-	DocSize      int        `json:"-"`
-	KeySize      int        `json:"-"`
-	TemplateName string     `json:"-"`
-	KeyPrefix    string     `json:"-"`
-	KeySuffix    string     `json:"-"`
+	Seed         int64      `json:"seed"`
+	SeedEnd      int64      `json:"seedEnd"`
+	DocType      string     `json:"docType"`
+	DocSize      int        `json:"DocSize"`
+	KeySize      int        `json:"keySize"`
+	TemplateName string     `json:"templateName"`
+	KeyPrefix    string     `json:"keyPrefix"`
+	KeySuffix    string     `json:"keySuffix"`
 	lock         sync.Mutex `json:"-"`
 }
 
@@ -26,8 +26,8 @@ func (cmd *CollectionMetaData) UnLock() {
 }
 
 type MetaData struct {
-	MetaData map[string]*CollectionMetaData
-	lock     sync.Mutex
+	MetaData map[string]*CollectionMetaData `json:"metaData,omitempty"`
+	lock     sync.Mutex                     `json:"-"`
 }
 
 func NewMetaData() *MetaData {

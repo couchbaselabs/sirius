@@ -103,8 +103,7 @@ func (task *SingleDeleteTask) Do() error {
 
 	task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
-	collectionObject, err1 := task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
-		task.Collection)
+	collectionObject, err1 := task.GetCollectionObject()
 
 	if err1 != nil {
 		task.result.ErrorOther = err1.Error()
@@ -138,8 +137,7 @@ func singleDeleteDocuments(task *SingleDeleteTask, collectionObject *sdk.Collect
 			keyValue := <-dataChannel
 			kV, ok := keyValue.(KeyValue)
 			if !ok {
-				task.result.IncrementFailure("unknownDocId", struct{}{},
-					errors.New("unable to decode Key Value for single crud"), false, 0)
+				log.Println(task.Operation, task.CollectionIdentifier(), task.ResultSeed, errors.New("unable to decode Key Value for single crud"))
 				<-routineLimiter
 				return errors.New("unable to decode Key Value for single crud")
 			}
@@ -167,4 +165,22 @@ func singleDeleteDocuments(task *SingleDeleteTask, collectionObject *sdk.Collect
 	close(routineLimiter)
 	close(dataChannel)
 	log.Println("completed :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
+}
+
+func (task *SingleDeleteTask) PostTaskExceptionHandling(_ *sdk.CollectionObject) {
+	//TODO implement me
+
+}
+
+func (task *SingleDeleteTask) GetResultSeed() string {
+	return fmt.Sprintf("%d", task.result.ResultSeed)
+}
+
+func (task *SingleDeleteTask) GetCollectionObject() (*sdk.CollectionObject, error) {
+	return task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
+		task.Collection)
+}
+
+func (task *SingleDeleteTask) SetException(exceptions Exceptions) {
+
 }

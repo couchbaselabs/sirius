@@ -1,5 +1,7 @@
 package tasks
 
+import "github.com/couchbaselabs/sirius/internal/sdk"
+
 // TaskResult represents a request structure for retrieving result of the task.
 type TaskResult struct {
 	Seed         string `json:"seed" doc:"true"`
@@ -20,7 +22,7 @@ func (r *TaskResult) Do() error {
 	return nil
 }
 
-func (r *TaskResult) Config(req *Request, rerun bool) (int64, error) {
+func (r *TaskResult) Config(_ *Request, _ bool) (int64, error) {
 	r.TaskPending = false
 	return 0, nil
 }
@@ -40,4 +42,19 @@ func (r *TaskResult) CheckIfPending() bool {
 // TaskResponse represents a response structure which is returned to user upon scheduling a task.
 type TaskResponse struct {
 	Seed string `json:"seed"`
+}
+
+func (r *TaskResult) PostTaskExceptionHandling(_ *sdk.CollectionObject) {
+
+}
+
+func (r *TaskResult) GetResultSeed() string {
+	return ""
+}
+
+func (r *TaskResult) GetCollectionObject() (*sdk.CollectionObject, error) {
+	return nil, nil
+}
+
+func (r *TaskResult) SetException(exceptions Exceptions) {
 }
