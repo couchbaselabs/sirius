@@ -1,9 +1,9 @@
 # Readme
 
-This Readme file provides instructions for building and running a Go application named **Sirius**. The Sirius 
-application is designed to load data into a Couchbase server and store task metadata and results in directories.
+This Readme file provides instructions for building and running a Go application named **Sirius**. A distributed testing framework designed for Couchbase,
+serving as a REST-based loading service for system, functional, performance and volume testing.
 
-Doc loader different capabilities are  described using  [**Rest Endpoints**](task-config.generated.md).
+Doc loader different capabilities are described using  [**Rest Endpoints**](task-config.generated.md).
 
 ## Requirements
 
@@ -40,10 +40,13 @@ make build
 To run Sirius locally, use the following command:
 
 clean everything and run
+
 ```shell
 make clean
 ```
+
 Run
+
 ```shell
 make run
 ```
@@ -56,7 +59,8 @@ To deploy Sirius using Docker, use the following command:
 make deploy
 ```
 
-This command will stop any running Docker images, build and start Docker images for Sirius, and verify that the images have been built and started.
+This command will stop any running Docker images, build and start Docker images for Sirius, and verify that the images
+have been built and started.
 
 To perform a fresh deployment, which will rebuild the Docker images, use the following command:
 
@@ -94,8 +98,11 @@ make clean_deploy
 
 ## Conclusion
 
-Sirius is a simple but powerful Go application for loading data into a server and storing task metadata and results. By following the instructions in this Readme, you can quickly build and run the application locally, or deploy it to a Docker environment for production use.
+Sirius is a simple but powerful Go application for loading Data into a server and storing task metadata and results. By
+following the instructions in this Readme, you can quickly build and run the application locally, or deploy it to a
+Docker environment for production use.
 
 Internal Reference Only :-
-[**Sirius**](https://docs.google.com/presentation/d/1B_de8lv1nKlaILmgGHwSUIVdRd4CYrAOa7rDV-d0QRA/edit#slide=id.g24f63dd352b_2_536)
+[**Sirius
+**](https://docs.google.com/presentation/d/1B_de8lv1nKlaILmgGHwSUIVdRd4CYrAOa7rDV-d0QRA/edit#slide=id.g24f63dd352b_2_536)
 [**Wiki**](https://couchbasecloud.atlassian.net/wiki/spaces/~6346ad4e62541f0d4c4f6785/pages/2000748801/Sirius)

@@ -95,7 +95,6 @@ func (task *QueryTask) tearUp() error {
 	if err := task.result.SaveResultIntoFile(); err != nil {
 		log.Println("not able to save result into ", task.ResultSeed)
 	}
-	task.result = nil
 	task.TaskPending = false
 	return task.req.SaveRequestIntoFile()
 }
@@ -252,4 +251,21 @@ func runN1qlQuery(task *QueryTask, cluster *gocb.Cluster, scope *gocb.Scope, col
 	_ = group.Wait()
 	close(routineLimiter)
 	log.Println("completed :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
+}
+
+func (task *QueryTask) PostTaskExceptionHandling(_ *sdk.CollectionObject) {
+	//TODO implement me
+}
+
+func (task *QueryTask) GetResultSeed() string {
+	return fmt.Sprintf("%d", task.result.ResultSeed)
+}
+
+func (task *QueryTask) GetCollectionObject() (*sdk.CollectionObject, error) {
+	return task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
+		task.Collection)
+}
+
+func (task *QueryTask) SetException(exceptions Exceptions) {
+	//TODO implement me
 }

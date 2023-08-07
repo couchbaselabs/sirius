@@ -18,12 +18,12 @@ const DefaultDocSize int = 1024
 // Generator helps to generate random document for inserting and updating random
 // as per the doc loading task requirement.
 type Generator struct {
-	DocType   string
-	KeyPrefix string
-	KeySuffix string
-	Seed      int64
-	SeedEnd   int64
-	Template  template.Template
+	DocType   string            `json:"docType"`
+	KeyPrefix string            `json:"keyPrefix"`
+	KeySuffix string            `json:"keySuffix"`
+	Seed      int64             `json:"seed"`
+	SeedEnd   int64             `json:"seedEnd"`
+	Template  template.Template `json:"template"`
 }
 
 func ConfigGenerator(doctype, keyPrefix, keySuffix string, seed, seedEnd int64, template template.Template) *Generator {

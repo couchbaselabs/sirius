@@ -1,9 +1,13 @@
 package tasks
 
+import (
+	"github.com/couchbaselabs/sirius/internal/sdk"
+)
+
 // ClearTask represents a request structure for clearing everything.
 type ClearTask struct {
 	IdentifierToken string `json:"identifierToken" doc:"true"`
-	TaskPending     bool   `json:"-" doc"false"`
+	TaskPending     bool   `json:"-" doc:"false"`
 }
 
 func (task *ClearTask) Describe() string {
@@ -41,4 +45,19 @@ func (task *ClearTask) CollectionIdentifier() string {
 
 func (task *ClearTask) CheckIfPending() bool {
 	return task.TaskPending
+}
+
+func (task *ClearTask) PostTaskExceptionHandling(_ *sdk.CollectionObject) {
+
+}
+
+func (task *ClearTask) GetResultSeed() string {
+	return ""
+}
+
+func (task *ClearTask) GetCollectionObject() (*sdk.CollectionObject, error) {
+	return nil, nil
+}
+
+func (task *ClearTask) SetException(exceptions Exceptions) {
 }

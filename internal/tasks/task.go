@@ -1,5 +1,7 @@
 package tasks
 
+import "github.com/couchbaselabs/sirius/internal/sdk"
+
 type Task interface {
 	Describe() string
 	Do() error
@@ -7,5 +9,9 @@ type Task interface {
 	BuildIdentifier() string
 	CollectionIdentifier() string
 	CheckIfPending() bool
+	PostTaskExceptionHandling(collectionObject *sdk.CollectionObject)
+	GetResultSeed() string
+	GetCollectionObject() (*sdk.CollectionObject, error)
+	SetException(exceptions Exceptions)
 	tearUp() error
 }

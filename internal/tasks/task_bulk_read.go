@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
 	"github.com/couchbaselabs/sirius/internal/sdk"
 	"github.com/couchbaselabs/sirius/internal/task_meta_data"
@@ -11,8 +12,10 @@ import (
 	"github.com/couchbaselabs/sirius/internal/task_state"
 	"github.com/couchbaselabs/sirius/internal/template"
 	"github.com/jaswdr/faker"
+	"golang.org/x/exp/slices"
 	"golang.org/x/sync/errgroup"
 	"log"
+	"math"
 	"math/rand"
 	"time"
 )
@@ -57,7 +60,6 @@ func (task *ReadTask) tearUp() error {
 	if err := task.result.SaveResultIntoFile(); err != nil {
 		log.Println("not able to save result into ", task.ResultSeed, task.Operation)
 	}
-	task.result = nil
 	task.State.StopStoringState()
 	task.TaskPending = false
 	return task.req.SaveRequestIntoFile()
@@ -120,8 +122,7 @@ func (task *ReadTask) Do() error {
 
 	task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
-	collectionObject, err1 := task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
-		task.Collection)
+	collectionObject, err1 := task.GetCollectionObject()
 
 	task.gen = docgenerator.ConfigGenerator(task.MetaData.DocType, task.MetaData.KeyPrefix,
 		task.MetaData.KeySuffix, task.State.SeedStart, task.State.SeedEnd,
@@ -130,15 +131,13 @@ func (task *ReadTask) Do() error {
 	if err1 != nil {
 		task.result.ErrorOther = err1.Error()
 		task.result.FailWholeBulkOperation(task.OperationConfig.Start, task.OperationConfig.End,
-			task.OperationConfig.DocSize, task.gen, err1)
+			task.OperationConfig.DocSize, task.gen, err1, task.State)
 		return task.tearUp()
 	}
 
 	getDocuments(task, collectionObject)
 	task.result.Success = task.OperationConfig.End - task.OperationConfig.Start - task.result.Failure
 
-	task.State.ClearErrorKeyStates()
-	task.State.ClearCompletedKeyStates()
 	return task.tearUp()
 }
 
@@ -153,10 +152,7 @@ func getDocuments(task *ReadTask, collectionObject *sdk.CollectionObject) {
 	for _, offset := range task.State.KeyStates.Err {
 		skip[offset] = struct{}{}
 	}
-	//deletedOffset, err1 := task.req.retracePreviousDeletions(task.CollectionIdentifier(), task.ResultSeed)
-	//if err1 != nil {
-	//	return
-	//}
+
 	insertErrorOffset, err2 := task.req.retracePreviousFailedInsertions(task.CollectionIdentifier(), task.ResultSeed)
 	if err2 != nil {
 		return
@@ -174,10 +170,7 @@ func getDocuments(task *ReadTask, collectionObject *sdk.CollectionObject) {
 				<-routineLimiter
 				return fmt.Errorf("alreday performed operation on " + docId)
 			}
-			//if _, ok := deletedOffset[offset]; ok {
-			//	<-routineLimiter
-			//	return fmt.Errorf("alreday deleted docID on " + docId)
-			//}
+
 			if _, ok := insertErrorOffset[offset]; ok {
 				<-routineLimiter
 				return fmt.Errorf("error in insertion of docID on " + docId)
@@ -186,7 +179,7 @@ func getDocuments(task *ReadTask, collectionObject *sdk.CollectionObject) {
 			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
 			originalDocument, err := task.gen.Template.GenerateDocument(&fake, task.OperationConfig.DocSize)
 			if err != nil {
-				task.result.IncrementFailure(docId, originalDocument, err, false, 0)
+				task.result.IncrementFailure(docId, originalDocument, err, false, 0, offset)
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 				<-routineLimiter
 				return err
@@ -196,7 +189,7 @@ func getDocuments(task *ReadTask, collectionObject *sdk.CollectionObject) {
 				&fake,
 				task.ResultSeed)
 			if err != nil {
-				task.result.IncrementFailure(docId, originalDocument, err, false, 0)
+				task.result.IncrementFailure(docId, originalDocument, err, false, 0, offset)
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 				<-routineLimiter
 				return err
@@ -204,15 +197,25 @@ func getDocuments(task *ReadTask, collectionObject *sdk.CollectionObject) {
 
 			var resultFromHost map[string]any
 			documentFromHost := template.InitialiseTemplate(task.MetaData.TemplateName)
-			result, err := collectionObject.Collection.Get(docId, nil)
+
+			result := &gocb.GetResult{}
+
+			for retry := 0; retry <= int(math.Max(float64(1), float64(task.OperationConfig.Exceptions.
+				RetryAttempts))); retry++ {
+				result, err = collectionObject.Collection.Get(docId, nil)
+				if err == nil {
+					break
+				}
+			}
+
 			if err != nil {
-				task.result.IncrementFailure(docId, originalDocument, err, false, 0)
+				task.result.IncrementFailure(docId, originalDocument, err, false, 0, offset)
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 				<-routineLimiter
 				return err
 			}
 			if err := result.Content(&resultFromHost); err != nil {
-				task.result.IncrementFailure(docId, originalDocument, err, false, 0)
+				task.result.IncrementFailure(docId, originalDocument, err, false, 0, offset)
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 				<-routineLimiter
 				return err
@@ -221,14 +224,14 @@ func getDocuments(task *ReadTask, collectionObject *sdk.CollectionObject) {
 			err = json.Unmarshal(resultBytes, &documentFromHost)
 			if err != nil {
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
-				task.result.IncrementFailure(docId, originalDocument, err, false, 0)
+				task.result.IncrementFailure(docId, originalDocument, err, false, 0, offset)
 				<-routineLimiter
 				return err
 			}
 
 			ok, err := task.gen.Template.Compare(documentFromHost, originalDocument)
 			if err != nil || !ok {
-				task.result.IncrementFailure(docId, documentFromHost, errors.New("integrity lost"), false, 0)
+				task.result.IncrementFailure(docId, documentFromHost, errors.New("integrity lost"), false, 0, offset)
 				<-routineLimiter
 				return err
 			}
@@ -241,5 +244,189 @@ func getDocuments(task *ReadTask, collectionObject *sdk.CollectionObject) {
 	_ = group.Wait()
 	close(routineLimiter)
 	close(dataChannel)
+	task.PostTaskExceptionHandling(collectionObject)
 	log.Println("completed :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
+}
+
+func (task *ReadTask) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
+	task.State.StopStoringState()
+
+	// Get all the errorOffset
+	errorOffsetMaps := task.State.ReturnErrOffset()
+	// Get all the completed offset
+	completedOffsetMaps := task.State.ReturnCompletedOffset()
+
+	// For the offset in ignore exceptions :-> move them from error to completed
+	for _, exception := range task.OperationConfig.Exceptions.IgnoreExceptions {
+		for _, failedDocs := range task.result.BulkError[exception] {
+			if _, ok := errorOffsetMaps[failedDocs.Offset]; ok {
+				delete(errorOffsetMaps, failedDocs.Offset)
+				completedOffsetMaps[failedDocs.Offset] = struct{}{}
+			}
+		}
+		delete(task.result.BulkError, exception)
+	}
+
+	if task.OperationConfig.Exceptions.RetryAttempts > 0 {
+
+		var exceptionList []string
+
+		if len(task.OperationConfig.Exceptions.RetryExceptions) == 0 {
+			for exception, _ := range task.result.BulkError {
+				exceptionList = append(exceptionList, exception)
+			}
+		} else {
+			exceptionList = task.OperationConfig.Exceptions.RetryExceptions
+		}
+
+		// For the retry exceptions :-> move them on success after retrying from err to completed
+		for _, exception := range exceptionList {
+
+			errorOffsetListMap := make([]map[int64]RetriedResult, 0)
+			for _, failedDocs := range task.result.BulkError[exception] {
+				m := make(map[int64]RetriedResult)
+				m[failedDocs.Offset] = RetriedResult{}
+				errorOffsetListMap = append(errorOffsetListMap, m)
+			}
+
+			routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
+			dataChannel := make(chan map[int64]RetriedResult, MaxConcurrentRoutines)
+			wg := errgroup.Group{}
+			for _, x := range errorOffsetListMap {
+				dataChannel <- x
+				routineLimiter <- struct{}{}
+				wg.Go(func() error {
+					m := <-dataChannel
+					var offset = int64(-1)
+					for k, _ := range m {
+						offset = k
+					}
+					key := task.State.SeedStart + offset
+					docId := task.gen.BuildKey(key)
+					fake := faker.NewWithSeed(rand.NewSource(int64(key)))
+
+					originalDoc, err := task.gen.Template.GenerateDocument(&fake, task.OperationConfig.DocSize)
+					if err != nil {
+						<-routineLimiter
+						return err
+					}
+					originalDoc, err = task.req.retracePreviousMutations(task.CollectionIdentifier(), offset, originalDoc, *task.gen, &fake,
+						task.ResultSeed)
+					if err != nil {
+						task.result.IncrementFailure(docId, originalDoc, err, false, 0, offset)
+						<-routineLimiter
+						return err
+					}
+
+					retry := 0
+					result := &gocb.GetResult{}
+					for retry = 0; retry <= task.OperationConfig.Exceptions.RetryAttempts; retry++ {
+						result, err = collectionObject.Collection.Get(docId, nil)
+
+						if err == nil {
+							break
+						}
+					}
+
+					if err == nil {
+						var resultFromHost map[string]any
+						documentFromHost := template.InitialiseTemplate(task.MetaData.TemplateName)
+						if err := result.Content(&resultFromHost); err != nil {
+							<-routineLimiter
+							return err
+						}
+						resultBytes, err := json.Marshal(resultFromHost)
+						err = json.Unmarshal(resultBytes, &documentFromHost)
+						if err != nil {
+							<-routineLimiter
+							return err
+						}
+
+						ok, err := task.gen.Template.Compare(documentFromHost, originalDoc)
+						if err != nil || !ok {
+							<-routineLimiter
+							return err
+						} else {
+							m[offset] = RetriedResult{
+								Status: true,
+								CAS:    uint64(result.Cas()),
+							}
+						}
+					}
+
+					<-routineLimiter
+					return nil
+				})
+			}
+			_ = wg.Wait()
+
+			// After successfully retrying, shift err to complete and clear the result structure.
+			if _, ok := task.result.BulkError[exception]; ok {
+				for _, x := range errorOffsetListMap {
+					for offset, retryResult := range x {
+						if retryResult.Status == true {
+							delete(errorOffsetMaps, offset)
+							completedOffsetMaps[offset] = struct{}{}
+							for index := range task.result.BulkError[exception] {
+								if task.result.BulkError[exception][index].Offset == offset {
+
+									offsetRetriedIndex := slices.IndexFunc(task.result.RetriedError[exception],
+										func(document task_result.FailedDocument) bool {
+											return document.Offset == offset
+										})
+
+									if offsetRetriedIndex == -1 {
+										task.result.RetriedError[exception] = append(task.result.RetriedError[exception], task.result.BulkError[exception][index])
+
+										task.result.RetriedError[exception][len(task.result.RetriedError[exception])-1].
+											Status = retryResult.Status
+
+										task.result.RetriedError[exception][len(task.result.RetriedError[exception])-1].
+											Cas = retryResult.CAS
+
+									} else {
+										task.result.BulkError[exception][offsetRetriedIndex].Status = retryResult.Status
+										task.result.BulkError[exception][offsetRetriedIndex].Cas = retryResult.CAS
+									}
+
+									task.result.BulkError[exception][index] = task.result.BulkError[exception][len(task.
+										result.BulkError[exception])-1]
+
+									task.result.BulkError[exception] = task.result.BulkError[exception][:len(task.
+										result.BulkError[exception])-1]
+
+									break
+								}
+							}
+						} else {
+							for index := range task.result.BulkError[exception] {
+								if task.result.BulkError[exception][index].Offset == offset {
+									task.result.RetriedError[exception] = append(task.result.RetriedError[exception],
+										task.result.BulkError[exception][index])
+									break
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	task.State.MakeCompleteKeyFromMap(completedOffsetMaps)
+	task.State.MakeErrorKeyFromMap(errorOffsetMaps)
+	task.result.Failure = int64(len(task.State.KeyStates.Err))
+}
+
+func (task *ReadTask) GetResultSeed() string {
+	return fmt.Sprintf("%d", task.result.ResultSeed)
+}
+
+func (task *ReadTask) GetCollectionObject() (*sdk.CollectionObject, error) {
+	return task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
+		task.Collection)
+}
+
+func (task *ReadTask) SetException(exceptions Exceptions) {
+	task.OperationConfig.Exceptions = exceptions
 }

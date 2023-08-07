@@ -505,3 +505,35 @@ func (app *Config) runQueryTask(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = app.writeJSON(w, http.StatusOK, resPayload)
 }
+
+// RetryExceptionTask runs the query workload for a duration of time
+func (app *Config) RetryExceptionTask(w http.ResponseWriter, r *http.Request) {
+	task := &tasks.RetryExceptions{}
+	if err := app.readJSON(w, r, task); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	log.Print(task, tasks.RetryExceptionOperation)
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	seedResult, err := task.Config(req, false)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	if err := app.taskManager.AddTask(task); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+	}
+	respPayload := tasks.TaskResponse{
+		Seed: fmt.Sprintf("%d", seedResult),
+	}
+	resPayload := jsonResponse{
+		Error:   false,
+		Message: "Successfully started requested query running",
+		Data:    respPayload,
+	}
+	_ = app.writeJSON(w, http.StatusOK, resPayload)
+}
