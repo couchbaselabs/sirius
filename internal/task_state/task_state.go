@@ -179,8 +179,9 @@ func (t *TaskState) StoreError(err []int64) {
 // StopStoringState will terminate the thread which is receiving offset
 // on dataChannel.
 func (t *TaskState) StopStoringState() {
+	time.Sleep(1 * time.Second)
 	t.cancel()
-	time.Sleep(2 * time.Second)
+	time.Sleep(1 * time.Second)
 }
 
 // ClearCompletedKeyStates clears the Completed key state

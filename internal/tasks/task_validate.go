@@ -60,7 +60,6 @@ func (task *ValidateTask) tearUp() error {
 	if err := task.result.SaveResultIntoFile(); err != nil {
 		log.Println("not able to save result into ", task.ResultSeed, task.Operation)
 	}
-	task.result = nil
 	task.State.StopStoringState()
 	task.TaskPending = false
 	return task.req.SaveRequestIntoFile()
@@ -273,27 +272,11 @@ func (task *ValidateTask) PostTaskExceptionHandling(collectionObject *sdk.Collec
 	completedOffsetMaps := task.State.ReturnCompletedOffset()
 
 	// For the offset in ignore exceptions :-> move them from error to completed
-	for _, exception := range task.OperationConfig.Exceptions.IgnoreExceptions {
-		for _, failedDocs := range task.result.BulkError[exception] {
-			if _, ok := errorOffsetMaps[failedDocs.Offset]; ok {
-				delete(errorOffsetMaps, failedDocs.Offset)
-				completedOffsetMaps[failedDocs.Offset] = struct{}{}
-			}
-		}
-		delete(task.result.BulkError, exception)
-	}
+	shiftErrToCompletedOnIgnore(task.OperationConfig.Exceptions.IgnoreExceptions, task.result, errorOffsetMaps, completedOffsetMaps)
 
 	if task.OperationConfig.Exceptions.RetryAttempts > 0 {
 
-		var exceptionList []string
-
-		if len(task.OperationConfig.Exceptions.RetryExceptions) == 0 {
-			for exception, _ := range task.result.BulkError {
-				exceptionList = append(exceptionList, exception)
-			}
-		} else {
-			exceptionList = task.OperationConfig.Exceptions.RetryExceptions
-		}
+		exceptionList := getExceptions(task.result, task.OperationConfig.Exceptions.RetryExceptions)
 
 		// For the retry exceptions :-> move them on success after retrying from err to completed
 		for _, exception := range exceptionList {
@@ -376,45 +359,7 @@ func (task *ValidateTask) PostTaskExceptionHandling(collectionObject *sdk.Collec
 			}
 			_ = wg.Wait()
 
-			// After successfully retrying, shift err to complete and clear the result structure.
-			if _, ok := task.result.BulkError[exception]; ok {
-				for _, x := range errorOffsetListMap {
-					for offset, retryResult := range x {
-						if retryResult.Status == true {
-							delete(errorOffsetMaps, offset)
-							completedOffsetMaps[offset] = struct{}{}
-							for index := range task.result.BulkError[exception] {
-								if task.result.BulkError[exception][index].Offset == offset {
-
-									task.result.RetriedError[exception] = append(task.result.RetriedError[exception], task.result.BulkError[exception][index])
-
-									task.result.RetriedError[exception][len(task.result.RetriedError[exception])-1].
-										Status = retryResult.Status
-
-									task.result.RetriedError[exception][len(task.result.RetriedError[exception])-1].
-										Cas = retryResult.CAS
-
-									task.result.BulkError[exception][index] = task.result.BulkError[exception][len(task.
-										result.BulkError[exception])-1]
-
-									task.result.BulkError[exception] = task.result.BulkError[exception][:len(task.
-										result.BulkError[exception])-1]
-
-									break
-								}
-							}
-						} else {
-							for index := range task.result.BulkError[exception] {
-								if task.result.BulkError[exception][index].Offset == offset {
-									task.result.RetriedError[exception] = append(task.result.RetriedError[exception],
-										task.result.BulkError[exception][index])
-									break
-								}
-							}
-						}
-					}
-				}
-			}
+			shiftErrToCompletedOnRetrying(exception, task.result, errorOffsetListMap, errorOffsetMaps, completedOffsetMaps)
 		}
 	}
 
