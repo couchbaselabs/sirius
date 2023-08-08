@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
+	"github.com/couchbaselabs/sirius/internal/task_result"
+	"golang.org/x/exp/slices"
 )
 
 const (
@@ -210,4 +212,82 @@ type Exceptions struct {
 type RetriedResult struct {
 	Status bool   `json:"status,omitempty" doc:"true"`
 	CAS    uint64 `json:"cas,omitempty" doc:"true"`
+}
+
+func shiftErrToCompletedOnRetrying(exception string, result *task_result.TaskResult,
+	errorOffsetListMap []map[int64]RetriedResult, errorOffsetMaps, completedOffsetMaps map[int64]struct{}) {
+	if _, ok := result.BulkError[exception]; ok {
+		for _, x := range errorOffsetListMap {
+			for offset, retryResult := range x {
+				if retryResult.Status == true {
+					delete(errorOffsetMaps, offset)
+					completedOffsetMaps[offset] = struct{}{}
+					for index := range result.BulkError[exception] {
+						if result.BulkError[exception][index].Offset == offset {
+
+							offsetRetriedIndex := slices.IndexFunc(result.RetriedError[exception],
+								func(document task_result.FailedDocument) bool {
+									return document.Offset == offset
+								})
+
+							if offsetRetriedIndex == -1 {
+								result.RetriedError[exception] = append(result.RetriedError[exception], result.BulkError[exception][index])
+
+								result.RetriedError[exception][len(result.RetriedError[exception])-1].
+									Status = retryResult.Status
+
+								result.RetriedError[exception][len(result.RetriedError[exception])-1].
+									Cas = retryResult.CAS
+
+							} else {
+								result.BulkError[exception][offsetRetriedIndex].Status = retryResult.Status
+								result.BulkError[exception][offsetRetriedIndex].Cas = retryResult.CAS
+							}
+
+							result.BulkError[exception][index] = result.BulkError[exception][len(
+								result.BulkError[exception])-1]
+
+							result.BulkError[exception] = result.BulkError[exception][:len(
+								result.BulkError[exception])-1]
+
+							break
+						}
+					}
+				} else {
+					for index := range result.BulkError[exception] {
+						if result.BulkError[exception][index].Offset == offset {
+							result.RetriedError[exception] = append(result.RetriedError[exception],
+								result.BulkError[exception][index])
+							break
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+func shiftErrToCompletedOnIgnore(ignoreExceptions []string, result *task_result.TaskResult, errorOffsetMaps,
+	completedOffsetMaps map[int64]struct{}) {
+	for _, exception := range ignoreExceptions {
+		for _, failedDocs := range result.BulkError[exception] {
+			if _, ok := errorOffsetMaps[failedDocs.Offset]; ok {
+				delete(errorOffsetMaps, failedDocs.Offset)
+				completedOffsetMaps[failedDocs.Offset] = struct{}{}
+			}
+		}
+		delete(result.BulkError, exception)
+	}
+}
+
+func getExceptions(result *task_result.TaskResult, RetryExceptions []string) []string {
+	var exceptionList []string
+	if len(RetryExceptions) == 0 {
+		for exception, _ := range result.BulkError {
+			exceptionList = append(exceptionList, exception)
+		}
+	} else {
+		exceptionList = RetryExceptions
+	}
+	return exceptionList
 }

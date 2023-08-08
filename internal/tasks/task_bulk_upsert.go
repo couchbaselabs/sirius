@@ -10,7 +10,6 @@ import (
 	"github.com/couchbaselabs/sirius/internal/task_state"
 	"github.com/couchbaselabs/sirius/internal/template"
 	"github.com/jaswdr/faker"
-	"golang.org/x/exp/slices"
 	"golang.org/x/sync/errgroup"
 	"log"
 	"math"
@@ -237,27 +236,11 @@ func (task *UpsertTask) PostTaskExceptionHandling(collectionObject *sdk.Collecti
 	completedOffsetMaps := task.State.ReturnCompletedOffset()
 
 	// For the offset in ignore exceptions :-> move them from error to completed
-	for _, exception := range task.OperationConfig.Exceptions.IgnoreExceptions {
-		for _, failedDocs := range task.result.BulkError[exception] {
-			if _, ok := errorOffsetMaps[failedDocs.Offset]; ok {
-				delete(errorOffsetMaps, failedDocs.Offset)
-				completedOffsetMaps[failedDocs.Offset] = struct{}{}
-			}
-		}
-		delete(task.result.BulkError, exception)
-	}
+	shiftErrToCompletedOnIgnore(task.OperationConfig.Exceptions.IgnoreExceptions, task.result, errorOffsetMaps, completedOffsetMaps)
 
 	if task.OperationConfig.Exceptions.RetryAttempts > 0 {
 
-		var exceptionList []string
-
-		if len(task.OperationConfig.Exceptions.RetryExceptions) == 0 {
-			for exception, _ := range task.result.BulkError {
-				exceptionList = append(exceptionList, exception)
-			}
-		} else {
-			exceptionList = task.OperationConfig.Exceptions.RetryExceptions
-		}
+		exceptionList := getExceptions(task.result, task.OperationConfig.Exceptions.RetryExceptions)
 
 		// For the retry exceptions :-> move them on success after retrying from err to completed
 		for _, exception := range exceptionList {
@@ -328,55 +311,7 @@ func (task *UpsertTask) PostTaskExceptionHandling(collectionObject *sdk.Collecti
 			}
 			_ = wg.Wait()
 
-			if _, ok := task.result.BulkError[exception]; ok {
-				for _, x := range errorOffsetListMap {
-					for offset, retryResult := range x {
-						if retryResult.Status == true {
-							delete(errorOffsetMaps, offset)
-							completedOffsetMaps[offset] = struct{}{}
-							for index := range task.result.BulkError[exception] {
-								if task.result.BulkError[exception][index].Offset == offset {
-
-									offsetRetriedIndex := slices.IndexFunc(task.result.RetriedError[exception],
-										func(document task_result.FailedDocument) bool {
-											return document.Offset == offset
-										})
-
-									if offsetRetriedIndex == -1 {
-										task.result.RetriedError[exception] = append(task.result.RetriedError[exception], task.result.BulkError[exception][index])
-
-										task.result.RetriedError[exception][len(task.result.RetriedError[exception])-1].
-											Status = retryResult.Status
-
-										task.result.RetriedError[exception][len(task.result.RetriedError[exception])-1].
-											Cas = retryResult.CAS
-
-									} else {
-										task.result.BulkError[exception][offsetRetriedIndex].Status = retryResult.Status
-										task.result.BulkError[exception][offsetRetriedIndex].Cas = retryResult.CAS
-									}
-
-									task.result.BulkError[exception][index] = task.result.BulkError[exception][len(task.
-										result.BulkError[exception])-1]
-
-									task.result.BulkError[exception] = task.result.BulkError[exception][:len(task.
-										result.BulkError[exception])-1]
-
-									break
-								}
-							}
-						} else {
-							for index := range task.result.BulkError[exception] {
-								if task.result.BulkError[exception][index].Offset == offset {
-									task.result.RetriedError[exception] = append(task.result.RetriedError[exception],
-										task.result.BulkError[exception][index])
-									break
-								}
-							}
-						}
-					}
-				}
-			}
+			shiftErrToCompletedOnRetrying(exception, task.result, errorOffsetListMap, errorOffsetMaps, completedOffsetMaps)
 		}
 	}
 
