@@ -134,7 +134,7 @@ func (task *ValidateTask) Do() error {
 	if err1 != nil {
 		task.result.ErrorOther = err1.Error()
 		task.result.FailWholeBulkOperation(0, task.MetaData.Seed-task.MetaData.SeedEnd,
-			task.OperationConfig.DocSize, task.gen, err1, task.State)
+			task.MetaData.DocSize, task.gen, err1, task.State)
 		return task.tearUp()
 	}
 
@@ -142,8 +142,6 @@ func (task *ValidateTask) Do() error {
 
 	task.result.Success = task.State.SeedEnd - task.State.SeedStart - task.result.Failure
 
-	task.State.ClearErrorKeyStates()
-	task.State.ClearCompletedKeyStates()
 	return task.tearUp()
 }
 
@@ -186,7 +184,7 @@ func validateDocuments(task *ValidateTask, collectionObject *sdk.CollectionObjec
 			}
 
 			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
-			originalDocument, err := task.gen.Template.GenerateDocument(&fake, task.OperationConfig.DocSize)
+			originalDocument, err := task.gen.Template.GenerateDocument(&fake, task.MetaData.DocSize)
 			if err != nil {
 				task.result.IncrementFailure(docId, originalDocument, err, false, 0, offset)
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
@@ -304,7 +302,7 @@ func (task *ValidateTask) PostTaskExceptionHandling(collectionObject *sdk.Collec
 					docId := task.gen.BuildKey(key)
 					fake := faker.NewWithSeed(rand.NewSource(int64(key)))
 
-					originalDoc, err := task.gen.Template.GenerateDocument(&fake, task.OperationConfig.DocSize)
+					originalDoc, err := task.gen.Template.GenerateDocument(&fake, task.MetaData.DocSize)
 					if err != nil {
 						<-routineLimiter
 						return err
