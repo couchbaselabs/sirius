@@ -130,7 +130,7 @@ func (task *ReadTask) Do() error {
 	if err1 != nil {
 		task.result.ErrorOther = err1.Error()
 		task.result.FailWholeBulkOperation(task.OperationConfig.Start, task.OperationConfig.End,
-			task.OperationConfig.DocSize, task.gen, err1, task.State)
+			task.MetaData.DocSize, task.gen, err1, task.State)
 		return task.tearUp()
 	}
 
@@ -176,7 +176,7 @@ func getDocuments(task *ReadTask, collectionObject *sdk.CollectionObject) {
 			}
 
 			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
-			originalDocument, err := task.gen.Template.GenerateDocument(&fake, task.OperationConfig.DocSize)
+			originalDocument, err := task.gen.Template.GenerateDocument(&fake, task.MetaData.DocSize)
 			if err != nil {
 				task.result.IncrementFailure(docId, originalDocument, err, false, 0, offset)
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
@@ -288,7 +288,7 @@ func (task *ReadTask) PostTaskExceptionHandling(collectionObject *sdk.Collection
 					docId := task.gen.BuildKey(key)
 					fake := faker.NewWithSeed(rand.NewSource(int64(key)))
 
-					originalDoc, err := task.gen.Template.GenerateDocument(&fake, task.OperationConfig.DocSize)
+					originalDoc, err := task.gen.Template.GenerateDocument(&fake, task.MetaData.DocSize)
 					if err != nil {
 						<-routineLimiter
 						return err

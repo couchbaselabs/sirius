@@ -146,7 +146,7 @@ func (task *InsertTask) Do() error {
 	if err1 != nil {
 		task.result.ErrorOther = err1.Error()
 		task.result.FailWholeBulkOperation(0, task.OperationConfig.Count,
-			task.OperationConfig.DocSize, task.gen, err1, task.State)
+			task.MetaData.DocSize, task.gen, err1, task.State)
 		return task.tearUp()
 	}
 
@@ -183,7 +183,7 @@ func insertDocuments(task *InsertTask, collectionObject *sdk.CollectionObject) {
 				return fmt.Errorf("alreday performed operation on " + docId)
 			}
 			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
-			doc, err := task.gen.Template.GenerateDocument(&fake, task.OperationConfig.DocSize)
+			doc, err := task.gen.Template.GenerateDocument(&fake, task.MetaData.DocSize)
 			if err != nil {
 				task.result.IncrementFailure(docId, doc, err, false, 0, offset)
 				<-routineLimiter
@@ -298,7 +298,7 @@ func (task *InsertTask) PostTaskExceptionHandling(collectionObject *sdk.Collecti
 					}
 					docId, key := task.gen.GetDocIdAndKey(offset)
 					fake := faker.NewWithSeed(rand.NewSource(int64(key)))
-					doc, _ := task.gen.Template.GenerateDocument(&fake, task.OperationConfig.DocSize)
+					doc, _ := task.gen.Template.GenerateDocument(&fake, task.MetaData.DocSize)
 
 					retry := 0
 					var err error

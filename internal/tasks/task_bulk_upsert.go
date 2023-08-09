@@ -140,7 +140,7 @@ func (task *UpsertTask) Do() error {
 	if err1 != nil {
 		task.result.ErrorOther = err1.Error()
 		task.result.FailWholeBulkOperation(task.OperationConfig.Start, task.OperationConfig.End,
-			task.OperationConfig.DocSize, task.gen, err1, task.State)
+			task.MetaData.DocSize, task.gen, err1, task.State)
 		return task.tearUp()
 	}
 
@@ -178,7 +178,7 @@ func upsertDocuments(task *UpsertTask, collectionObject *sdk.CollectionObject) {
 			}
 
 			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
-			originalDoc, err := task.gen.Template.GenerateDocument(&fake, task.OperationConfig.DocSize)
+			originalDoc, err := task.gen.Template.GenerateDocument(&fake, task.MetaData.DocSize)
 			if err != nil {
 				<-routineLimiter
 				return err
@@ -268,7 +268,7 @@ func (task *UpsertTask) PostTaskExceptionHandling(collectionObject *sdk.Collecti
 					docId := task.gen.BuildKey(key)
 					fake := faker.NewWithSeed(rand.NewSource(int64(key)))
 
-					originalDoc, err := task.gen.Template.GenerateDocument(&fake, task.OperationConfig.DocSize)
+					originalDoc, err := task.gen.Template.GenerateDocument(&fake, task.MetaData.DocSize)
 					if err != nil {
 						<-routineLimiter
 						return err

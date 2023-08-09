@@ -136,7 +136,7 @@ func (task *DeleteTask) Do() error {
 	if err1 != nil {
 		task.result.ErrorOther = err1.Error()
 		task.result.FailWholeBulkOperation(task.OperationConfig.Start, task.OperationConfig.End,
-			task.OperationConfig.DocSize, task.gen, err1, task.State)
+			task.MetaData.DocSize, task.gen, err1, task.State)
 		return task.tearUp()
 	}
 
