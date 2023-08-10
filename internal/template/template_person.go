@@ -83,7 +83,7 @@ func (p *Person) GenerateDocument(fake *faker.Faker, documentSize int) (interfac
 			},
 			BodyType: BodyType[fake.IntBetween(1, len(BodyType)-1)],
 		},
-		Mutated: 0,
+		Mutated: MutatedPathDefaultValue,
 	}
 	personDocument, err := json.Marshal(*person)
 	if err != nil {

@@ -91,6 +91,32 @@ func (r *Request) retracePreviousMutations(collectionIdentifier string, offset i
 	return doc, nil
 }
 
+func (r *Request) retracePreviousSubDocMutations(collectionIdentifier string, offset int64, gen docgenerator.Generator,
+	fake *faker.Faker, resultSeed int64) {
+	defer r.lock.Unlock()
+	r.lock.Lock()
+	for i := range r.Tasks {
+		td := r.Tasks[i]
+		if td.Operation == SubDocUpsertOperation {
+			u, ok := td.Task.(*SubDocUpsert)
+			if ok {
+				if collectionIdentifier != u.CollectionIdentifier() {
+					continue
+				}
+				if offset >= (u.SubDocOperationConfig.Start) && (offset < u.SubDocOperationConfig.End) && resultSeed != u.
+					ResultSeed {
+					errOffset := u.State.ReturnErrOffset()
+					if _, ok := errOffset[offset]; ok {
+						continue
+					} else {
+						gen.Template.GenerateSubPathAndValue(fake)
+					}
+				}
+			}
+		}
+	}
+}
+
 // retracePreviousDeletions returns a lookup table representing the offsets which are successfully deleted.
 func (r *Request) retracePreviousDeletions(collectionIdentifier string, resultSeed int64) (map[int64]struct{}, error) {
 	defer r.lock.Unlock()

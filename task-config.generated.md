@@ -19,6 +19,7 @@ configuration that is also available on a per-task basis:
  * [/single-touch](#single-touch)
  * [/single-upsert](#single-upsert)
  * [/sub-doc-bulk-insert](#sub-doc-bulk-insert)
+ * [/sub-doc-bulk-upsert](#sub-doc-bulk-upsert)
  * [/validate](#validate)
 
 ---
@@ -268,6 +269,24 @@ Description : Single insert task updates key value in Couchbase.
  REST : POST
 
 Description :  SubDocInsert inserts a Sub-Document
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `SubDocOperationConfig` | `ptr` | `json:subDocOperationConfig,omitempty`  |
+| `InsertSpecOptions` | `ptr` | `json:insertSpecOptions,omitempty`  |
+| `MutateInOptions` | `ptr` | `json:mutateInOptions,omitempty`  |
+
+---
+#### /sub-doc-bulk-upsert
+
+ REST : POST
+
+Description :  SubDocUpsert upserts a Sub-Document
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |

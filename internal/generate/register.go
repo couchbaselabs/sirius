@@ -32,6 +32,7 @@ func (r *Register) RegisteredTasks() map[string]TaskRegister {
 		"/run-template-query":  {"POST", &tasks.QueryTask{}},
 		"/retry-exceptions":    {"POST", &tasks.RetryExceptions{}},
 		"/sub-doc-bulk-insert": {"POST", &tasks.SubDocInsert{}},
+		"/sub-doc-bulk-upsert": {"POST", &tasks.SubDocUpsert{}},
 	}
 }
 
