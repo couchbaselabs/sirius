@@ -104,6 +104,9 @@ func (task *SubDocUpsert) Config(req *Request, reRun bool) (int64, error) {
 			"", "", "")
 
 		task.req.lock.Lock()
+		if task.SubDocOperationConfig.End+task.MetaData.Seed > task.MetaData.SeedEnd {
+			task.req.AddToSeedEnd(task.MetaData, (task.SubDocOperationConfig.End+task.MetaData.Seed)-(task.MetaData.SeedEnd))
+		}
 		task.State = task_state.ConfigTaskState(task.MetaData.Seed, task.MetaData.SeedEnd, task.ResultSeed)
 		task.req.lock.Unlock()
 

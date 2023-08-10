@@ -1,7 +1,6 @@
 package tasks
 
 import (
-	"errors"
 	"fmt"
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
@@ -18,14 +17,14 @@ import (
 	"time"
 )
 
-type SubDocInsert struct {
+type SubDocReplace struct {
 	IdentifierToken       string                             `json:"identifierToken" doc:"true"`
 	ClusterConfig         *sdk.ClusterConfig                 `json:"clusterConfig" doc:"true"`
 	Bucket                string                             `json:"bucket" doc:"true"`
 	Scope                 string                             `json:"scope,omitempty" doc:"true"`
 	Collection            string                             `json:"collection,omitempty" doc:"true"`
 	SubDocOperationConfig *SubDocOperationConfig             `json:"subDocOperationConfig" doc:"true"`
-	InsertSpecOptions     *InsertSpecOptions                 `json:"insertSpecOptions" doc:"true"`
+	ReplaceSpecOptions    *ReplaceSpecOptions                `json:"replaceSpecOptions" doc:"true"`
 	MutateInOptions       *MutateInOptions                   `json:"mutateInOptions" doc:"true"`
 	Operation             string                             `json:"operation" doc:"false"`
 	ResultSeed            int64                              `json:"resultSeed" doc:"false"`
@@ -37,27 +36,27 @@ type SubDocInsert struct {
 	req                   *Request                           `json:"-" doc:"false"`
 }
 
-func (task *SubDocInsert) Describe() string {
-	return " SubDocInsert inserts a Sub-Document"
+func (task *SubDocReplace) Describe() string {
+	return " SubDocReplace upserts a Sub-Document"
 }
 
-func (task *SubDocInsert) BuildIdentifier() string {
+func (task *SubDocReplace) BuildIdentifier() string {
 	if task.IdentifierToken == "" {
 		task.IdentifierToken = DefaultIdentifierToken
 	}
 	return task.IdentifierToken
 }
 
-func (task *SubDocInsert) CollectionIdentifier() string {
+func (task *SubDocReplace) CollectionIdentifier() string {
 	return task.IdentifierToken + task.ClusterConfig.ConnectionString + task.Bucket + task.Scope + task.Collection
 }
 
-func (task *SubDocInsert) CheckIfPending() bool {
+func (task *SubDocReplace) CheckIfPending() bool {
 	return task.TaskPending
 }
 
 // Config configures  the insert task
-func (task *SubDocInsert) Config(req *Request, reRun bool) (int64, error) {
+func (task *SubDocReplace) Config(req *Request, reRun bool) (int64, error) {
 	task.TaskPending = true
 	task.req = req
 
@@ -74,7 +73,7 @@ func (task *SubDocInsert) Config(req *Request, reRun bool) (int64, error) {
 
 	if !reRun {
 		task.ResultSeed = int64(time.Now().UnixNano())
-		task.Operation = SubDocInsertOperation
+		task.Operation = SubDocReplaceOperation
 
 		if task.Bucket == "" {
 			task.Bucket = DefaultBucket
@@ -91,7 +90,7 @@ func (task *SubDocInsert) Config(req *Request, reRun bool) (int64, error) {
 			return 0, err
 		}
 
-		if err := configInsertSpecOptions(task.InsertSpecOptions); err != nil {
+		if err := configReplaceSpecOptions(task.ReplaceSpecOptions); err != nil {
 			task.TaskPending = false
 			return 0, err
 		}
@@ -105,9 +104,6 @@ func (task *SubDocInsert) Config(req *Request, reRun bool) (int64, error) {
 			"", "", "")
 
 		task.req.lock.Lock()
-		if task.SubDocOperationConfig.End+task.MetaData.Seed > task.MetaData.SeedEnd {
-			task.req.AddToSeedEnd(task.MetaData, (task.SubDocOperationConfig.End+task.MetaData.Seed)-(task.MetaData.SeedEnd))
-		}
 		task.State = task_state.ConfigTaskState(task.MetaData.Seed, task.MetaData.SeedEnd, task.ResultSeed)
 		task.req.lock.Unlock()
 
@@ -121,7 +117,7 @@ func (task *SubDocInsert) Config(req *Request, reRun bool) (int64, error) {
 	return task.ResultSeed, nil
 }
 
-func (task *SubDocInsert) tearUp() error {
+func (task *SubDocReplace) tearUp() error {
 	//Use this case to store task's state on disk when required
 	//if err := task.State.SaveTaskSateOnDisk(); err != nil {
 	//	log.Println("Error in storing TASK State on DISK")
@@ -134,7 +130,7 @@ func (task *SubDocInsert) tearUp() error {
 	return task.req.SaveRequestIntoFile()
 }
 
-func (task *SubDocInsert) Do() error {
+func (task *SubDocReplace) Do() error {
 
 	task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
@@ -151,14 +147,14 @@ func (task *SubDocInsert) Do() error {
 		return task.tearUp()
 	}
 
-	insertSubDocuments(task, collectionObject)
+	replaceSubDocuments(task, collectionObject)
 	task.result.Success = (task.SubDocOperationConfig.End - task.SubDocOperationConfig.Start) - task.result.Failure
 
 	return task.tearUp()
 }
 
 // insertDocuments uploads new documents in a bucket.scope.collection in a defined batch size at multiple iterations.
-func insertSubDocuments(task *SubDocInsert, collectionObject *sdk.CollectionObject) {
+func replaceSubDocuments(task *SubDocReplace, collectionObject *sdk.CollectionObject) {
 
 	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
 	dataChannel := make(chan int64, MaxConcurrentRoutines)
@@ -187,22 +183,25 @@ func insertSubDocuments(task *SubDocInsert, collectionObject *sdk.CollectionObje
 			}
 			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
 
+			task.gen.Template.GenerateSubPathAndValue(&fake)
+			task.req.retracePreviousSubDocMutations(task.CollectionIdentifier(), offset, *task.gen, &fake,
+				task.ResultSeed)
+
 			var err error
 			for retry := 0; retry <= int(math.Max(float64(1), float64(task.SubDocOperationConfig.Exceptions.
 				RetryAttempts))); retry++ {
 
 				var iOps []gocb.MutateInSpec
 				for path, value := range task.gen.Template.GenerateSubPathAndValue(&fake) {
-					iOps = append(iOps, gocb.InsertSpec(path, value, &gocb.InsertSpecOptions{
-						CreatePath: task.InsertSpecOptions.CreatePath,
-						IsXattr:    task.InsertSpecOptions.IsXattr,
+					iOps = append(iOps, gocb.ReplaceSpec(path, value, &gocb.ReplaceSpecOptions{
+						IsXattr: task.ReplaceSpecOptions.IsXattr,
 					}))
 				}
 
-				if !task.InsertSpecOptions.IsXattr {
+				if !task.ReplaceSpecOptions.IsXattr {
 					iOps = append(iOps, gocb.IncrementSpec(template.MutatedPath,
 						template.MutateFieldIncrement, &gocb.CounterSpecOptions{
-							CreatePath: true,
+							CreatePath: false,
 							IsXattr:    false,
 						}))
 				}
@@ -222,17 +221,12 @@ func insertSubDocuments(task *SubDocInsert, collectionObject *sdk.CollectionObje
 				}
 			}
 			if err != nil {
-				if errors.Is(err, gocb.ErrPathExists) {
-					task.State.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
-					<-routineLimiter
-					return nil
-				} else {
-					task.result.IncrementFailure(docId, struct {
-					}{}, err, false, 0, offset)
-					task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
-					<-routineLimiter
-					return err
-				}
+				task.result.IncrementFailure(docId, struct {
+				}{}, err, false, 0, offset)
+				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
+				<-routineLimiter
+				return err
+
 			}
 
 			task.State.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
@@ -248,7 +242,7 @@ func insertSubDocuments(task *SubDocInsert, collectionObject *sdk.CollectionObje
 	log.Println("completed :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 }
 
-func (task *SubDocInsert) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
+func (task *SubDocReplace) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
 	task.State.StopStoringState()
 
 	// Get all the errorOffset
@@ -287,25 +281,27 @@ func (task *SubDocInsert) PostTaskExceptionHandling(collectionObject *sdk.Collec
 					}
 					docId, key := task.gen.GetDocIdAndKey(offset)
 					fake := faker.NewWithSeed(rand.NewSource(int64(key)))
-					log.Println(fake)
+
+					task.gen.Template.GenerateSubPathAndValue(&fake)
+					task.req.retracePreviousSubDocMutations(task.CollectionIdentifier(), offset, *task.gen, &fake, task.ResultSeed)
+
 					retry := 0
 					var err error
-
 					result := &gocb.MutateInResult{}
+
 					for retry = 0; retry <= task.SubDocOperationConfig.Exceptions.RetryAttempts; retry++ {
 
 						var iOps []gocb.MutateInSpec
 						for path, value := range task.gen.Template.GenerateSubPathAndValue(&fake) {
-							iOps = append(iOps, gocb.InsertSpec(path, value, &gocb.InsertSpecOptions{
-								CreatePath: task.InsertSpecOptions.CreatePath,
-								IsXattr:    task.InsertSpecOptions.IsXattr,
+							iOps = append(iOps, gocb.ReplaceSpec(path, value, &gocb.ReplaceSpecOptions{
+								IsXattr: task.ReplaceSpecOptions.IsXattr,
 							}))
 						}
 
-						if !task.InsertSpecOptions.IsXattr {
+						if !task.ReplaceSpecOptions.IsXattr {
 							iOps = append(iOps, gocb.IncrementSpec(template.MutatedPath,
 								template.MutateFieldIncrement, &gocb.CounterSpecOptions{
-									CreatePath: true,
+									CreatePath: false,
 									IsXattr:    false,
 								}))
 						}
@@ -327,7 +323,7 @@ func (task *SubDocInsert) PostTaskExceptionHandling(collectionObject *sdk.Collec
 
 					if err != nil {
 						m[offset] = RetriedResult{
-							Status: false,
+							Status: true,
 							CAS:    0,
 						}
 					} else {
@@ -353,18 +349,18 @@ func (task *SubDocInsert) PostTaskExceptionHandling(collectionObject *sdk.Collec
 
 }
 
-func (task *SubDocInsert) GetResultSeed() string {
+func (task *SubDocReplace) GetResultSeed() string {
 	if task.result == nil {
 		return ""
 	}
 	return fmt.Sprintf("%d", task.result.ResultSeed)
 }
 
-func (task *SubDocInsert) GetCollectionObject() (*sdk.CollectionObject, error) {
+func (task *SubDocReplace) GetCollectionObject() (*sdk.CollectionObject, error) {
 	return task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
 		task.Collection)
 }
 
-func (task *SubDocInsert) SetException(exceptions Exceptions) {
+func (task *SubDocReplace) SetException(exceptions Exceptions) {
 	task.SubDocOperationConfig.Exceptions = exceptions
 }

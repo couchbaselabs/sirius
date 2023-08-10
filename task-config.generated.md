@@ -21,6 +21,7 @@ configuration that is also available on a per-task basis:
  * [/sub-doc-bulk-delete](#sub-doc-bulk-delete)
  * [/sub-doc-bulk-insert](#sub-doc-bulk-insert)
  * [/sub-doc-bulk-read](#sub-doc-bulk-read)
+ * [/sub-doc-bulk-replace](#sub-doc-bulk-replace)
  * [/sub-doc-bulk-upsert](#sub-doc-bulk-upsert)
  * [/validate](#validate)
 
@@ -320,6 +321,24 @@ Description :  SubDocRead reads sub-document in bulk
 | `LookupInOptions` | `ptr` | `json:lookupInOptions`  |
 
 ---
+#### /sub-doc-bulk-replace
+
+ REST : POST
+
+Description :  SubDocReplace upserts a Sub-Document
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `SubDocOperationConfig` | `ptr` | `json:subDocOperationConfig`  |
+| `ReplaceSpecOptions` | `ptr` | `json:replaceSpecOptions`  |
+| `MutateInOptions` | `ptr` | `json:mutateInOptions`  |
+
+---
 #### /sub-doc-bulk-upsert
 
  REST : POST
@@ -371,6 +390,7 @@ Description : Validates every document in the cluster's bucket
  * [removeOptions](#removeoptions)
  * [removeSpecOptions](#removespecoptions)
  * [replaceOption](#replaceoption)
+ * [replaceSpecOptions](#replacespecoptions)
  * [retriedError](#retriederror)
  * [singleOperationConfig](#singleoperationconfig)
  * [singleResult](#singleresult)
@@ -497,6 +517,11 @@ Description : Validates every document in the cluster's bucket
 | `ReplicateTo` | `uint` | `json:replicateTo,omitempty`  |
 | `Durability` | `string` | `json:durability,omitempty`  |
 | `Timeout` | `int` | `json:timeout,omitempty`  |
+#### replaceSpecOptions
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IsXattr` | `bool` | `json:isXattr,omitempty`  |
 #### retriedError
 
 | Name | Type | JSON Tag |

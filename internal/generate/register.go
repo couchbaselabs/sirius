@@ -16,25 +16,26 @@ type Register struct {
 
 func (r *Register) RegisteredTasks() map[string]TaskRegister {
 	return map[string]TaskRegister{
-		"/bulk-create":         {"POST", &tasks.InsertTask{}},
-		"/bulk-delete":         {"POST", &tasks.DeleteTask{}},
-		"/bulk-upsert":         {"POST", &tasks.UpsertTask{}},
-		"/validate":            {"POST", &tasks.ValidateTask{}},
-		"/result":              {"POST", &tasks.TaskResult{}},
-		"/clear_data":          {"POST", &tasks.ClearTask{}},
-		"/bulk-read":           {"POST", &tasks.ReadTask{}},
-		"/single-create":       {"POST", &tasks.SingleInsertTask{}},
-		"/single-delete":       {"POST", &tasks.SingleDeleteTask{}},
-		"/single-upsert":       {"POST", &tasks.SingleUpsertTask{}},
-		"/single-read":         {"POST", &tasks.SingleReadTask{}},
-		"/single-touch":        {"POST", &tasks.SingleTouchTask{}},
-		"/single-replace":      {"POST", &tasks.SingleReplaceTask{}},
-		"/run-template-query":  {"POST", &tasks.QueryTask{}},
-		"/retry-exceptions":    {"POST", &tasks.RetryExceptions{}},
-		"/sub-doc-bulk-insert": {"POST", &tasks.SubDocInsert{}},
-		"/sub-doc-bulk-upsert": {"POST", &tasks.SubDocUpsert{}},
-		"/sub-doc-bulk-delete": {"POST", &tasks.SubDocDelete{}},
-		"/sub-doc-bulk-read":   {"POST", &tasks.SubDocRead{}},
+		"/bulk-create":          {"POST", &tasks.InsertTask{}},
+		"/bulk-delete":          {"POST", &tasks.DeleteTask{}},
+		"/bulk-upsert":          {"POST", &tasks.UpsertTask{}},
+		"/validate":             {"POST", &tasks.ValidateTask{}},
+		"/result":               {"POST", &tasks.TaskResult{}},
+		"/clear_data":           {"POST", &tasks.ClearTask{}},
+		"/bulk-read":            {"POST", &tasks.ReadTask{}},
+		"/single-create":        {"POST", &tasks.SingleInsertTask{}},
+		"/single-delete":        {"POST", &tasks.SingleDeleteTask{}},
+		"/single-upsert":        {"POST", &tasks.SingleUpsertTask{}},
+		"/single-read":          {"POST", &tasks.SingleReadTask{}},
+		"/single-touch":         {"POST", &tasks.SingleTouchTask{}},
+		"/single-replace":       {"POST", &tasks.SingleReplaceTask{}},
+		"/run-template-query":   {"POST", &tasks.QueryTask{}},
+		"/retry-exceptions":     {"POST", &tasks.RetryExceptions{}},
+		"/sub-doc-bulk-insert":  {"POST", &tasks.SubDocInsert{}},
+		"/sub-doc-bulk-upsert":  {"POST", &tasks.SubDocUpsert{}},
+		"/sub-doc-bulk-delete":  {"POST", &tasks.SubDocDelete{}},
+		"/sub-doc-bulk-read":    {"POST", &tasks.SubDocRead{}},
+		"/sub-doc-bulk-replace": {"POST", &tasks.SubDocReplace{}},
 	}
 }
 
@@ -60,6 +61,7 @@ func (r *Register) HelperStruct() map[string]any {
 		"removeSpecOptions":     &tasks.RemoveSpecOptions{},
 		"getSpecOptions":        &tasks.GetSpecOptions{},
 		"lookupInOptions":       &tasks.LookupInOptions{},
+		"replaceSpecOptions":    &tasks.ReplaceSpecOptions{},
 	}
 
 }
