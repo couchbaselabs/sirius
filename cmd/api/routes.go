@@ -43,6 +43,7 @@ func (app *Config) routes() http.Handler {
 	mux.Post("/retry-exceptions", app.RetryExceptionTask)
 	mux.Post("/sub-doc-bulk-insert", app.SubDocInsertTask)
 	mux.Post("/sub-doc-bulk-upsert", app.SubDocUpsertTask)
+	mux.Post("/sub-doc-bulk-delete", app.SubDocDeleteTask)
 
 	return mux
 }

@@ -33,6 +33,7 @@ func (r *Register) RegisteredTasks() map[string]TaskRegister {
 		"/retry-exceptions":    {"POST", &tasks.RetryExceptions{}},
 		"/sub-doc-bulk-insert": {"POST", &tasks.SubDocInsert{}},
 		"/sub-doc-bulk-upsert": {"POST", &tasks.SubDocUpsert{}},
+		"/sub-doc-bulk-delete": {"POST", &tasks.SubDocDelete{}},
 	}
 }
 
@@ -52,9 +53,10 @@ func (r *Register) HelperStruct() map[string]any {
 		"singleResult":          &task_result.SingleOperationResult{},
 		"queryOperationConfig":  &tasks.QueryOperationConfig{},
 		"exceptions":            &tasks.Exceptions{},
+		"subDocOperationConfig": &tasks.SubDocOperationConfig{},
 		"mutateInOptions":       &tasks.MutateInOptions{},
 		"insertSpecOptions":     &tasks.InsertSpecOptions{},
-		"subDocOperationConfig": &tasks.SubDocOperationConfig{},
+		"removeSpecOptions":     &tasks.RemoveSpecOptions{},
 	}
 
 }

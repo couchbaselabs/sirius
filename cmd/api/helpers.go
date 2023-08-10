@@ -92,6 +92,7 @@ func registerInterfaces() {
 	gob.Register(&tasks.RetryExceptions{})
 	gob.Register(&tasks.SubDocInsert{})
 	gob.Register(&tasks.SubDocUpsert{})
+	gob.Register(&tasks.SubDocDelete{})
 
 	r := generate.Register{}
 	for _, i := range r.HelperStruct() {

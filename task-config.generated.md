@@ -18,6 +18,7 @@ configuration that is also available on a per-task basis:
  * [/single-replace](#single-replace)
  * [/single-touch](#single-touch)
  * [/single-upsert](#single-upsert)
+ * [/sub-doc-bulk-delete](#sub-doc-bulk-delete)
  * [/sub-doc-bulk-insert](#sub-doc-bulk-insert)
  * [/sub-doc-bulk-upsert](#sub-doc-bulk-upsert)
  * [/validate](#validate)
@@ -264,6 +265,24 @@ Description : Single insert task updates key value in Couchbase.
 | `OperationConfig` | `ptr` | `json:singleOperationConfig`  |
 
 ---
+#### /sub-doc-bulk-delete
+
+ REST : POST
+
+Description :  SubDocDelete deletes sub-documents in bulk
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `SubDocOperationConfig` | `ptr` | `json:subDocOperationConfig,omitempty`  |
+| `RemoveSpecOptions` | `ptr` | `json:removeSpecOptions,omitempty`  |
+| `MutateInOptions` | `ptr` | `json:mutateInOptions,omitempty`  |
+
+---
 #### /sub-doc-bulk-insert
 
  REST : POST
@@ -329,6 +348,7 @@ Description : Validates every document in the cluster's bucket
  * [operationConfig](#operationconfig)
  * [queryOperationConfig](#queryoperationconfig)
  * [removeOptions](#removeoptions)
+ * [removeSpecOptions](#removespecoptions)
  * [replaceOption](#replaceoption)
  * [retriedError](#retriederror)
  * [singleOperationConfig](#singleoperationconfig)
@@ -431,6 +451,11 @@ Description : Validates every document in the cluster's bucket
 | `ReplicateTo` | `uint` | `json:replicateTo,omitempty`  |
 | `Durability` | `string` | `json:durability,omitempty`  |
 | `Timeout` | `int` | `json:timeout,omitempty`  |
+#### removeSpecOptions
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IsXattr` | `bool` | `json:isXattr,omitempty`  |
 #### replaceOption
 
 | Name | Type | JSON Tag |
