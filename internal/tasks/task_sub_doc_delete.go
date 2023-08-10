@@ -1,7 +1,6 @@
 package tasks
 
 import (
-	"errors"
 	"fmt"
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
@@ -24,9 +23,9 @@ type SubDocDelete struct {
 	Bucket                string                             `json:"bucket" doc:"true"`
 	Scope                 string                             `json:"scope,omitempty" doc:"true"`
 	Collection            string                             `json:"collection,omitempty" doc:"true"`
-	SubDocOperationConfig *SubDocOperationConfig             `json:"subDocOperationConfig,omitempty" doc:"true"`
-	RemoveSpecOptions     *RemoveSpecOptions                 `json:"removeSpecOptions,omitempty" doc:"true"`
-	MutateInOptions       *MutateInOptions                   `json:"mutateInOptions,omitempty" doc:"true"`
+	SubDocOperationConfig *SubDocOperationConfig             `json:"subDocOperationConfig" doc:"true"`
+	RemoveSpecOptions     *RemoveSpecOptions                 `json:"removeSpecOptions" doc:"true"`
+	MutateInOptions       *MutateInOptions                   `json:"mutateInOptions" doc:"true"`
 	Operation             string                             `json:"operation" doc:"false"`
 	ResultSeed            int64                              `json:"resultSeed" doc:"false"`
 	TaskPending           bool                               `json:"taskPending" doc:"false"`
@@ -87,6 +86,16 @@ func (task *SubDocDelete) Config(req *Request, reRun bool) (int64, error) {
 		}
 
 		if err := configSubDocOperationConfig(task.SubDocOperationConfig); err != nil {
+			task.TaskPending = false
+			return 0, err
+		}
+
+		if err := configRemoveSpecOptions(task.RemoveSpecOptions); err != nil {
+			task.TaskPending = false
+			return 0, err
+		}
+
+		if err := configMutateInOptions(task.MutateInOptions); err != nil {
 			task.TaskPending = false
 			return 0, err
 		}
@@ -208,17 +217,13 @@ func deleteSubDocuments(task *SubDocDelete, collectionObject *sdk.CollectionObje
 				}
 			}
 			if err != nil {
-				if errors.Is(err, gocb.ErrPathExists) {
-					task.State.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
-					<-routineLimiter
-					return nil
-				} else {
-					task.result.IncrementFailure(docId, struct {
-					}{}, err, false, 0, offset)
-					task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
-					<-routineLimiter
-					return err
-				}
+
+				task.result.IncrementFailure(docId, struct {
+				}{}, err, false, 0, offset)
+				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
+				<-routineLimiter
+				return err
+
 			}
 
 			task.State.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
@@ -339,6 +344,9 @@ func (task *SubDocDelete) PostTaskExceptionHandling(collectionObject *sdk.Collec
 }
 
 func (task *SubDocDelete) GetResultSeed() string {
+	if task.result == nil {
+		return ""
+	}
 	return fmt.Sprintf("%d", task.result.ResultSeed)
 }
 

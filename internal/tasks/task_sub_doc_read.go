@@ -17,15 +17,15 @@ import (
 	"time"
 )
 
-type SubDocUpsert struct {
+type SubDocRead struct {
 	IdentifierToken       string                             `json:"identifierToken" doc:"true"`
 	ClusterConfig         *sdk.ClusterConfig                 `json:"clusterConfig" doc:"true"`
 	Bucket                string                             `json:"bucket" doc:"true"`
 	Scope                 string                             `json:"scope,omitempty" doc:"true"`
 	Collection            string                             `json:"collection,omitempty" doc:"true"`
 	SubDocOperationConfig *SubDocOperationConfig             `json:"subDocOperationConfig" doc:"true"`
-	InsertSpecOptions     *InsertSpecOptions                 `json:"insertSpecOptions" doc:"true"`
-	MutateInOptions       *MutateInOptions                   `json:"mutateInOptions" doc:"true"`
+	GetSpecOptions        *GetSpecOptions                    `json:"getSpecOptions" doc:"true"`
+	LookupInOptions       *LookupInOptions                   `json:"lookupInOptions" doc:"true"`
 	Operation             string                             `json:"operation" doc:"false"`
 	ResultSeed            int64                              `json:"resultSeed" doc:"false"`
 	TaskPending           bool                               `json:"taskPending" doc:"false"`
@@ -36,27 +36,27 @@ type SubDocUpsert struct {
 	req                   *Request                           `json:"-" doc:"false"`
 }
 
-func (task *SubDocUpsert) Describe() string {
-	return " SubDocUpsert upserts a Sub-Document"
+func (task *SubDocRead) Describe() string {
+	return " SubDocRead reads sub-document in bulk"
 }
 
-func (task *SubDocUpsert) BuildIdentifier() string {
+func (task *SubDocRead) BuildIdentifier() string {
 	if task.IdentifierToken == "" {
 		task.IdentifierToken = DefaultIdentifierToken
 	}
 	return task.IdentifierToken
 }
 
-func (task *SubDocUpsert) CollectionIdentifier() string {
+func (task *SubDocRead) CollectionIdentifier() string {
 	return task.IdentifierToken + task.ClusterConfig.ConnectionString + task.Bucket + task.Scope + task.Collection
 }
 
-func (task *SubDocUpsert) CheckIfPending() bool {
+func (task *SubDocRead) CheckIfPending() bool {
 	return task.TaskPending
 }
 
 // Config configures  the insert task
-func (task *SubDocUpsert) Config(req *Request, reRun bool) (int64, error) {
+func (task *SubDocRead) Config(req *Request, reRun bool) (int64, error) {
 	task.TaskPending = true
 	task.req = req
 
@@ -73,7 +73,7 @@ func (task *SubDocUpsert) Config(req *Request, reRun bool) (int64, error) {
 
 	if !reRun {
 		task.ResultSeed = int64(time.Now().UnixNano())
-		task.Operation = SubDocUpsertOperation
+		task.Operation = SubDocReadOperation
 
 		if task.Bucket == "" {
 			task.Bucket = DefaultBucket
@@ -86,16 +86,6 @@ func (task *SubDocUpsert) Config(req *Request, reRun bool) (int64, error) {
 		}
 
 		if err := configSubDocOperationConfig(task.SubDocOperationConfig); err != nil {
-			task.TaskPending = false
-			return 0, err
-		}
-
-		if err := configInsertSpecOptions(task.InsertSpecOptions); err != nil {
-			task.TaskPending = false
-			return 0, err
-		}
-
-		if err := configMutateInOptions(task.MutateInOptions); err != nil {
 			task.TaskPending = false
 			return 0, err
 		}
@@ -117,7 +107,7 @@ func (task *SubDocUpsert) Config(req *Request, reRun bool) (int64, error) {
 	return task.ResultSeed, nil
 }
 
-func (task *SubDocUpsert) tearUp() error {
+func (task *SubDocRead) tearUp() error {
 	//Use this case to store task's state on disk when required
 	//if err := task.State.SaveTaskSateOnDisk(); err != nil {
 	//	log.Println("Error in storing TASK State on DISK")
@@ -130,7 +120,7 @@ func (task *SubDocUpsert) tearUp() error {
 	return task.req.SaveRequestIntoFile()
 }
 
-func (task *SubDocUpsert) Do() error {
+func (task *SubDocRead) Do() error {
 
 	task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
@@ -147,14 +137,14 @@ func (task *SubDocUpsert) Do() error {
 		return task.tearUp()
 	}
 
-	upsertSubDocuments(task, collectionObject)
+	readSubDocuments(task, collectionObject)
 	task.result.Success = (task.SubDocOperationConfig.End - task.SubDocOperationConfig.Start) - task.result.Failure
 
 	return task.tearUp()
 }
 
 // insertDocuments uploads new documents in a bucket.scope.collection in a defined batch size at multiple iterations.
-func upsertSubDocuments(task *SubDocUpsert, collectionObject *sdk.CollectionObject) {
+func readSubDocuments(task *SubDocRead, collectionObject *sdk.CollectionObject) {
 
 	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
 	dataChannel := make(chan int64, MaxConcurrentRoutines)
@@ -181,40 +171,26 @@ func upsertSubDocuments(task *SubDocUpsert, collectionObject *sdk.CollectionObje
 				<-routineLimiter
 				return fmt.Errorf("alreday performed operation on " + docId)
 			}
+
 			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
 
-			task.gen.Template.GenerateSubPathAndValue(&fake)
-			task.req.retracePreviousSubDocMutations(task.CollectionIdentifier(), offset, *task.gen, &fake,
-				task.ResultSeed)
-
 			var err error
+			result := &gocb.LookupInResult{}
+			var paths []string
+
 			for retry := 0; retry <= int(math.Max(float64(1), float64(task.SubDocOperationConfig.Exceptions.
 				RetryAttempts))); retry++ {
 
-				var iOps []gocb.MutateInSpec
-				for path, value := range task.gen.Template.GenerateSubPathAndValue(&fake) {
-					iOps = append(iOps, gocb.UpsertSpec(path, value, &gocb.UpsertSpecOptions{
-						CreatePath: task.InsertSpecOptions.CreatePath,
-						IsXattr:    task.InsertSpecOptions.IsXattr,
+				var iOps []gocb.LookupInSpec
+				for path, _ := range task.gen.Template.GenerateSubPathAndValue(&fake) {
+					paths = append(paths, path)
+					iOps = append(iOps, gocb.GetSpec(path, &gocb.GetSpecOptions{
+						IsXattr: task.GetSpecOptions.IsXattr,
 					}))
 				}
 
-				if !task.InsertSpecOptions.IsXattr {
-					iOps = append(iOps, gocb.IncrementSpec(template.MutatedPath,
-						template.MutateFieldIncrement, &gocb.CounterSpecOptions{
-							CreatePath: false,
-							IsXattr:    false,
-						}))
-				}
-
-				_, err = collectionObject.Collection.MutateIn(docId, iOps, &gocb.MutateInOptions{
-					Expiry:          time.Duration(task.MutateInOptions.Expiry) * time.Second,
-					PersistTo:       task.MutateInOptions.PersistTo,
-					ReplicateTo:     task.MutateInOptions.ReplicateTo,
-					DurabilityLevel: getDurability(task.MutateInOptions.Durability),
-					StoreSemantic:   getStoreSemantic(task.MutateInOptions.StoreSemantic),
-					Timeout:         time.Duration(task.MutateInOptions.Expiry) * time.Second,
-					PreserveExpiry:  task.MutateInOptions.PreserveExpiry,
+				result, err = collectionObject.Collection.LookupIn(docId, iOps, &gocb.LookupInOptions{
+					Timeout: time.Duration(task.LookupInOptions.Timeout) * time.Second,
 				})
 
 				if err == nil {
@@ -227,7 +203,17 @@ func upsertSubDocuments(task *SubDocUpsert, collectionObject *sdk.CollectionObje
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 				<-routineLimiter
 				return err
+			}
 
+			for index, _ := range paths {
+				var val interface{}
+				if err := result.ContentAt(uint(index), &val); err != nil {
+					task.result.IncrementFailure(docId, struct {
+					}{}, err, false, 0, offset)
+					task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
+					<-routineLimiter
+					return err
+				}
 			}
 
 			task.State.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
@@ -243,7 +229,7 @@ func upsertSubDocuments(task *SubDocUpsert, collectionObject *sdk.CollectionObje
 	log.Println("completed :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 }
 
-func (task *SubDocUpsert) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
+func (task *SubDocRead) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
 	task.State.StopStoringState()
 
 	// Get all the errorOffset
@@ -283,39 +269,25 @@ func (task *SubDocUpsert) PostTaskExceptionHandling(collectionObject *sdk.Collec
 					docId, key := task.gen.GetDocIdAndKey(offset)
 					fake := faker.NewWithSeed(rand.NewSource(int64(key)))
 
-					task.gen.Template.GenerateSubPathAndValue(&fake)
-					task.req.retracePreviousSubDocMutations(task.CollectionIdentifier(), offset, *task.gen, &fake, task.ResultSeed)
-
 					retry := 0
 					var err error
-					result := &gocb.MutateInResult{}
+					result := &gocb.LookupInResult{}
+					var paths []string
 
 					for retry = 0; retry <= task.SubDocOperationConfig.Exceptions.RetryAttempts; retry++ {
 
-						var iOps []gocb.MutateInSpec
-						for path, value := range task.gen.Template.GenerateSubPathAndValue(&fake) {
-							iOps = append(iOps, gocb.InsertSpec(path, value, &gocb.InsertSpecOptions{
-								CreatePath: task.InsertSpecOptions.CreatePath,
-								IsXattr:    task.InsertSpecOptions.IsXattr,
+						var iOps []gocb.LookupInSpec
+						for path, _ := range task.gen.Template.GenerateSubPathAndValue(&fake) {
+
+							paths = append(paths, path)
+
+							iOps = append(iOps, gocb.GetSpec(path, &gocb.GetSpecOptions{
+								IsXattr: task.GetSpecOptions.IsXattr,
 							}))
 						}
 
-						if !task.InsertSpecOptions.IsXattr {
-							iOps = append(iOps, gocb.IncrementSpec(template.MutatedPath,
-								template.MutateFieldIncrement, &gocb.CounterSpecOptions{
-									CreatePath: true,
-									IsXattr:    false,
-								}))
-						}
-
-						result, err = collectionObject.Collection.MutateIn(docId, iOps, &gocb.MutateInOptions{
-							Expiry:          time.Duration(task.MutateInOptions.Expiry) * time.Second,
-							PersistTo:       task.MutateInOptions.PersistTo,
-							ReplicateTo:     task.MutateInOptions.ReplicateTo,
-							DurabilityLevel: getDurability(task.MutateInOptions.Durability),
-							StoreSemantic:   getStoreSemantic(task.MutateInOptions.StoreSemantic),
-							Timeout:         time.Duration(task.MutateInOptions.Expiry) * time.Second,
-							PreserveExpiry:  task.MutateInOptions.PreserveExpiry,
+						_, err = collectionObject.Collection.LookupIn(docId, iOps, &gocb.LookupInOptions{
+							Timeout: time.Duration(task.LookupInOptions.Timeout) * time.Second,
 						})
 
 						if err == nil {
@@ -325,10 +297,22 @@ func (task *SubDocUpsert) PostTaskExceptionHandling(collectionObject *sdk.Collec
 
 					if err != nil {
 						m[offset] = RetriedResult{
-							Status: true,
+							Status: false,
 							CAS:    0,
 						}
 					} else {
+						for index, _ := range paths {
+							var val interface{}
+							if err := result.ContentAt(uint(index), &val); err != nil {
+								m[offset] = RetriedResult{
+									Status: false,
+									CAS:    0,
+								}
+								<-routineLimiter
+								return nil
+							}
+						}
+
 						m[offset] = RetriedResult{
 							Status: true,
 							CAS:    uint64(result.Cas()),
@@ -351,18 +335,18 @@ func (task *SubDocUpsert) PostTaskExceptionHandling(collectionObject *sdk.Collec
 
 }
 
-func (task *SubDocUpsert) GetResultSeed() string {
+func (task *SubDocRead) GetResultSeed() string {
 	if task.result == nil {
 		return ""
 	}
 	return fmt.Sprintf("%d", task.result.ResultSeed)
 }
 
-func (task *SubDocUpsert) GetCollectionObject() (*sdk.CollectionObject, error) {
+func (task *SubDocRead) GetCollectionObject() (*sdk.CollectionObject, error) {
 	return task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
 		task.Collection)
 }
 
-func (task *SubDocUpsert) SetException(exceptions Exceptions) {
+func (task *SubDocRead) SetException(exceptions Exceptions) {
 	task.SubDocOperationConfig.Exceptions = exceptions
 }

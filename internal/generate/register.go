@@ -34,6 +34,7 @@ func (r *Register) RegisteredTasks() map[string]TaskRegister {
 		"/sub-doc-bulk-insert": {"POST", &tasks.SubDocInsert{}},
 		"/sub-doc-bulk-upsert": {"POST", &tasks.SubDocUpsert{}},
 		"/sub-doc-bulk-delete": {"POST", &tasks.SubDocDelete{}},
+		"/sub-doc-bulk-read":   {"POST", &tasks.SubDocRead{}},
 	}
 }
 
@@ -57,6 +58,8 @@ func (r *Register) HelperStruct() map[string]any {
 		"mutateInOptions":       &tasks.MutateInOptions{},
 		"insertSpecOptions":     &tasks.InsertSpecOptions{},
 		"removeSpecOptions":     &tasks.RemoveSpecOptions{},
+		"getSpecOptions":        &tasks.GetSpecOptions{},
+		"lookupInOptions":       &tasks.LookupInOptions{},
 	}
 
 }

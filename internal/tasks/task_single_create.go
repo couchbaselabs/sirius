@@ -224,6 +224,9 @@ func (task *SingleInsertTask) PostTaskExceptionHandling(_ *sdk.CollectionObject)
 }
 
 func (task *SingleInsertTask) GetResultSeed() string {
+	if task.result == nil {
+		return ""
+	}
 	return fmt.Sprintf("%d", task.result.ResultSeed)
 }
 

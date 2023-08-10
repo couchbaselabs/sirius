@@ -20,6 +20,7 @@ configuration that is also available on a per-task basis:
  * [/single-upsert](#single-upsert)
  * [/sub-doc-bulk-delete](#sub-doc-bulk-delete)
  * [/sub-doc-bulk-insert](#sub-doc-bulk-insert)
+ * [/sub-doc-bulk-read](#sub-doc-bulk-read)
  * [/sub-doc-bulk-upsert](#sub-doc-bulk-upsert)
  * [/validate](#validate)
 
@@ -278,9 +279,9 @@ Description :  SubDocDelete deletes sub-documents in bulk
 | `Bucket` | `string` | `json:bucket`  |
 | `Scope` | `string` | `json:scope,omitempty`  |
 | `Collection` | `string` | `json:collection,omitempty`  |
-| `SubDocOperationConfig` | `ptr` | `json:subDocOperationConfig,omitempty`  |
-| `RemoveSpecOptions` | `ptr` | `json:removeSpecOptions,omitempty`  |
-| `MutateInOptions` | `ptr` | `json:mutateInOptions,omitempty`  |
+| `SubDocOperationConfig` | `ptr` | `json:subDocOperationConfig`  |
+| `RemoveSpecOptions` | `ptr` | `json:removeSpecOptions`  |
+| `MutateInOptions` | `ptr` | `json:mutateInOptions`  |
 
 ---
 #### /sub-doc-bulk-insert
@@ -296,9 +297,27 @@ Description :  SubDocInsert inserts a Sub-Document
 | `Bucket` | `string` | `json:bucket`  |
 | `Scope` | `string` | `json:scope,omitempty`  |
 | `Collection` | `string` | `json:collection,omitempty`  |
-| `SubDocOperationConfig` | `ptr` | `json:subDocOperationConfig,omitempty`  |
-| `InsertSpecOptions` | `ptr` | `json:insertSpecOptions,omitempty`  |
-| `MutateInOptions` | `ptr` | `json:mutateInOptions,omitempty`  |
+| `SubDocOperationConfig` | `ptr` | `json:subDocOperationConfig`  |
+| `InsertSpecOptions` | `ptr` | `json:insertSpecOptions`  |
+| `MutateInOptions` | `ptr` | `json:mutateInOptions`  |
+
+---
+#### /sub-doc-bulk-read
+
+ REST : POST
+
+Description :  SubDocRead reads sub-document in bulk
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `SubDocOperationConfig` | `ptr` | `json:subDocOperationConfig`  |
+| `GetSpecOptions` | `ptr` | `json:getSpecOptions`  |
+| `LookupInOptions` | `ptr` | `json:lookupInOptions`  |
 
 ---
 #### /sub-doc-bulk-upsert
@@ -314,9 +333,9 @@ Description :  SubDocUpsert upserts a Sub-Document
 | `Bucket` | `string` | `json:bucket`  |
 | `Scope` | `string` | `json:scope,omitempty`  |
 | `Collection` | `string` | `json:collection,omitempty`  |
-| `SubDocOperationConfig` | `ptr` | `json:subDocOperationConfig,omitempty`  |
-| `InsertSpecOptions` | `ptr` | `json:insertSpecOptions,omitempty`  |
-| `MutateInOptions` | `ptr` | `json:mutateInOptions,omitempty`  |
+| `SubDocOperationConfig` | `ptr` | `json:subDocOperationConfig`  |
+| `InsertSpecOptions` | `ptr` | `json:insertSpecOptions`  |
+| `MutateInOptions` | `ptr` | `json:mutateInOptions`  |
 
 ---
 #### /validate
@@ -341,9 +360,11 @@ Description : Validates every document in the cluster's bucket
  * [clusterConfig](#clusterconfig)
  * [compressionConfig](#compressionconfig)
  * [exceptions](#exceptions)
+ * [getSpecOptions](#getspecoptions)
  * [insertOptions](#insertoptions)
  * [insertSpecOptions](#insertspecoptions)
  * [keyValue](#keyvalue)
+ * [lookupInOptions](#lookupinoptions)
  * [mutateInOptions](#mutateinoptions)
  * [operationConfig](#operationconfig)
  * [queryOperationConfig](#queryoperationconfig)
@@ -388,6 +409,11 @@ Description : Validates every document in the cluster's bucket
 | `IgnoreExceptions` | `slice` | `json:ignoreExceptions,omitempty`  |
 | `RetryExceptions` | `slice` | `json:retryExceptions,omitempty`  |
 | `RetryAttempts` | `int` | `json:retryAttempts,omitempty`  |
+#### getSpecOptions
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IsXattr` | `bool` | `json:isXattr,omitempty`  |
 #### insertOptions
 
 | Name | Type | JSON Tag |
@@ -409,6 +435,11 @@ Description : Validates every document in the cluster's bucket
 | ---- | ---- | -------- |
 | `Key` | `string` | `json:key`  |
 | `Doc` | `interface` | `json:value,omitempty`  |
+#### lookupInOptions
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `Timeout` | `int` | `json:timeout,omitempty`  |
 #### mutateInOptions
 
 | Name | Type | JSON Tag |

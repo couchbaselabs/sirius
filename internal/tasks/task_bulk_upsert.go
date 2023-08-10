@@ -321,6 +321,9 @@ func (task *UpsertTask) PostTaskExceptionHandling(collectionObject *sdk.Collecti
 }
 
 func (task *UpsertTask) GetResultSeed() string {
+	if task.result == nil {
+		return ""
+	}
 	return fmt.Sprintf("%d", task.result.ResultSeed)
 }
 

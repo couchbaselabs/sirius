@@ -52,7 +52,7 @@ func (s *SmallTemplate) GenerateIndexesForSdk() (map[string][]string, error) {
 	return map[string][]string{}, nil
 }
 
-func (s *SmallTemplate) GenerateSubPathAndValue(fake *faker.Faker) map[string]interface{} {
+func (s *SmallTemplate) GenerateSubPathAndValue(fake *faker.Faker) map[string]any {
 
 	return map[string]interface{}{
 		"dataExtra": fake.RandomStringWithLength(fake.RandomDigit()),

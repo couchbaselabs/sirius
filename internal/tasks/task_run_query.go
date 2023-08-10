@@ -258,6 +258,9 @@ func (task *QueryTask) PostTaskExceptionHandling(_ *sdk.CollectionObject) {
 }
 
 func (task *QueryTask) GetResultSeed() string {
+	if task.result == nil {
+		return ""
+	}
 	return fmt.Sprintf("%d", task.result.ResultSeed)
 }
 

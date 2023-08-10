@@ -367,6 +367,9 @@ func (task *ValidateTask) PostTaskExceptionHandling(collectionObject *sdk.Collec
 }
 
 func (task *ValidateTask) GetResultSeed() string {
+	if task.result == nil {
+		return ""
+	}
 	return fmt.Sprintf("%d", task.result.ResultSeed)
 }
 

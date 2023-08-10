@@ -305,6 +305,9 @@ type SubDocOperationConfig struct {
 }
 
 func configSubDocOperationConfig(sub *SubDocOperationConfig) error {
+	if sub == nil {
+		return fmt.Errorf("unable to parse configSubDocOperationConfig")
+	}
 	if sub.Start < 0 {
 		sub.Start = 0
 		sub.End = 0
@@ -320,12 +323,22 @@ type GetSpecOptions struct {
 	IsXattr bool `json:"isXattr,omitempty" doc:"true"`
 }
 
-type LookupInSpec struct {
-	isXattr bool `json:"isXattr,omitempty" doc:"true"`
+func configGetSpecOptions(g *GetSpecOptions) error {
+	if g == nil {
+		return fmt.Errorf("unable to parse configGetSpecOptions")
+	}
+	return nil
 }
 
 type LookupInOptions struct {
 	Timeout int `json:"timeout,omitempty" doc:"true"`
+}
+
+func configLookupInOptions(l *LookupInOptions) error {
+	if l == nil {
+		return fmt.Errorf("unable to parse configLookupInOptions")
+	}
+	return nil
 }
 
 type InsertSpecOptions struct {
@@ -333,12 +346,33 @@ type InsertSpecOptions struct {
 	IsXattr    bool `json:"isXattr,omitempty" doc:"true"`
 }
 
+func configInsertSpecOptions(i *InsertSpecOptions) error {
+	if i == nil {
+		return fmt.Errorf("unable to parse configInsertSpecOptions")
+	}
+	return nil
+}
+
 type RemoveSpecOptions struct {
 	IsXattr bool `json:"isXattr,omitempty" doc:"true"`
 }
 
+func configRemoveSpecOptions(r *RemoveSpecOptions) error {
+	if r == nil {
+		return fmt.Errorf("unable to parse configRemoveSpecOptions")
+	}
+	return nil
+}
+
 type ReplaceSpecOptions struct {
 	IsXattr bool `json:"isXattr,omitempty" doc:"true"`
+}
+
+func configReplaceSpecOptions(r *ReplaceSpecOptions) error {
+	if r == nil {
+		return fmt.Errorf("unable to parse configReplaceSpecOptions")
+	}
+	return nil
 }
 
 type MutateInOptions struct {
@@ -349,6 +383,13 @@ type MutateInOptions struct {
 	StoreSemantic  int    `json:"storeSemantic,omitempty" doc:"true"`
 	Timeout        int    `json:"timeout,omitempty" doc:"true"`
 	PreserveExpiry bool   `json:"preserveExpiry,omitempty" doc:"true"`
+}
+
+func configMutateInOptions(m *MutateInOptions) error {
+	if m == nil {
+		return fmt.Errorf("unable to parse configMutateInOptions")
+	}
+	return nil
 }
 
 func getStoreSemantic(storeSemantic int) gocb.StoreSemantics {
