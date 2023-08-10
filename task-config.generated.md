@@ -18,6 +18,7 @@ configuration that is also available on a per-task basis:
  * [/single-replace](#single-replace)
  * [/single-touch](#single-touch)
  * [/single-upsert](#single-upsert)
+ * [/sub-doc-bulk-insert](#sub-doc-bulk-insert)
  * [/validate](#validate)
 
 ---
@@ -262,6 +263,24 @@ Description : Single insert task updates key value in Couchbase.
 | `OperationConfig` | `ptr` | `json:singleOperationConfig`  |
 
 ---
+#### /sub-doc-bulk-insert
+
+ REST : POST
+
+Description :  SubDocInsert inserts a Sub-Document
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `SubDocOperationConfig` | `ptr` | `json:subDocOperationConfig,omitempty`  |
+| `InsertSpecOptions` | `ptr` | `json:insertSpecOptions,omitempty`  |
+| `MutateInOptions` | `ptr` | `json:mutateInOptions,omitempty`  |
+
+---
 #### /validate
 
  REST : POST
@@ -285,7 +304,9 @@ Description : Validates every document in the cluster's bucket
  * [compressionConfig](#compressionconfig)
  * [exceptions](#exceptions)
  * [insertOptions](#insertoptions)
+ * [insertSpecOptions](#insertspecoptions)
  * [keyValue](#keyvalue)
+ * [mutateInOptions](#mutateinoptions)
  * [operationConfig](#operationconfig)
  * [queryOperationConfig](#queryoperationconfig)
  * [removeOptions](#removeoptions)
@@ -293,6 +314,7 @@ Description : Validates every document in the cluster's bucket
  * [retriedError](#retriederror)
  * [singleOperationConfig](#singleoperationconfig)
  * [singleResult](#singleresult)
+ * [subDocOperationConfig](#subdocoperationconfig)
  * [timeoutsConfig](#timeoutsconfig)
 
 ---
@@ -336,12 +358,27 @@ Description : Validates every document in the cluster's bucket
 | `ReplicateTo` | `uint` | `json:replicateTo,omitempty`  |
 | `Durability` | `string` | `json:durability,omitempty`  |
 | `Timeout` | `int` | `json:timeout,omitempty`  |
+#### insertSpecOptions
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `CreatePath` | `bool` | `json:createPath,omitempty`  |
+| `IsXattr` | `bool` | `json:isXattr,omitempty`  |
 #### keyValue
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
 | `Key` | `string` | `json:key`  |
 | `Doc` | `interface` | `json:value,omitempty`  |
+#### mutateInOptions
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `ReplicateTo` | `uint` | `json:replicateTo,omitempty`  |
+| `Durability` | `string` | `json:durability,omitempty`  |
+| `StoreSemantic` | `int` | `json:storeSemantic,omitempty`  |
+| `Timeout` | `int` | `json:timeout,omitempty`  |
+| `PreserveExpiry` | `bool` | `json:preserveExpiry,omitempty`  |
 #### operationConfig
 
 | Name | Type | JSON Tag |
@@ -406,6 +443,13 @@ Description : Validates every document in the cluster's bucket
 | `ErrorString` | `string` | `json:errorString`  |
 | `Status` | `bool` | `json:status`  |
 | `Cas` | `uint64` | `json:cas`  |
+#### subDocOperationConfig
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `Start` | `int64` | `json:start`  |
+| `End` | `int64` | `json:end`  |
+| `Exceptions` | `struct` | `json:exceptions,omitempty`  |
 #### timeoutsConfig
 
 | Name | Type | JSON Tag |

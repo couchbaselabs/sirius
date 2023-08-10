@@ -30,6 +30,11 @@ const (
 	CreateIndex             string = "createIndex"
 	BuildIndex              string = "buildIndex"
 	RetryExceptionOperation string = "retryException"
+	SubDocInsertOperation   string = "subDocInsert"
+	SubDocDeleteOperation   string = "subDocDelete"
+	SubDocUpsertOperation   string = "subDocUpsert"
+	SubDocReadOperation     string = "subDocRead"
+	SubDocReplaceOperation  string = "subDocReplace"
 )
 
 const (
@@ -41,6 +46,7 @@ const (
 	DefaultBucket                             string = "default"
 	DefaultUser                               string = "Administrator"
 	DefaultPassword                           string = "password"
+	StoreSemanticsReplace                     string = "store"
 )
 
 // getDurability returns gocb.DurabilityLevel required for Doc loading operation
@@ -290,4 +296,64 @@ func getExceptions(result *task_result.TaskResult, RetryExceptions []string) []s
 		exceptionList = RetryExceptions
 	}
 	return exceptionList
+}
+
+type SubDocOperationConfig struct {
+	Start      int64      `json:"start" doc:"true"`
+	End        int64      `json:"end" doc:"true"`
+	Exceptions Exceptions `json:"exceptions,omitempty" doc:"true"`
+}
+
+func configSubDocOperationConfig(sub *SubDocOperationConfig) error {
+	if sub.Start < 0 {
+		sub.Start = 0
+		sub.End = 0
+	}
+	if sub.Start > sub.End {
+		sub.End = sub.Start
+		return fmt.Errorf("operation start to end range is malformed")
+	}
+	return nil
+}
+
+type GetSpecOptions struct {
+	IsXattr bool `json:"isXattr,omitempty" doc:"true"`
+}
+
+type LookupInSpec struct {
+	isXattr bool `json:"isXattr,omitempty" doc:"true"`
+}
+
+type LookupInOptions struct {
+	Timeout int `json:"timeout,omitempty" doc:"true"`
+}
+
+type InsertSpecOptions struct {
+	CreatePath bool `json:"createPath,omitempty" doc:"true"`
+	IsXattr    bool `json:"isXattr,omitempty" doc:"true"`
+}
+
+type RemoveSpecOptions struct {
+	IsXattr bool `json:"isXattr,omitempty" doc:"true"`
+}
+
+type ReplaceSpecOptions struct {
+	IsXattr bool `json:"isXattr,omitempty" doc:"true"`
+}
+
+type MutateInOptions struct {
+	Expiry         int    `json:"expiry,omitempty" doc"true"`
+	PersistTo      uint   `json:"persistTo,omitempty" doc"true"`
+	ReplicateTo    uint   `json:"replicateTo,omitempty" doc:"true"`
+	Durability     string `json:"durability,omitempty" doc:"true"`
+	StoreSemantic  int    `json:"storeSemantic,omitempty" doc:"true"`
+	Timeout        int    `json:"timeout,omitempty" doc:"true"`
+	PreserveExpiry bool   `json:"preserveExpiry,omitempty" doc:"true"`
+}
+
+func getStoreSemantic(storeSemantic int) gocb.StoreSemantics {
+	if storeSemantic > 3 {
+		return gocb.StoreSemanticsUpsert
+	}
+	return gocb.StoreSemantics(storeSemantic)
 }

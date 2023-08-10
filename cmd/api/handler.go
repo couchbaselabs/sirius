@@ -537,3 +537,40 @@ func (app *Config) RetryExceptionTask(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = app.writeJSON(w, http.StatusOK, resPayload)
 }
+
+// SubDocInsertTask is used to bulk loading documents into buckets
+func (app *Config) SubDocInsertTask(w http.ResponseWriter, r *http.Request) {
+	task := &tasks.SubDocInsert{}
+	if err := app.readJSON(w, r, task); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	log.Print(task, tasks.SubDocInsertOperation)
+	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SubDocInsertOperation, task)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	resultSeed, err := task.Config(req, false)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	if err := app.taskManager.AddTask(task); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+	}
+	respPayload := tasks.TaskResponse{
+		Seed: fmt.Sprintf("%d", resultSeed),
+	}
+	resPayload := jsonResponse{
+		Error:   false,
+		Message: "Successfully started requested doc loading",
+		Data:    respPayload,
+	}
+	_ = app.writeJSON(w, http.StatusOK, resPayload)
+}

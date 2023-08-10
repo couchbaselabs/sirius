@@ -51,6 +51,7 @@ type Person struct {
 	MaritalStatus string    `json:"maritalStatus,omitempty"`
 	Hobbies       []string  `json:"hobbies,omitempty"`
 	Attributes    Attribute `json:"attributes,omitempty"`
+	Mutated       int       `json:"mutated,omitempty"`
 	Padding       string    `json:"payload"`
 }
 
@@ -82,6 +83,7 @@ func (p *Person) GenerateDocument(fake *faker.Faker, documentSize int) (interfac
 			},
 			BodyType: BodyType[fake.IntBetween(1, len(BodyType)-1)],
 		},
+		Mutated: 0,
 	}
 	personDocument, err := json.Marshal(*person)
 	if err != nil {
@@ -178,4 +180,15 @@ func (p *Person) Compare(document1 interface{}, document2 interface{}) (bool, er
 		return false, fmt.Errorf("unable to decode second document to person template")
 	}
 	return reflect.DeepEqual(p1, p2), nil
+}
+
+func (p *Person) GenerateSubPathAndValue(fake *faker.Faker) map[string]interface{} {
+	return map[string]interface{}{
+		"fullName":                fake.Person().FirstName() + " " + fake.Person().LastName(),
+		"sex":                     fake.Person().Gender(),
+		"contact.Phone":           fake.Person().Contact().Phone,
+		"contact.email":           fake.Person().Contact().Email,
+		"attributes.fashionColor": fake.Color().ColorName(),
+		"address.buildingNumber":  fake.Address().BuildingNumber(),
+	}
 }
