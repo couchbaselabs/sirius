@@ -464,6 +464,8 @@ Description : Validates every document in the cluster's bucket
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
+| `Expiry` | `int` | `json:expiry,omitempty`  |
+| `PersistTo` | `uint` | `json:persistTo,omitempty`  |
 | `ReplicateTo` | `uint` | `json:replicateTo,omitempty`  |
 | `Durability` | `string` | `json:durability,omitempty`  |
 | `StoreSemantic` | `int` | `json:storeSemantic,omitempty`  |

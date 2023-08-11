@@ -200,7 +200,7 @@ func replaceSubDocuments(task *SubDocReplace, collectionObject *sdk.CollectionOb
 
 				if !task.ReplaceSpecOptions.IsXattr {
 					iOps = append(iOps, gocb.IncrementSpec(template.MutatedPath,
-						template.MutateFieldIncrement, &gocb.CounterSpecOptions{
+						int64(template.MutateFieldIncrement), &gocb.CounterSpecOptions{
 							CreatePath: false,
 							IsXattr:    false,
 						}))
@@ -300,7 +300,7 @@ func (task *SubDocReplace) PostTaskExceptionHandling(collectionObject *sdk.Colle
 
 						if !task.ReplaceSpecOptions.IsXattr {
 							iOps = append(iOps, gocb.IncrementSpec(template.MutatedPath,
-								template.MutateFieldIncrement, &gocb.CounterSpecOptions{
+								int64(template.MutateFieldIncrement), &gocb.CounterSpecOptions{
 									CreatePath: false,
 									IsXattr:    false,
 								}))

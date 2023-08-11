@@ -204,7 +204,7 @@ func upsertSubDocuments(task *SubDocUpsert, collectionObject *sdk.CollectionObje
 
 				if !task.InsertSpecOptions.IsXattr {
 					iOps = append(iOps, gocb.IncrementSpec(template.MutatedPath,
-						template.MutateFieldIncrement, &gocb.CounterSpecOptions{
+						int64(template.MutateFieldIncrement), &gocb.CounterSpecOptions{
 							CreatePath: false,
 							IsXattr:    false,
 						}))
@@ -287,7 +287,8 @@ func (task *SubDocUpsert) PostTaskExceptionHandling(collectionObject *sdk.Collec
 					fake := faker.NewWithSeed(rand.NewSource(int64(key)))
 
 					task.gen.Template.GenerateSubPathAndValue(&fake)
-					task.req.retracePreviousSubDocMutations(task.CollectionIdentifier(), offset, *task.gen, &fake, task.ResultSeed)
+					_ = task.req.retracePreviousSubDocMutations(task.CollectionIdentifier(), offset, *task.gen, &fake,
+						task.ResultSeed)
 
 					retry := 0
 					var err error
@@ -305,7 +306,7 @@ func (task *SubDocUpsert) PostTaskExceptionHandling(collectionObject *sdk.Collec
 
 						if !task.InsertSpecOptions.IsXattr {
 							iOps = append(iOps, gocb.IncrementSpec(template.MutatedPath,
-								template.MutateFieldIncrement, &gocb.CounterSpecOptions{
+								int64(template.MutateFieldIncrement), &gocb.CounterSpecOptions{
 									CreatePath: true,
 									IsXattr:    false,
 								}))

@@ -1,8 +1,6 @@
 package tasks
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
@@ -152,11 +150,6 @@ func getDocuments(task *ReadTask, collectionObject *sdk.CollectionObject) {
 		skip[offset] = struct{}{}
 	}
 
-	insertErrorOffset, err2 := task.req.retracePreviousFailedInsertions(task.CollectionIdentifier(), task.ResultSeed)
-	if err2 != nil {
-		return
-	}
-
 	group := errgroup.Group{}
 	for i := task.OperationConfig.Start; i < task.OperationConfig.End; i++ {
 		routineLimiter <- struct{}{}
@@ -170,11 +163,6 @@ func getDocuments(task *ReadTask, collectionObject *sdk.CollectionObject) {
 				return fmt.Errorf("alreday performed operation on " + docId)
 			}
 
-			if _, ok := insertErrorOffset[offset]; ok {
-				<-routineLimiter
-				return fmt.Errorf("error in insertion of docID on " + docId)
-			}
-
 			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
 			originalDocument, err := task.gen.Template.GenerateDocument(&fake, task.MetaData.DocSize)
 			if err != nil {
@@ -183,54 +171,18 @@ func getDocuments(task *ReadTask, collectionObject *sdk.CollectionObject) {
 				<-routineLimiter
 				return err
 			}
-			originalDocument, err = task.req.retracePreviousMutations(task.CollectionIdentifier(), offset,
-				originalDocument, *task.gen,
-				&fake,
-				task.ResultSeed)
-			if err != nil {
-				task.result.IncrementFailure(docId, originalDocument, err, false, 0, offset)
-				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
-				<-routineLimiter
-				return err
-			}
-
-			var resultFromHost map[string]any
-			documentFromHost := template.InitialiseTemplate(task.MetaData.TemplateName)
-
-			result := &gocb.GetResult{}
 
 			for retry := 0; retry <= int(math.Max(float64(1), float64(task.OperationConfig.Exceptions.
 				RetryAttempts))); retry++ {
-				result, err = collectionObject.Collection.Get(docId, nil)
+				_, err = collectionObject.Collection.Get(docId, nil)
 				if err == nil {
 					break
 				}
 			}
 
 			if err != nil {
-				task.result.IncrementFailure(docId, originalDocument, err, false, 0, offset)
-				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
-				<-routineLimiter
-				return err
-			}
-			if err := result.Content(&resultFromHost); err != nil {
-				task.result.IncrementFailure(docId, originalDocument, err, false, 0, offset)
-				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
-				<-routineLimiter
-				return err
-			}
-			resultBytes, err := json.Marshal(resultFromHost)
-			err = json.Unmarshal(resultBytes, &documentFromHost)
-			if err != nil {
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 				task.result.IncrementFailure(docId, originalDocument, err, false, 0, offset)
-				<-routineLimiter
-				return err
-			}
-
-			ok, err := task.gen.Template.Compare(documentFromHost, originalDocument)
-			if err != nil || !ok {
-				task.result.IncrementFailure(docId, documentFromHost, errors.New("integrity lost"), false, 0, offset)
 				<-routineLimiter
 				return err
 			}
@@ -286,23 +238,10 @@ func (task *ReadTask) PostTaskExceptionHandling(collectionObject *sdk.Collection
 					}
 					key := task.State.SeedStart + offset
 					docId := task.gen.BuildKey(key)
-					fake := faker.NewWithSeed(rand.NewSource(int64(key)))
-
-					originalDoc, err := task.gen.Template.GenerateDocument(&fake, task.MetaData.DocSize)
-					if err != nil {
-						<-routineLimiter
-						return err
-					}
-					originalDoc, err = task.req.retracePreviousMutations(task.CollectionIdentifier(), offset, originalDoc, *task.gen, &fake,
-						task.ResultSeed)
-					if err != nil {
-						task.result.IncrementFailure(docId, originalDoc, err, false, 0, offset)
-						<-routineLimiter
-						return err
-					}
 
 					retry := 0
 					result := &gocb.GetResult{}
+					var err error
 					for retry = 0; retry <= task.OperationConfig.Exceptions.RetryAttempts; retry++ {
 						result, err = collectionObject.Collection.Get(docId, nil)
 
@@ -312,28 +251,9 @@ func (task *ReadTask) PostTaskExceptionHandling(collectionObject *sdk.Collection
 					}
 
 					if err == nil {
-						var resultFromHost map[string]any
-						documentFromHost := template.InitialiseTemplate(task.MetaData.TemplateName)
-						if err := result.Content(&resultFromHost); err != nil {
-							<-routineLimiter
-							return err
-						}
-						resultBytes, err := json.Marshal(resultFromHost)
-						err = json.Unmarshal(resultBytes, &documentFromHost)
-						if err != nil {
-							<-routineLimiter
-							return err
-						}
-
-						ok, err := task.gen.Template.Compare(documentFromHost, originalDoc)
-						if err != nil || !ok {
-							<-routineLimiter
-							return err
-						} else {
-							m[offset] = RetriedResult{
-								Status: true,
-								CAS:    uint64(result.Cas()),
-							}
+						m[offset] = RetriedResult{
+							Status: true,
+							CAS:    uint64(result.Cas()),
 						}
 					}
 

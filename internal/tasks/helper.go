@@ -6,6 +6,8 @@ import (
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
 	"github.com/couchbaselabs/sirius/internal/task_result"
 	"golang.org/x/exp/slices"
+	"log"
+	"reflect"
 )
 
 const (
@@ -376,8 +378,8 @@ func configReplaceSpecOptions(r *ReplaceSpecOptions) error {
 }
 
 type MutateInOptions struct {
-	Expiry         int    `json:"expiry,omitempty" doc"true"`
-	PersistTo      uint   `json:"persistTo,omitempty" doc"true"`
+	Expiry         int    `json:"expiry,omitempty" doc:"true"`
+	PersistTo      uint   `json:"persistTo,omitempty" doc:"true"`
 	ReplicateTo    uint   `json:"replicateTo,omitempty" doc:"true"`
 	Durability     string `json:"durability,omitempty" doc:"true"`
 	StoreSemantic  int    `json:"storeSemantic,omitempty" doc:"true"`
@@ -397,4 +399,42 @@ func getStoreSemantic(storeSemantic int) gocb.StoreSemantics {
 		return gocb.StoreSemanticsUpsert
 	}
 	return gocb.StoreSemantics(storeSemantic)
+}
+
+func compareDocumentsIsSame(host map[string]any, document1 map[string]any, document2 map[string]any) bool {
+
+	hostMap := make(map[string]any)
+	buildKeyAndValues(host, hostMap, "")
+
+	document1Map := make(map[string]any)
+	buildKeyAndValues(document1, document1Map, "")
+
+	document2Map := make(map[string]any)
+	buildKeyAndValues(document2, document2Map, "")
+
+	for key, value := range hostMap {
+		if v1, ok := document1Map[key]; ok {
+			if reflect.DeepEqual(value, v1) == false {
+				return false
+			}
+		} else if v2, ok := document2Map[key]; ok {
+			if reflect.DeepEqual(v2, value) == false {
+				return false
+			}
+		} else {
+			log.Println("unknown field", key)
+		}
+	}
+
+	return true
+}
+
+func buildKeyAndValues(doc map[string]any, result map[string]any, startString string) {
+	for key, value := range doc {
+		if subDoc, ok := value.(map[string]any); ok {
+			buildKeyAndValues(subDoc, result, key+".")
+		} else {
+			result[startString+key] = value
+		}
+	}
 }

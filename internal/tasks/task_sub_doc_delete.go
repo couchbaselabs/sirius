@@ -196,7 +196,7 @@ func deleteSubDocuments(task *SubDocDelete, collectionObject *sdk.CollectionObje
 
 				if !task.RemoveSpecOptions.IsXattr {
 					iOps = append(iOps, gocb.IncrementSpec(template.MutatedPath,
-						template.MutateFieldIncrement, &gocb.CounterSpecOptions{
+						int64(template.MutateFieldIncrement), &gocb.CounterSpecOptions{
 							CreatePath: false,
 							IsXattr:    false,
 						}))
@@ -294,7 +294,7 @@ func (task *SubDocDelete) PostTaskExceptionHandling(collectionObject *sdk.Collec
 
 						if !task.RemoveSpecOptions.IsXattr {
 							iOps = append(iOps, gocb.IncrementSpec(template.MutatedPath,
-								template.MutateFieldIncrement, &gocb.CounterSpecOptions{
+								int64(template.MutateFieldIncrement), &gocb.CounterSpecOptions{
 									CreatePath: false,
 									IsXattr:    false,
 								}))

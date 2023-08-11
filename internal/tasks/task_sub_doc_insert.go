@@ -201,7 +201,7 @@ func insertSubDocuments(task *SubDocInsert, collectionObject *sdk.CollectionObje
 
 				if !task.InsertSpecOptions.IsXattr {
 					iOps = append(iOps, gocb.IncrementSpec(template.MutatedPath,
-						template.MutateFieldIncrement, &gocb.CounterSpecOptions{
+						int64(template.MutateFieldIncrement), &gocb.CounterSpecOptions{
 							CreatePath: true,
 							IsXattr:    false,
 						}))
@@ -304,7 +304,7 @@ func (task *SubDocInsert) PostTaskExceptionHandling(collectionObject *sdk.Collec
 
 						if !task.InsertSpecOptions.IsXattr {
 							iOps = append(iOps, gocb.IncrementSpec(template.MutatedPath,
-								template.MutateFieldIncrement, &gocb.CounterSpecOptions{
+								int64(template.MutateFieldIncrement), &gocb.CounterSpecOptions{
 									CreatePath: true,
 									IsXattr:    false,
 								}))

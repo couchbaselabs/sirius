@@ -6,9 +6,9 @@ import (
 )
 
 const (
-	MutatedPath             string = "mutated"
-	MutatedPathDefaultValue int    = 0
-	MutateFieldIncrement    int64  = 1
+	MutatedPath             string  = "mutated"
+	MutatedPathDefaultValue float64 = 0
+	MutateFieldIncrement    float64 = 1
 )
 
 type Template interface {
