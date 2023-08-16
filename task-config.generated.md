@@ -17,6 +17,7 @@ configuration that is also available on a per-task basis:
  * [/single-read](#single-read)
  * [/single-replace](#single-replace)
  * [/single-sub-doc-bulk-insert](#single-sub-doc-bulk-insert)
+ * [/single-sub-doc-bulk-upsert](#single-sub-doc-bulk-upsert)
  * [/single-touch](#single-touch)
  * [/single-upsert](#single-upsert)
  * [/sub-doc-bulk-delete](#sub-doc-bulk-delete)
@@ -237,6 +238,24 @@ Description : Single replace task a document in the collection in Couchbase.
  REST : POST
 
 Description : SingleSingleSubDocInsert inserts a Sub-Document as per user's input [No Random data]
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `SingleSubDocOperationConfig` | `ptr` | `json:singleSubDocOperationConfig`  |
+| `InsertSpecOptions` | `ptr` | `json:insertSpecOptions`  |
+| `MutateInOptions` | `ptr` | `json:mutateInOptions`  |
+
+---
+#### /single-sub-doc-bulk-upsert
+
+ REST : POST
+
+Description : SingleSingleSubDocUpsert inserts a Sub-Document as per user's input [No Random data]
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |

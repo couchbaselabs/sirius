@@ -47,6 +47,7 @@ func (app *Config) routes() http.Handler {
 	mux.Post("/sub-doc-bulk-read", app.SubDocReadTask)
 	mux.Post("/sub-doc-bulk-replace", app.SubDocReplaceTask)
 	mux.Post("/single-sub-doc-bulk-insert", app.SingleSubDocInsert)
+	mux.Post("/single-sub-doc-bulk-upsert", app.SingleSubDocUpsert)
 
 	return mux
 }
