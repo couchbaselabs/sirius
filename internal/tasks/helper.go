@@ -11,32 +11,33 @@ import (
 )
 
 const (
-	MaxConcurrentRoutines          = 45
-	DefaultIdentifierToken         = "default"
-	MaxQueryRuntime         int    = 86400
-	DefaultQueryRunTime     int    = 100
-	WatchIndexDuration      int    = 120
-	InsertOperation         string = "insert"
-	QueryOperation          string = "query"
-	DeleteOperation         string = "delete"
-	UpsertOperation         string = "upsert"
-	ReadOperation           string = "read"
-	ValidateOperation       string = "validate"
-	SingleInsertOperation   string = "singleInsert"
-	SingleDeleteOperation   string = "singleDelete"
-	SingleUpsertOperation   string = "singleUpsert"
-	SingleReadOperation     string = "singleRead"
-	SingleTouchOperation    string = "singleTouch"
-	SingleReplaceOperation  string = "singleReplace"
-	CreatePrimaryIndex      string = "createPrimaryIndex"
-	CreateIndex             string = "createIndex"
-	BuildIndex              string = "buildIndex"
-	RetryExceptionOperation string = "retryException"
-	SubDocInsertOperation   string = "subDocInsert"
-	SubDocDeleteOperation   string = "subDocDelete"
-	SubDocUpsertOperation   string = "subDocUpsert"
-	SubDocReadOperation     string = "subDocRead"
-	SubDocReplaceOperation  string = "subDocReplace"
+	MaxConcurrentRoutines              = 45
+	DefaultIdentifierToken             = "default"
+	MaxQueryRuntime             int    = 86400
+	DefaultQueryRunTime         int    = 100
+	WatchIndexDuration          int    = 120
+	InsertOperation             string = "insert"
+	QueryOperation              string = "query"
+	DeleteOperation             string = "delete"
+	UpsertOperation             string = "upsert"
+	ReadOperation               string = "read"
+	ValidateOperation           string = "validate"
+	SingleInsertOperation       string = "singleInsert"
+	SingleDeleteOperation       string = "singleDelete"
+	SingleUpsertOperation       string = "singleUpsert"
+	SingleReadOperation         string = "singleRead"
+	SingleTouchOperation        string = "singleTouch"
+	SingleReplaceOperation      string = "singleReplace"
+	CreatePrimaryIndex          string = "createPrimaryIndex"
+	CreateIndex                 string = "createIndex"
+	BuildIndex                  string = "buildIndex"
+	RetryExceptionOperation     string = "retryException"
+	SubDocInsertOperation       string = "subDocInsert"
+	SubDocDeleteOperation       string = "subDocDelete"
+	SubDocUpsertOperation       string = "subDocUpsert"
+	SubDocReadOperation         string = "subDocRead"
+	SubDocReplaceOperation      string = "subDocReplace"
+	SingleSubDocInsertOperation string = "singleSubDocInsert"
 )
 
 const (
@@ -437,4 +438,21 @@ func buildKeyAndValues(doc map[string]any, result map[string]any, startString st
 			result[startString+key] = value
 		}
 	}
+}
+
+type PathValue struct {
+	Key   string `json:"key" doc:"true"`
+	Path  string `json:"path" doc:"true"`
+	Value any    `json:"value,omitempty" doc:"true"`
+}
+
+type SingleSubDocOperationConfig struct {
+	PathValue []PathValue `json:"pathValue" doc:"true"`
+}
+
+func configSingleSubDocOperationConfig(s *SingleSubDocOperationConfig) error {
+	if s == nil {
+		return fmt.Errorf("unable to parse SingleSubDocOperationConfig")
+	}
+	return nil
 }

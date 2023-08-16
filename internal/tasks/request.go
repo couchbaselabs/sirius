@@ -122,7 +122,7 @@ func (r *Request) retracePreviousSubDocMutations(collectionIdentifier string, of
 	return result
 }
 
-// countMutation return the number of mutation happened on a offset
+// countMutation return the number of mutation happened on an offset
 func (r *Request) countMutation(collectionIdentifier string, offset int64, resultSeed int64) int {
 	defer r.lock.Unlock()
 	r.lock.Lock()

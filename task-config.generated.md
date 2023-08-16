@@ -16,6 +16,7 @@ configuration that is also available on a per-task basis:
  * [/single-delete](#single-delete)
  * [/single-read](#single-read)
  * [/single-replace](#single-replace)
+ * [/single-sub-doc-bulk-insert](#single-sub-doc-bulk-insert)
  * [/single-touch](#single-touch)
  * [/single-upsert](#single-upsert)
  * [/sub-doc-bulk-delete](#sub-doc-bulk-delete)
@@ -231,6 +232,24 @@ Description : Single replace task a document in the collection in Couchbase.
 | `OperationConfig` | `ptr` | `json:singleOperationConfig`  |
 
 ---
+#### /single-sub-doc-bulk-insert
+
+ REST : POST
+
+Description : SingleSingleSubDocInsert inserts a Sub-Document as per user's input [No Random data]
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `SingleSubDocOperationConfig` | `ptr` | `json:singleSubDocOperationConfig`  |
+| `InsertSpecOptions` | `ptr` | `json:insertSpecOptions`  |
+| `MutateInOptions` | `ptr` | `json:mutateInOptions`  |
+
+---
 #### /single-touch
 
  REST : POST
@@ -386,6 +405,7 @@ Description : Validates every document in the cluster's bucket
  * [lookupInOptions](#lookupinoptions)
  * [mutateInOptions](#mutateinoptions)
  * [operationConfig](#operationconfig)
+ * [pathValue](#pathvalue)
  * [queryOperationConfig](#queryoperationconfig)
  * [removeOptions](#removeoptions)
  * [removeSpecOptions](#removespecoptions)
@@ -394,6 +414,7 @@ Description : Validates every document in the cluster's bucket
  * [retriedError](#retriederror)
  * [singleOperationConfig](#singleoperationconfig)
  * [singleResult](#singleresult)
+ * [singleSubDocOperationConfig](#singlesubdocoperationconfig)
  * [subDocOperationConfig](#subdocoperationconfig)
  * [timeoutsConfig](#timeoutsconfig)
 
@@ -487,6 +508,13 @@ Description : Validates every document in the cluster's bucket
 | `End` | `int64` | `json:end`  |
 | `FieldsToChange` | `slice` | `json:fieldsToChange`  |
 | `Exceptions` | `struct` | `json:exceptions,omitempty`  |
+#### pathValue
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `Key` | `string` | `json:key`  |
+| `Path` | `string` | `json:path`  |
+| `Value` | `interface` | `json:value,omitempty`  |
 #### queryOperationConfig
 
 | Name | Type | JSON Tag |
@@ -545,6 +573,11 @@ Description : Validates every document in the cluster's bucket
 | `ErrorString` | `string` | `json:errorString`  |
 | `Status` | `bool` | `json:status`  |
 | `Cas` | `uint64` | `json:cas`  |
+#### singleSubDocOperationConfig
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `PathValue` | `slice` | `json:pathValue`  |
 #### subDocOperationConfig
 
 | Name | Type | JSON Tag |
