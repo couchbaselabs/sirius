@@ -41,6 +41,7 @@ const (
 	SingleSubDocUpsertOperation  string = "singleSubDocUpsert"
 	SingleSubDocReplaceOperation string = "singleSubDocReplace"
 	SingleSubDocDeleteOperation  string = "singleSubDocDelete"
+	SingleSubDocReadOperation    string = "singleSubDocRead"
 )
 
 const (

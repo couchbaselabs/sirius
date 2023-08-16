@@ -18,6 +18,7 @@ configuration that is also available on a per-task basis:
  * [/single-replace](#single-replace)
  * [/single-sub-doc-delete](#single-sub-doc-delete)
  * [/single-sub-doc-insert](#single-sub-doc-insert)
+ * [/single-sub-doc-read](#single-sub-doc-read)
  * [/single-sub-doc-replace](#single-sub-doc-replace)
  * [/single-sub-doc-upsert](#single-sub-doc-upsert)
  * [/single-touch](#single-touch)
@@ -269,6 +270,24 @@ Description : SingleSingleSubDocInsert inserts a Sub-Document as per user's inpu
 | `SingleSubDocOperationConfig` | `ptr` | `json:singleSubDocOperationConfig`  |
 | `InsertSpecOptions` | `ptr` | `json:insertSpecOptions`  |
 | `MutateInOptions` | `ptr` | `json:mutateInOptions`  |
+
+---
+#### /single-sub-doc-read
+
+ REST : POST
+
+Description : SingleSingleSubDocRead inserts a Sub-Document as per user's input [No Random data]
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `SingleSubDocOperationConfig` | `ptr` | `json:singleSubDocOperationConfig`  |
+| `LookupInOptions` | `ptr` | `json:lookupInOptions`  |
+| `GetSpecOptions` | `ptr` | `json:getSpecOptions`  |
 
 ---
 #### /single-sub-doc-replace
