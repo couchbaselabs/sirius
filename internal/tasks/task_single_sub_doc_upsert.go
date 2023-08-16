@@ -5,7 +5,6 @@ import (
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/sdk"
 	"github.com/couchbaselabs/sirius/internal/task_result"
-	"golang.org/x/sync/errgroup"
 	"log"
 	"time"
 )
@@ -113,8 +112,8 @@ func (task *SingleSubDocUpsert) Do() error {
 	if err1 != nil {
 		task.result.ErrorOther = err1.Error()
 		var docIds []string
-		for _, pathValue := range task.SingleSubDocOperationConfig.PathValue {
-			docIds = append(docIds, pathValue.Key)
+		for _, data := range task.SingleSubDocOperationConfig.KeyPathValue {
+			docIds = append(docIds, data.Key)
 		}
 		task.result.FailWholeSingleOperation(docIds, err1)
 		return task.tearUp()
@@ -122,60 +121,40 @@ func (task *SingleSubDocUpsert) Do() error {
 
 	singleUpsertSubDocuments(task, collectionObject)
 
-	task.result.Success = int64(len(task.SingleSubDocOperationConfig.PathValue)) - task.result.Failure
+	task.result.Success = int64(len(task.SingleSubDocOperationConfig.KeyPathValue)) - task.result.Failure
 	return task.tearUp()
 }
 
 // singleInsertSubDocuments uploads new documents in a bucket.scope.collection in a defined batch size at multiple iterations.
 func singleUpsertSubDocuments(task *SingleSubDocUpsert, collectionObject *sdk.CollectionObject) {
+	for _, data := range task.SingleSubDocOperationConfig.KeyPathValue {
 
-	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
-	dataChannel := make(chan PathValue, MaxConcurrentRoutines)
+		var iOps []gocb.MutateInSpec
 
-	group := errgroup.Group{}
+		for i := range data.PathValue {
+			iOps = append(iOps, gocb.UpsertSpec(data.PathValue[i].Path, data.PathValue[i].Value, &gocb.UpsertSpecOptions{
+				CreatePath: task.InsertSpecOptions.CreatePath,
+				IsXattr:    task.InsertSpecOptions.IsXattr,
+			}))
+		}
 
-	for _, data := range task.SingleSubDocOperationConfig.PathValue {
-
-		routineLimiter <- struct{}{}
-		dataChannel <- data
-
-		group.Go(func() error {
-			pathValue := <-dataChannel
-
-			var iOps []gocb.MutateInSpec
-
-			if !task.InsertSpecOptions.IsXattr {
-				iOps = append(iOps, gocb.UpsertSpec(pathValue.Path, pathValue.Value, &gocb.UpsertSpecOptions{
-					CreatePath: task.InsertSpecOptions.CreatePath,
-					IsXattr:    task.InsertSpecOptions.IsXattr,
-				}))
-			}
-
-			result, err := collectionObject.Collection.MutateIn(pathValue.Key, iOps, &gocb.MutateInOptions{
-				Expiry:          time.Duration(task.MutateInOptions.Expiry) * time.Second,
-				PersistTo:       task.MutateInOptions.PersistTo,
-				ReplicateTo:     task.MutateInOptions.ReplicateTo,
-				DurabilityLevel: getDurability(task.MutateInOptions.Durability),
-				StoreSemantic:   getStoreSemantic(task.MutateInOptions.StoreSemantic),
-				Timeout:         time.Duration(task.MutateInOptions.Expiry) * time.Second,
-				PreserveExpiry:  task.MutateInOptions.PreserveExpiry,
-			})
-
-			if err != nil {
-				task.result.CreateSingleErrorResult(pathValue.Key, err.Error(), false, 0)
-				<-routineLimiter
-				return err
-			}
-
-			task.result.CreateSingleErrorResult(pathValue.Key, "", true, uint64(result.Cas()))
-			<-routineLimiter
-			return nil
+		result, err := collectionObject.Collection.MutateIn(data.Key, iOps, &gocb.MutateInOptions{
+			Expiry:          time.Duration(task.MutateInOptions.Expiry) * time.Second,
+			PersistTo:       task.MutateInOptions.PersistTo,
+			ReplicateTo:     task.MutateInOptions.ReplicateTo,
+			DurabilityLevel: getDurability(task.MutateInOptions.Durability),
+			StoreSemantic:   getStoreSemantic(task.MutateInOptions.StoreSemantic),
+			Timeout:         time.Duration(task.MutateInOptions.Expiry) * time.Second,
+			PreserveExpiry:  task.MutateInOptions.PreserveExpiry,
 		})
+
+		if err != nil {
+			task.result.CreateSingleErrorResult(data.Key, err.Error(), false, 0)
+		} else {
+			task.result.CreateSingleErrorResult(data.Key, "", true, uint64(result.Cas()))
+		}
 	}
 
-	_ = group.Wait()
-	close(routineLimiter)
-	close(dataChannel)
 	task.PostTaskExceptionHandling(collectionObject)
 	log.Println("completed :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 }

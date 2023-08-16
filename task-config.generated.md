@@ -16,8 +16,9 @@ configuration that is also available on a per-task basis:
  * [/single-delete](#single-delete)
  * [/single-read](#single-read)
  * [/single-replace](#single-replace)
- * [/single-sub-doc-bulk-insert](#single-sub-doc-bulk-insert)
- * [/single-sub-doc-bulk-upsert](#single-sub-doc-bulk-upsert)
+ * [/single-sub-doc-insert](#single-sub-doc-insert)
+ * [/single-sub-doc-replace](#single-sub-doc-replace)
+ * [/single-sub-doc-upsert](#single-sub-doc-upsert)
  * [/single-touch](#single-touch)
  * [/single-upsert](#single-upsert)
  * [/sub-doc-bulk-delete](#sub-doc-bulk-delete)
@@ -233,7 +234,7 @@ Description : Single replace task a document in the collection in Couchbase.
 | `OperationConfig` | `ptr` | `json:singleOperationConfig`  |
 
 ---
-#### /single-sub-doc-bulk-insert
+#### /single-sub-doc-insert
 
  REST : POST
 
@@ -251,7 +252,25 @@ Description : SingleSingleSubDocInsert inserts a Sub-Document as per user's inpu
 | `MutateInOptions` | `ptr` | `json:mutateInOptions`  |
 
 ---
-#### /single-sub-doc-bulk-upsert
+#### /single-sub-doc-replace
+
+ REST : POST
+
+Description : SingleSingleSubDocReplace inserts a Sub-Document as per user's input [No Random data]
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `SingleSubDocOperationConfig` | `ptr` | `json:singleSubDocOperationConfig`  |
+| `ReplaceSpecOptions` | `ptr` | `json:replaceSpecOptions`  |
+| `MutateInOptions` | `ptr` | `json:mutateInOptions`  |
+
+---
+#### /single-sub-doc-upsert
 
  REST : POST
 
@@ -420,6 +439,7 @@ Description : Validates every document in the cluster's bucket
  * [getSpecOptions](#getspecoptions)
  * [insertOptions](#insertoptions)
  * [insertSpecOptions](#insertspecoptions)
+ * [keyPathValue](#keypathvalue)
  * [keyValue](#keyvalue)
  * [lookupInOptions](#lookupinoptions)
  * [mutateInOptions](#mutateinoptions)
@@ -489,6 +509,12 @@ Description : Validates every document in the cluster's bucket
 | ---- | ---- | -------- |
 | `CreatePath` | `bool` | `json:createPath,omitempty`  |
 | `IsXattr` | `bool` | `json:isXattr,omitempty`  |
+#### keyPathValue
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `Key` | `string` | `json:key`  |
+| `PathValue` | `slice` | `json:PathValue`  |
 #### keyValue
 
 | Name | Type | JSON Tag |
@@ -531,7 +557,6 @@ Description : Validates every document in the cluster's bucket
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
-| `Key` | `string` | `json:key`  |
 | `Path` | `string` | `json:path`  |
 | `Value` | `interface` | `json:value,omitempty`  |
 #### queryOperationConfig
@@ -596,7 +621,7 @@ Description : Validates every document in the cluster's bucket
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
-| `PathValue` | `slice` | `json:pathValue`  |
+| `KeyPathValue` | `slice` | `json:keyPathValue`  |
 #### subDocOperationConfig
 
 | Name | Type | JSON Tag |

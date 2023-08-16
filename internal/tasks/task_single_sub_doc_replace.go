@@ -9,14 +9,14 @@ import (
 	"time"
 )
 
-type SingleSubDocInsert struct {
+type SingleSubDocReplace struct {
 	IdentifierToken             string                       `json:"identifierToken" doc:"true"`
 	ClusterConfig               *sdk.ClusterConfig           `json:"clusterConfig" doc:"true"`
 	Bucket                      string                       `json:"bucket" doc:"true"`
 	Scope                       string                       `json:"scope,omitempty" doc:"true"`
 	Collection                  string                       `json:"collection,omitempty" doc:"true"`
 	SingleSubDocOperationConfig *SingleSubDocOperationConfig `json:"singleSubDocOperationConfig" doc:"true"`
-	InsertSpecOptions           *InsertSpecOptions           `json:"insertSpecOptions" doc:"true"`
+	ReplaceSpecOptions          *ReplaceSpecOptions          `json:"replaceSpecOptions" doc:"true"`
 	MutateInOptions             *MutateInOptions             `json:"mutateInOptions" doc:"true"`
 	Operation                   string                       `json:"operation" doc:"false"`
 	ResultSeed                  int64                        `json:"resultSeed" doc:"false"`
@@ -25,27 +25,27 @@ type SingleSubDocInsert struct {
 	req                         *Request                     `json:"-" doc:"false"`
 }
 
-func (task *SingleSubDocInsert) Describe() string {
-	return "SingleSingleSubDocInsert inserts a Sub-Document as per user's input [No Random data]"
+func (task *SingleSubDocReplace) Describe() string {
+	return "SingleSingleSubDocReplace inserts a Sub-Document as per user's input [No Random data]"
 }
 
-func (task *SingleSubDocInsert) BuildIdentifier() string {
+func (task *SingleSubDocReplace) BuildIdentifier() string {
 	if task.IdentifierToken == "" {
 		task.IdentifierToken = DefaultIdentifierToken
 	}
 	return task.IdentifierToken
 }
 
-func (task *SingleSubDocInsert) CollectionIdentifier() string {
+func (task *SingleSubDocReplace) CollectionIdentifier() string {
 	return task.IdentifierToken + task.ClusterConfig.ConnectionString + task.Bucket + task.Scope + task.Collection
 }
 
-func (task *SingleSubDocInsert) CheckIfPending() bool {
+func (task *SingleSubDocReplace) CheckIfPending() bool {
 	return task.TaskPending
 }
 
 // Config configures  the insert task
-func (task *SingleSubDocInsert) Config(req *Request, reRun bool) (int64, error) {
+func (task *SingleSubDocReplace) Config(req *Request, reRun bool) (int64, error) {
 	task.TaskPending = true
 	task.req = req
 
@@ -62,7 +62,7 @@ func (task *SingleSubDocInsert) Config(req *Request, reRun bool) (int64, error) 
 
 	if !reRun {
 		task.ResultSeed = int64(time.Now().UnixNano())
-		task.Operation = SingleSubDocInsertOperation
+		task.Operation = SingleSubDocReplaceOperation
 
 		if task.Bucket == "" {
 			task.Bucket = DefaultBucket
@@ -79,7 +79,7 @@ func (task *SingleSubDocInsert) Config(req *Request, reRun bool) (int64, error) 
 			return 0, err
 		}
 
-		if err := configInsertSpecOptions(task.InsertSpecOptions); err != nil {
+		if err := configReplaceSpecOptions(task.ReplaceSpecOptions); err != nil {
 			task.TaskPending = false
 			return 0, err
 		}
@@ -94,16 +94,15 @@ func (task *SingleSubDocInsert) Config(req *Request, reRun bool) (int64, error) 
 	return task.ResultSeed, nil
 }
 
-func (task *SingleSubDocInsert) tearUp() error {
+func (task *SingleSubDocReplace) tearUp() error {
 	if err := task.result.SaveResultIntoFile(); err != nil {
 		log.Println("not able to save result into ", task.ResultSeed, task.Operation)
 	}
-	task.result = nil
 	task.TaskPending = false
 	return task.req.SaveRequestIntoFile()
 }
 
-func (task *SingleSubDocInsert) Do() error {
+func (task *SingleSubDocReplace) Do() error {
 
 	task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
@@ -119,23 +118,22 @@ func (task *SingleSubDocInsert) Do() error {
 		return task.tearUp()
 	}
 
-	singleInsertSubDocuments(task, collectionObject)
+	singleReplaceSubDocuments(task, collectionObject)
 
 	task.result.Success = int64(len(task.SingleSubDocOperationConfig.KeyPathValue)) - task.result.Failure
 	return task.tearUp()
 }
 
-// singleInsertSubDocuments uploads new documents in a bucket.scope.collection in a defined batch size at multiple iterations.
-func singleInsertSubDocuments(task *SingleSubDocInsert, collectionObject *sdk.CollectionObject) {
+// singleReplaceSubDocuments uploads new documents in a bucket.scope.collection in a defined batch size at multiple iterations.
+func singleReplaceSubDocuments(task *SingleSubDocReplace, collectionObject *sdk.CollectionObject) {
 
 	for _, data := range task.SingleSubDocOperationConfig.KeyPathValue {
 
 		var iOps []gocb.MutateInSpec
 
 		for i := range data.PathValue {
-			iOps = append(iOps, gocb.InsertSpec(data.PathValue[i].Path, data.PathValue[i].Value, &gocb.InsertSpecOptions{
-				CreatePath: task.InsertSpecOptions.CreatePath,
-				IsXattr:    task.InsertSpecOptions.IsXattr,
+			iOps = append(iOps, gocb.ReplaceSpec(data.PathValue[i].Path, data.PathValue[i].Value, &gocb.ReplaceSpecOptions{
+				IsXattr: task.ReplaceSpecOptions.IsXattr,
 			}))
 		}
 
@@ -154,27 +152,26 @@ func singleInsertSubDocuments(task *SingleSubDocInsert, collectionObject *sdk.Co
 		} else {
 			task.result.CreateSingleErrorResult(data.Key, "", true, uint64(result.Cas()))
 		}
-
 	}
 
 	task.PostTaskExceptionHandling(collectionObject)
 	log.Println("completed :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 }
 
-func (task *SingleSubDocInsert) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
+func (task *SingleSubDocReplace) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
 }
 
-func (task *SingleSubDocInsert) GetResultSeed() string {
+func (task *SingleSubDocReplace) GetResultSeed() string {
 	if task.result == nil {
 		return ""
 	}
 	return fmt.Sprintf("%d", task.result.ResultSeed)
 }
 
-func (task *SingleSubDocInsert) GetCollectionObject() (*sdk.CollectionObject, error) {
+func (task *SingleSubDocReplace) GetCollectionObject() (*sdk.CollectionObject, error) {
 	return task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
 		task.Collection)
 }
 
-func (task *SingleSubDocInsert) SetException(exceptions Exceptions) {
+func (task *SingleSubDocReplace) SetException(exceptions Exceptions) {
 }

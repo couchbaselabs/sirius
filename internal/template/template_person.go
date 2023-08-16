@@ -51,7 +51,7 @@ type Person struct {
 	MaritalStatus string    `json:"maritalStatus,omitempty"`
 	Hobbies       []string  `json:"hobbies,omitempty"`
 	Attributes    Attribute `json:"attributes,omitempty"`
-	Mutated       float64   `json:"mutated,omitempty"`
+	Mutated       float64   `json:"mutated"`
 	Padding       string    `json:"payload"`
 }
 
