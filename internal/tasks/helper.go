@@ -6,6 +6,8 @@ import (
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
 	"github.com/couchbaselabs/sirius/internal/task_result"
 	"golang.org/x/exp/slices"
+	"log"
+	"reflect"
 )
 
 const (
@@ -30,6 +32,11 @@ const (
 	CreateIndex             string = "createIndex"
 	BuildIndex              string = "buildIndex"
 	RetryExceptionOperation string = "retryException"
+	SubDocInsertOperation   string = "subDocInsert"
+	SubDocDeleteOperation   string = "subDocDelete"
+	SubDocUpsertOperation   string = "subDocUpsert"
+	SubDocReadOperation     string = "subDocRead"
+	SubDocReplaceOperation  string = "subDocReplace"
 )
 
 const (
@@ -41,6 +48,7 @@ const (
 	DefaultBucket                             string = "default"
 	DefaultUser                               string = "Administrator"
 	DefaultPassword                           string = "password"
+	StoreSemanticsReplace                     string = "store"
 )
 
 // getDurability returns gocb.DurabilityLevel required for Doc loading operation
@@ -290,4 +298,143 @@ func getExceptions(result *task_result.TaskResult, RetryExceptions []string) []s
 		exceptionList = RetryExceptions
 	}
 	return exceptionList
+}
+
+type SubDocOperationConfig struct {
+	Start      int64      `json:"start" doc:"true"`
+	End        int64      `json:"end" doc:"true"`
+	Exceptions Exceptions `json:"exceptions,omitempty" doc:"true"`
+}
+
+func configSubDocOperationConfig(sub *SubDocOperationConfig) error {
+	if sub == nil {
+		return fmt.Errorf("unable to parse configSubDocOperationConfig")
+	}
+	if sub.Start < 0 {
+		sub.Start = 0
+		sub.End = 0
+	}
+	if sub.Start > sub.End {
+		sub.End = sub.Start
+		return fmt.Errorf("operation start to end range is malformed")
+	}
+	return nil
+}
+
+type GetSpecOptions struct {
+	IsXattr bool `json:"isXattr,omitempty" doc:"true"`
+}
+
+func configGetSpecOptions(g *GetSpecOptions) error {
+	if g == nil {
+		return fmt.Errorf("unable to parse configGetSpecOptions")
+	}
+	return nil
+}
+
+type LookupInOptions struct {
+	Timeout int `json:"timeout,omitempty" doc:"true"`
+}
+
+func configLookupInOptions(l *LookupInOptions) error {
+	if l == nil {
+		return fmt.Errorf("unable to parse configLookupInOptions")
+	}
+	return nil
+}
+
+type InsertSpecOptions struct {
+	CreatePath bool `json:"createPath,omitempty" doc:"true"`
+	IsXattr    bool `json:"isXattr,omitempty" doc:"true"`
+}
+
+func configInsertSpecOptions(i *InsertSpecOptions) error {
+	if i == nil {
+		return fmt.Errorf("unable to parse configInsertSpecOptions")
+	}
+	return nil
+}
+
+type RemoveSpecOptions struct {
+	IsXattr bool `json:"isXattr,omitempty" doc:"true"`
+}
+
+func configRemoveSpecOptions(r *RemoveSpecOptions) error {
+	if r == nil {
+		return fmt.Errorf("unable to parse configRemoveSpecOptions")
+	}
+	return nil
+}
+
+type ReplaceSpecOptions struct {
+	IsXattr bool `json:"isXattr,omitempty" doc:"true"`
+}
+
+func configReplaceSpecOptions(r *ReplaceSpecOptions) error {
+	if r == nil {
+		return fmt.Errorf("unable to parse configReplaceSpecOptions")
+	}
+	return nil
+}
+
+type MutateInOptions struct {
+	Expiry         int    `json:"expiry,omitempty" doc:"true"`
+	PersistTo      uint   `json:"persistTo,omitempty" doc:"true"`
+	ReplicateTo    uint   `json:"replicateTo,omitempty" doc:"true"`
+	Durability     string `json:"durability,omitempty" doc:"true"`
+	StoreSemantic  int    `json:"storeSemantic,omitempty" doc:"true"`
+	Timeout        int    `json:"timeout,omitempty" doc:"true"`
+	PreserveExpiry bool   `json:"preserveExpiry,omitempty" doc:"true"`
+}
+
+func configMutateInOptions(m *MutateInOptions) error {
+	if m == nil {
+		return fmt.Errorf("unable to parse configMutateInOptions")
+	}
+	return nil
+}
+
+func getStoreSemantic(storeSemantic int) gocb.StoreSemantics {
+	if storeSemantic > 3 {
+		return gocb.StoreSemanticsUpsert
+	}
+	return gocb.StoreSemantics(storeSemantic)
+}
+
+func compareDocumentsIsSame(host map[string]any, document1 map[string]any, document2 map[string]any) bool {
+
+	hostMap := make(map[string]any)
+	buildKeyAndValues(host, hostMap, "")
+
+	document1Map := make(map[string]any)
+	buildKeyAndValues(document1, document1Map, "")
+
+	document2Map := make(map[string]any)
+	buildKeyAndValues(document2, document2Map, "")
+
+	for key, value := range hostMap {
+		if v1, ok := document1Map[key]; ok {
+			if reflect.DeepEqual(value, v1) == false {
+				return false
+			}
+		} else if v2, ok := document2Map[key]; ok {
+			if reflect.DeepEqual(v2, value) == false {
+				return false
+			}
+		} else {
+			log.Println("unknown field", key)
+		}
+	}
+
+	return true
+}
+
+func buildKeyAndValues(doc map[string]any, result map[string]any, startString string) {
+	for key, value := range doc {
+		if subDoc, ok := value.(map[string]any); ok {
+			buildKeyAndValues(subDoc, result, key+".")
+		} else {
+			result[startString+key] = value
+		}
+	}
 }

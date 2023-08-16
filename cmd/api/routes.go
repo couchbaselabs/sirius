@@ -41,6 +41,11 @@ func (app *Config) routes() http.Handler {
 	mux.Post("/single-replace", app.singleReplaceTask)
 	mux.Post("/run-template-query", app.runQueryTask)
 	mux.Post("/retry-exceptions", app.RetryExceptionTask)
+	mux.Post("/sub-doc-bulk-insert", app.SubDocInsertTask)
+	mux.Post("/sub-doc-bulk-upsert", app.SubDocUpsertTask)
+	mux.Post("/sub-doc-bulk-delete", app.SubDocDeleteTask)
+	mux.Post("/sub-doc-bulk-read", app.SubDocReadTask)
+	mux.Post("/sub-doc-bulk-replace", app.SubDocReplaceTask)
 
 	return mux
 }

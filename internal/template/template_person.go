@@ -34,23 +34,24 @@ type Hair struct {
 }
 
 type Attribute struct {
-	Weight   int    `json:"weight,omitempty"`
-	Height   int    `json:"height,omitempty"`
-	Colour   string `json:"colour,omitempty"`
-	Hair     Hair   `json:"hair,omitempty"`
-	BodyType string `json:"bodyType,omitempty"`
+	Weight   float64 `json:"weight,omitempty"`
+	Height   float64 `json:"height,omitempty"`
+	Colour   string  `json:"colour,omitempty"`
+	Hair     Hair    `json:"hair,omitempty"`
+	BodyType string  `json:"bodyType,omitempty"`
 }
 
 type Person struct {
 	FirstName     string    `json:"firstName,omitempty"`
 	Lastname      string    `json:"lastName,omitempty"`
-	Age           int       `json:"age,omitempty"`
+	Age           float64   `json:"age,omitempty"`
 	Email         string    `json:"email,omitempty"`
 	Address       Address   `json:"address,omitempty"`
 	Gender        string    `json:"gender,omitempty"`
 	MaritalStatus string    `json:"maritalStatus,omitempty"`
 	Hobbies       []string  `json:"hobbies,omitempty"`
 	Attributes    Attribute `json:"attributes,omitempty"`
+	Mutated       float64   `json:"mutated,omitempty"`
 	Padding       string    `json:"payload"`
 }
 
@@ -58,7 +59,7 @@ func (p *Person) GenerateDocument(fake *faker.Faker, documentSize int) (interfac
 	person := &Person{
 		FirstName:     fake.Person().FirstName(),
 		Lastname:      fake.Person().LastName(),
-		Age:           fake.IntBetween(0, 100),
+		Age:           fake.Float64(2, 0, 100),
 		Email:         fake.Internet().CompanyEmail(),
 		Gender:        fake.Gender().Name(),
 		MaritalStatus: maritalChoices[fake.IntBetween(1, len(maritalChoices)-1)],
@@ -71,8 +72,8 @@ func (p *Person) GenerateDocument(fake *faker.Faker, documentSize int) (interfac
 			Country: fake.Address().Country(),
 		},
 		Attributes: Attribute{
-			Weight: fake.IntBetween(55, 200),
-			Height: fake.IntBetween(100, 300),
+			Weight: fake.Float64(2, 0, 100),
+			Height: fake.Float64(2, 0, 100),
 			Colour: bodyColor[fake.IntBetween(1, len(bodyColor)-1)],
 			Hair: Hair{
 				Type:      HairType[fake.IntBetween(1, len(HairType)-1)],
@@ -82,6 +83,7 @@ func (p *Person) GenerateDocument(fake *faker.Faker, documentSize int) (interfac
 			},
 			BodyType: BodyType[fake.IntBetween(1, len(BodyType)-1)],
 		},
+		Mutated: MutatedPathDefaultValue,
 	}
 	personDocument, err := json.Marshal(*person)
 	if err != nil {
@@ -112,7 +114,7 @@ func (p *Person) UpdateDocument(fieldsToChange []string, lastUpdatedDocument int
 		person.Lastname = fake.Person().LastName()
 	}
 	if _, ok := checkFields["age"]; ok || (len(checkFields) == 0) {
-		person.Age = fake.IntBetween(0, 100)
+		person.Age = fake.Float64(2, 0, 100)
 	}
 	if _, ok := checkFields["email"]; ok || (len(checkFields) == 0) {
 		person.Email = fake.Internet().CompanyEmail()
@@ -142,10 +144,10 @@ func (p *Person) UpdateDocument(fieldsToChange []string, lastUpdatedDocument int
 		person.Hobbies = hobbyChoices[:fake.IntBetween(1, len(hobbyChoices)-1)]
 	}
 	if _, ok := checkFields["attributes.weight"]; ok || (len(checkFields) == 0) {
-		person.Attributes.Weight = fake.IntBetween(55, 200)
+		person.Attributes.Weight = fake.Float64(2, 0, 100)
 	}
 	if _, ok := checkFields["attributes.height"]; ok || (len(checkFields) == 0) {
-		person.Attributes.Height = fake.IntBetween(100, 300)
+		person.Attributes.Height = fake.Float64(2, 0, 100)
 	}
 	if _, ok := checkFields["attributes.colour"]; ok || (len(checkFields) == 0) {
 		person.Attributes.Colour = bodyColor[fake.IntBetween(1, len(bodyColor)-1)]
@@ -178,4 +180,15 @@ func (p *Person) Compare(document1 interface{}, document2 interface{}) (bool, er
 		return false, fmt.Errorf("unable to decode second document to person template")
 	}
 	return reflect.DeepEqual(p1, p2), nil
+}
+
+func (p *Person) GenerateSubPathAndValue(fake *faker.Faker) map[string]any {
+	return map[string]interface{}{
+		"fullName":                fake.Person().FirstName() + " " + fake.Person().LastName(),
+		"sex":                     fake.Person().Gender(),
+		"contact.Phone":           fake.Person().Contact().Phone,
+		"contact.email":           fake.Person().Contact().Email,
+		"attributes.fashionColor": fake.Color().ColorName(),
+		"address.buildingNumber":  fake.Address().BuildingNumber(),
+	}
 }

@@ -18,6 +18,11 @@ configuration that is also available on a per-task basis:
  * [/single-replace](#single-replace)
  * [/single-touch](#single-touch)
  * [/single-upsert](#single-upsert)
+ * [/sub-doc-bulk-delete](#sub-doc-bulk-delete)
+ * [/sub-doc-bulk-insert](#sub-doc-bulk-insert)
+ * [/sub-doc-bulk-read](#sub-doc-bulk-read)
+ * [/sub-doc-bulk-replace](#sub-doc-bulk-replace)
+ * [/sub-doc-bulk-upsert](#sub-doc-bulk-upsert)
  * [/validate](#validate)
 
 ---
@@ -262,6 +267,96 @@ Description : Single insert task updates key value in Couchbase.
 | `OperationConfig` | `ptr` | `json:singleOperationConfig`  |
 
 ---
+#### /sub-doc-bulk-delete
+
+ REST : POST
+
+Description :  SubDocDelete deletes sub-documents in bulk
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `SubDocOperationConfig` | `ptr` | `json:subDocOperationConfig`  |
+| `RemoveSpecOptions` | `ptr` | `json:removeSpecOptions`  |
+| `MutateInOptions` | `ptr` | `json:mutateInOptions`  |
+
+---
+#### /sub-doc-bulk-insert
+
+ REST : POST
+
+Description :  SubDocInsert inserts a Sub-Document
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `SubDocOperationConfig` | `ptr` | `json:subDocOperationConfig`  |
+| `InsertSpecOptions` | `ptr` | `json:insertSpecOptions`  |
+| `MutateInOptions` | `ptr` | `json:mutateInOptions`  |
+
+---
+#### /sub-doc-bulk-read
+
+ REST : POST
+
+Description :  SubDocRead reads sub-document in bulk
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `SubDocOperationConfig` | `ptr` | `json:subDocOperationConfig`  |
+| `GetSpecOptions` | `ptr` | `json:getSpecOptions`  |
+| `LookupInOptions` | `ptr` | `json:lookupInOptions`  |
+
+---
+#### /sub-doc-bulk-replace
+
+ REST : POST
+
+Description :  SubDocReplace upserts a Sub-Document
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `SubDocOperationConfig` | `ptr` | `json:subDocOperationConfig`  |
+| `ReplaceSpecOptions` | `ptr` | `json:replaceSpecOptions`  |
+| `MutateInOptions` | `ptr` | `json:mutateInOptions`  |
+
+---
+#### /sub-doc-bulk-upsert
+
+ REST : POST
+
+Description :  SubDocUpsert upserts a Sub-Document
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `SubDocOperationConfig` | `ptr` | `json:subDocOperationConfig`  |
+| `InsertSpecOptions` | `ptr` | `json:insertSpecOptions`  |
+| `MutateInOptions` | `ptr` | `json:mutateInOptions`  |
+
+---
 #### /validate
 
  REST : POST
@@ -284,15 +379,22 @@ Description : Validates every document in the cluster's bucket
  * [clusterConfig](#clusterconfig)
  * [compressionConfig](#compressionconfig)
  * [exceptions](#exceptions)
+ * [getSpecOptions](#getspecoptions)
  * [insertOptions](#insertoptions)
+ * [insertSpecOptions](#insertspecoptions)
  * [keyValue](#keyvalue)
+ * [lookupInOptions](#lookupinoptions)
+ * [mutateInOptions](#mutateinoptions)
  * [operationConfig](#operationconfig)
  * [queryOperationConfig](#queryoperationconfig)
  * [removeOptions](#removeoptions)
+ * [removeSpecOptions](#removespecoptions)
  * [replaceOption](#replaceoption)
+ * [replaceSpecOptions](#replacespecoptions)
  * [retriedError](#retriederror)
  * [singleOperationConfig](#singleoperationconfig)
  * [singleResult](#singleresult)
+ * [subDocOperationConfig](#subdocoperationconfig)
  * [timeoutsConfig](#timeoutsconfig)
 
 ---
@@ -327,6 +429,11 @@ Description : Validates every document in the cluster's bucket
 | `IgnoreExceptions` | `slice` | `json:ignoreExceptions,omitempty`  |
 | `RetryExceptions` | `slice` | `json:retryExceptions,omitempty`  |
 | `RetryAttempts` | `int` | `json:retryAttempts,omitempty`  |
+#### getSpecOptions
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IsXattr` | `bool` | `json:isXattr,omitempty`  |
 #### insertOptions
 
 | Name | Type | JSON Tag |
@@ -336,12 +443,34 @@ Description : Validates every document in the cluster's bucket
 | `ReplicateTo` | `uint` | `json:replicateTo,omitempty`  |
 | `Durability` | `string` | `json:durability,omitempty`  |
 | `Timeout` | `int` | `json:timeout,omitempty`  |
+#### insertSpecOptions
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `CreatePath` | `bool` | `json:createPath,omitempty`  |
+| `IsXattr` | `bool` | `json:isXattr,omitempty`  |
 #### keyValue
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
 | `Key` | `string` | `json:key`  |
 | `Doc` | `interface` | `json:value,omitempty`  |
+#### lookupInOptions
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `Timeout` | `int` | `json:timeout,omitempty`  |
+#### mutateInOptions
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `Expiry` | `int` | `json:expiry,omitempty`  |
+| `PersistTo` | `uint` | `json:persistTo,omitempty`  |
+| `ReplicateTo` | `uint` | `json:replicateTo,omitempty`  |
+| `Durability` | `string` | `json:durability,omitempty`  |
+| `StoreSemantic` | `int` | `json:storeSemantic,omitempty`  |
+| `Timeout` | `int` | `json:timeout,omitempty`  |
+| `PreserveExpiry` | `bool` | `json:preserveExpiry,omitempty`  |
 #### operationConfig
 
 | Name | Type | JSON Tag |
@@ -375,6 +504,11 @@ Description : Validates every document in the cluster's bucket
 | `ReplicateTo` | `uint` | `json:replicateTo,omitempty`  |
 | `Durability` | `string` | `json:durability,omitempty`  |
 | `Timeout` | `int` | `json:timeout,omitempty`  |
+#### removeSpecOptions
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IsXattr` | `bool` | `json:isXattr,omitempty`  |
 #### replaceOption
 
 | Name | Type | JSON Tag |
@@ -385,6 +519,11 @@ Description : Validates every document in the cluster's bucket
 | `ReplicateTo` | `uint` | `json:replicateTo,omitempty`  |
 | `Durability` | `string` | `json:durability,omitempty`  |
 | `Timeout` | `int` | `json:timeout,omitempty`  |
+#### replaceSpecOptions
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IsXattr` | `bool` | `json:isXattr,omitempty`  |
 #### retriedError
 
 | Name | Type | JSON Tag |
@@ -406,6 +545,13 @@ Description : Validates every document in the cluster's bucket
 | `ErrorString` | `string` | `json:errorString`  |
 | `Status` | `bool` | `json:status`  |
 | `Cas` | `uint64` | `json:cas`  |
+#### subDocOperationConfig
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `Start` | `int64` | `json:start`  |
+| `End` | `int64` | `json:end`  |
+| `Exceptions` | `struct` | `json:exceptions,omitempty`  |
 #### timeoutsConfig
 
 | Name | Type | JSON Tag |

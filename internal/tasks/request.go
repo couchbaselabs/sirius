@@ -78,6 +78,9 @@ func (r *Request) retracePreviousMutations(collectionIdentifier string, offset i
 				}
 				if offset >= (u.OperationConfig.Start) && (offset < u.OperationConfig.End) && resultSeed != u.
 					ResultSeed {
+					if u.State == nil {
+						return doc, fmt.Errorf("Unable to retrace previous mutations on sirius for " + u.CollectionIdentifier())
+					}
 					errOffset := u.State.ReturnErrOffset()
 					if _, ok := errOffset[offset]; ok {
 						continue
@@ -91,6 +94,103 @@ func (r *Request) retracePreviousMutations(collectionIdentifier string, offset i
 	return doc, nil
 }
 
+func (r *Request) retracePreviousSubDocMutations(collectionIdentifier string, offset int64, gen docgenerator.Generator,
+	fake *faker.Faker, resultSeed int64) map[string]any {
+	defer r.lock.Unlock()
+	r.lock.Lock()
+	var result map[string]any
+	for i := range r.Tasks {
+		td := r.Tasks[i]
+		if td.Operation == SubDocUpsertOperation {
+			u, ok := td.Task.(*SubDocUpsert)
+			if ok {
+				if collectionIdentifier != u.CollectionIdentifier() {
+					continue
+				}
+				if offset >= (u.SubDocOperationConfig.Start) && (offset < u.SubDocOperationConfig.End) && resultSeed != u.
+					ResultSeed {
+					errOffset := u.State.ReturnErrOffset()
+					if _, ok := errOffset[offset]; ok {
+						continue
+					} else {
+						result = gen.Template.GenerateSubPathAndValue(fake)
+					}
+				}
+			}
+		}
+	}
+	return result
+}
+
+// countMutation return the number of mutation happened on a offset
+func (r *Request) countMutation(collectionIdentifier string, offset int64, resultSeed int64) int {
+	defer r.lock.Unlock()
+	r.lock.Lock()
+	var result int = 0
+	for i := range r.Tasks {
+		td := r.Tasks[i]
+		if td.Operation == SubDocUpsertOperation {
+			u, ok := td.Task.(*SubDocUpsert)
+			if ok {
+				if collectionIdentifier != u.CollectionIdentifier() {
+					continue
+				}
+				if offset >= (u.SubDocOperationConfig.Start) && (offset < u.SubDocOperationConfig.End) && resultSeed != u.
+					ResultSeed {
+					completeOffset := u.State.ReturnCompletedOffset()
+					if _, ok := completeOffset[offset]; ok {
+						result++
+					}
+				}
+			}
+		} else if td.Operation == SubDocDeleteOperation {
+			u, ok := td.Task.(*SubDocDelete)
+			if ok {
+				if collectionIdentifier != u.CollectionIdentifier() {
+					continue
+				}
+				if offset >= (u.SubDocOperationConfig.Start) && (offset < u.SubDocOperationConfig.End) && resultSeed != u.
+					ResultSeed {
+					completeOffset := u.State.ReturnCompletedOffset()
+					if _, ok := completeOffset[offset]; ok {
+						result++
+					}
+				}
+			}
+		} else if td.Operation == SubDocReplaceOperation {
+			u, ok := td.Task.(*SubDocReplace)
+			if ok {
+				if collectionIdentifier != u.CollectionIdentifier() {
+					continue
+				}
+				if offset >= (u.SubDocOperationConfig.Start) && (offset < u.SubDocOperationConfig.End) && resultSeed != u.
+					ResultSeed {
+					completeOffset := u.State.ReturnCompletedOffset()
+					if _, ok := completeOffset[offset]; ok {
+						result++
+					}
+				}
+			}
+		} else if td.Operation == SubDocInsertOperation {
+			u, ok := td.Task.(*SubDocInsert)
+			if ok {
+				if collectionIdentifier != u.CollectionIdentifier() {
+					continue
+				}
+				if offset >= (u.SubDocOperationConfig.Start) && (offset < u.SubDocOperationConfig.End) && resultSeed != u.
+					ResultSeed {
+					completeOffset := u.State.ReturnCompletedOffset()
+					if _, ok := completeOffset[offset]; ok {
+						result++
+					}
+				}
+			}
+		}
+	}
+	return result
+
+}
+
 // retracePreviousDeletions returns a lookup table representing the offsets which are successfully deleted.
 func (r *Request) retracePreviousDeletions(collectionIdentifier string, resultSeed int64) (map[int64]struct{}, error) {
 	defer r.lock.Unlock()
@@ -100,6 +200,32 @@ func (r *Request) retracePreviousDeletions(collectionIdentifier string, resultSe
 		td := r.Tasks[i]
 		if td.Operation == DeleteOperation {
 			u, ok := td.Task.(*DeleteTask)
+			if ok {
+				if collectionIdentifier != u.CollectionIdentifier() {
+					continue
+				}
+				if resultSeed != u.ResultSeed {
+					completedOffSet := u.State.ReturnCompletedOffset()
+					for deletedOffset, _ := range completedOffSet {
+						result[deletedOffset] = struct{}{}
+					}
+				}
+			}
+		}
+	}
+	return result, nil
+}
+
+// retracePreviousDeletions returns a lookup table representing the offsets which are successfully deleted.
+func (r *Request) retracePreviousSubDocDeletions(collectionIdentifier string, resultSeed int64) (map[int64]struct{},
+	error) {
+	defer r.lock.Unlock()
+	r.lock.Lock()
+	result := make(map[int64]struct{})
+	for i := range r.Tasks {
+		td := r.Tasks[i]
+		if td.Operation == SubDocDeleteOperation {
+			u, ok := td.Task.(*SubDocDelete)
 			if ok {
 				if collectionIdentifier != u.CollectionIdentifier() {
 					continue

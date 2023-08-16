@@ -8,10 +8,14 @@ import (
 
 type SmallTemplate struct {
 	RandomData string `json:"data,omitempty"`
+	Mutated    int    `json:"mutated,omitempty"`
 }
 
 func (s *SmallTemplate) GenerateDocument(fake *faker.Faker, documentSize int) (interface{}, error) {
-	return &SmallTemplate{RandomData: fake.RandomStringWithLength(int(documentSize))}, nil
+	return &SmallTemplate{
+		RandomData: fake.RandomStringWithLength(int(documentSize)),
+		Mutated:    0,
+	}, nil
 }
 
 func (s *SmallTemplate) UpdateDocument(fieldsToChange []string, lastUpdatedDocument interface{}, fake *faker.Faker) (interface{}, error) {
@@ -46,4 +50,11 @@ func (s *SmallTemplate) GenerateIndexes(bucketName string, scopeName string, col
 
 func (s *SmallTemplate) GenerateIndexesForSdk() (map[string][]string, error) {
 	return map[string][]string{}, nil
+}
+
+func (s *SmallTemplate) GenerateSubPathAndValue(fake *faker.Faker) map[string]any {
+
+	return map[string]interface{}{
+		"dataExtra": fake.RandomStringWithLength(fake.RandomDigit()),
+	}
 }

@@ -212,6 +212,9 @@ func (task *SingleUpsertTask) PostTaskExceptionHandling(_ *sdk.CollectionObject)
 }
 
 func (task *SingleUpsertTask) GetResultSeed() string {
+	if task.result == nil {
+		return ""
+	}
 	return fmt.Sprintf("%d", task.result.ResultSeed)
 }
 

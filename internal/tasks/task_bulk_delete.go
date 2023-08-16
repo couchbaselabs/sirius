@@ -299,6 +299,9 @@ func (task *DeleteTask) PostTaskExceptionHandling(collectionObject *sdk.Collecti
 }
 
 func (task *DeleteTask) GetResultSeed() string {
+	if task.result == nil {
+		return ""
+	}
 	return fmt.Sprintf("%d", task.result.ResultSeed)
 }
 

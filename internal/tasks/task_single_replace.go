@@ -174,6 +174,9 @@ func (task *SingleReplaceTask) PostTaskExceptionHandling(_ *sdk.CollectionObject
 }
 
 func (task *SingleReplaceTask) GetResultSeed() string {
+	if task.result == nil {
+		return ""
+	}
 	return fmt.Sprintf("%d", task.result.ResultSeed)
 }
 

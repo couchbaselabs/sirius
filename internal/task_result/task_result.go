@@ -65,7 +65,7 @@ func ConfigTaskResult(operation string, resultSeed int64) *TaskResult {
 }
 
 // IncrementFailure saves the failure count of doc loading operation.
-func (t *TaskResult) IncrementFailure(docId string, doc interface{}, err error, status bool, cas uint64, offset int64) {
+func (t *TaskResult) IncrementFailure(docId string, _ interface{}, err error, status bool, cas uint64, offset int64) {
 	t.lock.Lock()
 	t.Failure++
 	v, errorString := sdk.CheckSDKException(err)
