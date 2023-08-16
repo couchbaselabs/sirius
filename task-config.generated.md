@@ -16,6 +16,7 @@ configuration that is also available on a per-task basis:
  * [/single-delete](#single-delete)
  * [/single-read](#single-read)
  * [/single-replace](#single-replace)
+ * [/single-sub-doc-delete](#single-sub-doc-delete)
  * [/single-sub-doc-insert](#single-sub-doc-insert)
  * [/single-sub-doc-replace](#single-sub-doc-replace)
  * [/single-sub-doc-upsert](#single-sub-doc-upsert)
@@ -232,6 +233,24 @@ Description : Single replace task a document in the collection in Couchbase.
 | `Collection` | `string` | `json:collection,omitempty`  |
 | `ReplaceOptions` | `ptr` | `json:replaceOptions,omitempty`  |
 | `OperationConfig` | `ptr` | `json:singleOperationConfig`  |
+
+---
+#### /single-sub-doc-delete
+
+ REST : POST
+
+Description : SingleSingleSubDocDelete inserts a Sub-Document as per user's input [No Random data]
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `SingleSubDocOperationConfig` | `ptr` | `json:singleSubDocOperationConfig`  |
+| `RemoveSpecOptions` | `ptr` | `json:removeSpecOptions`  |
+| `MutateInOptions` | `ptr` | `json:mutateInOptions`  |
 
 ---
 #### /single-sub-doc-insert

@@ -49,6 +49,7 @@ func (app *Config) routes() http.Handler {
 	mux.Post("/single-sub-doc-insert", app.SingleSubDocInsert)
 	mux.Post("/single-sub-doc-upsert", app.SingleSubDocUpsert)
 	mux.Post("/single-sub-doc-replace", app.SingleSubDocReplace)
+	mux.Post("/single-sub-doc-replace", app.SingleSubDocDelete)
 
 	return mux
 }

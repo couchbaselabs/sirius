@@ -39,6 +39,7 @@ func (r *Register) RegisteredTasks() map[string]TaskRegister {
 		"/single-sub-doc-insert":  {"POST", &tasks.SingleSubDocInsert{}},
 		"/single-sub-doc-upsert":  {"POST", &tasks.SingleSubDocUpsert{}},
 		"/single-sub-doc-replace": {"POST", &tasks.SingleSubDocReplace{}},
+		"/single-sub-doc-delete":  {"POST", &tasks.SingleSubDocDelete{}},
 	}
 }
 
