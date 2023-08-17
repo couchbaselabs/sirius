@@ -17,6 +17,7 @@ configuration that is also available on a per-task basis:
  * [/single-read](#single-read)
  * [/single-replace](#single-replace)
  * [/single-sub-doc-delete](#single-sub-doc-delete)
+ * [/single-sub-doc-increment](#single-sub-doc-increment)
  * [/single-sub-doc-insert](#single-sub-doc-insert)
  * [/single-sub-doc-read](#single-sub-doc-read)
  * [/single-sub-doc-replace](#single-sub-doc-replace)
@@ -251,6 +252,24 @@ Description : SingleSingleSubDocDelete inserts a Sub-Document as per user's inpu
 | `Collection` | `string` | `json:collection,omitempty`  |
 | `SingleSubDocOperationConfig` | `ptr` | `json:singleSubDocOperationConfig`  |
 | `RemoveSpecOptions` | `ptr` | `json:removeSpecOptions`  |
+| `MutateInOptions` | `ptr` | `json:mutateInOptions`  |
+
+---
+#### /single-sub-doc-increment
+
+ REST : POST
+
+Description : SingleSingleSubDocIncrement increment the value of paths by delta as a sub-Document opertion.
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `SingleSubDocOperationConfig` | `ptr` | `json:singleSubDocOperationConfig`  |
+| `InsertSpecOptions` | `ptr` | `json:insertSpecOptions`  |
 | `MutateInOptions` | `ptr` | `json:mutateInOptions`  |
 
 ---
