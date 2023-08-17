@@ -385,6 +385,7 @@ func configReplaceSpecOptions(r *ReplaceSpecOptions) error {
 
 type MutateInOptions struct {
 	Expiry         int    `json:"expiry,omitempty" doc:"true"`
+	Cas            uint64 `json:"cas,omitempty" doc:"true"`
 	PersistTo      uint   `json:"persistTo,omitempty" doc:"true"`
 	ReplicateTo    uint   `json:"replicateTo,omitempty" doc:"true"`
 	Durability     string `json:"durability,omitempty" doc:"true"`

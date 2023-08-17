@@ -144,12 +144,14 @@ func singleReadSubDocuments(task *SingleSubDocRead, collectionObject *sdk.Collec
 		})
 
 		if err != nil {
+			task.result.Failure++
 			task.result.CreateSingleErrorResult(data.Key, err.Error(), false, 0)
 		} else {
 			flag := true
 			for index, _ := range paths {
 				var val interface{}
 				if err := result.ContentAt(uint(index), &val); err != nil {
+					task.result.Failure++
 					task.result.CreateSingleErrorResult(data.Key, err.Error(), false, 0)
 					flag = false
 					break

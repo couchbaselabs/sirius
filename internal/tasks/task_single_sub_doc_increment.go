@@ -147,6 +147,7 @@ func singleIncrementSubDocuments(task *SingleSubDocIncrement, collectionObject *
 
 		result, err := collectionObject.Collection.MutateIn(data.Key, iOps, &gocb.MutateInOptions{
 			Expiry:          time.Duration(task.MutateInOptions.Expiry) * time.Second,
+			Cas:             gocb.Cas(task.MutateInOptions.Cas),
 			PersistTo:       task.MutateInOptions.PersistTo,
 			ReplicateTo:     task.MutateInOptions.ReplicateTo,
 			DurabilityLevel: getDurability(task.MutateInOptions.Durability),
@@ -156,6 +157,7 @@ func singleIncrementSubDocuments(task *SingleSubDocIncrement, collectionObject *
 		})
 
 		if err != nil {
+			task.result.Failure++
 			task.result.CreateSingleErrorResult(data.Key, err.Error(), false, 0)
 		} else {
 			task.result.CreateSingleErrorResult(data.Key, "", true, uint64(result.Cas()))
