@@ -16,6 +16,12 @@ configuration that is also available on a per-task basis:
  * [/single-delete](#single-delete)
  * [/single-read](#single-read)
  * [/single-replace](#single-replace)
+ * [/single-sub-doc-delete](#single-sub-doc-delete)
+ * [/single-sub-doc-increment](#single-sub-doc-increment)
+ * [/single-sub-doc-insert](#single-sub-doc-insert)
+ * [/single-sub-doc-read](#single-sub-doc-read)
+ * [/single-sub-doc-replace](#single-sub-doc-replace)
+ * [/single-sub-doc-upsert](#single-sub-doc-upsert)
  * [/single-touch](#single-touch)
  * [/single-upsert](#single-upsert)
  * [/sub-doc-bulk-delete](#sub-doc-bulk-delete)
@@ -231,6 +237,114 @@ Description : Single replace task a document in the collection in Couchbase.
 | `OperationConfig` | `ptr` | `json:singleOperationConfig`  |
 
 ---
+#### /single-sub-doc-delete
+
+ REST : POST
+
+Description : SingleSingleSubDocDelete inserts a Sub-Document as per user's input [No Random data]
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `SingleSubDocOperationConfig` | `ptr` | `json:singleSubDocOperationConfig`  |
+| `RemoveSpecOptions` | `ptr` | `json:removeSpecOptions`  |
+| `MutateInOptions` | `ptr` | `json:mutateInOptions`  |
+
+---
+#### /single-sub-doc-increment
+
+ REST : POST
+
+Description : SingleSingleSubDocIncrement increment the value of paths by delta as a sub-Document opertion.
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `SingleSubDocOperationConfig` | `ptr` | `json:singleSubDocOperationConfig`  |
+| `InsertSpecOptions` | `ptr` | `json:insertSpecOptions`  |
+| `MutateInOptions` | `ptr` | `json:mutateInOptions`  |
+
+---
+#### /single-sub-doc-insert
+
+ REST : POST
+
+Description : SingleSingleSubDocInsert inserts a Sub-Document as per user's input [No Random data]
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `SingleSubDocOperationConfig` | `ptr` | `json:singleSubDocOperationConfig`  |
+| `InsertSpecOptions` | `ptr` | `json:insertSpecOptions`  |
+| `MutateInOptions` | `ptr` | `json:mutateInOptions`  |
+
+---
+#### /single-sub-doc-read
+
+ REST : POST
+
+Description : SingleSingleSubDocRead inserts a Sub-Document as per user's input [No Random data]
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `SingleSubDocOperationConfig` | `ptr` | `json:singleSubDocOperationConfig`  |
+| `LookupInOptions` | `ptr` | `json:lookupInOptions`  |
+| `GetSpecOptions` | `ptr` | `json:getSpecOptions`  |
+
+---
+#### /single-sub-doc-replace
+
+ REST : POST
+
+Description : SingleSingleSubDocReplace inserts a Sub-Document as per user's input [No Random data]
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `SingleSubDocOperationConfig` | `ptr` | `json:singleSubDocOperationConfig`  |
+| `ReplaceSpecOptions` | `ptr` | `json:replaceSpecOptions`  |
+| `MutateInOptions` | `ptr` | `json:mutateInOptions`  |
+
+---
+#### /single-sub-doc-upsert
+
+ REST : POST
+
+Description : SingleSingleSubDocUpsert inserts a Sub-Document as per user's input [No Random data]
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `SingleSubDocOperationConfig` | `ptr` | `json:singleSubDocOperationConfig`  |
+| `InsertSpecOptions` | `ptr` | `json:insertSpecOptions`  |
+| `MutateInOptions` | `ptr` | `json:mutateInOptions`  |
+
+---
 #### /single-touch
 
  REST : POST
@@ -382,10 +496,12 @@ Description : Validates every document in the cluster's bucket
  * [getSpecOptions](#getspecoptions)
  * [insertOptions](#insertoptions)
  * [insertSpecOptions](#insertspecoptions)
+ * [keyPathValue](#keypathvalue)
  * [keyValue](#keyvalue)
  * [lookupInOptions](#lookupinoptions)
  * [mutateInOptions](#mutateinoptions)
  * [operationConfig](#operationconfig)
+ * [pathValue](#pathvalue)
  * [queryOperationConfig](#queryoperationconfig)
  * [removeOptions](#removeoptions)
  * [removeSpecOptions](#removespecoptions)
@@ -394,6 +510,7 @@ Description : Validates every document in the cluster's bucket
  * [retriedError](#retriederror)
  * [singleOperationConfig](#singleoperationconfig)
  * [singleResult](#singleresult)
+ * [singleSubDocOperationConfig](#singlesubdocoperationconfig)
  * [subDocOperationConfig](#subdocoperationconfig)
  * [timeoutsConfig](#timeoutsconfig)
 
@@ -449,6 +566,12 @@ Description : Validates every document in the cluster's bucket
 | ---- | ---- | -------- |
 | `CreatePath` | `bool` | `json:createPath,omitempty`  |
 | `IsXattr` | `bool` | `json:isXattr,omitempty`  |
+#### keyPathValue
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `Key` | `string` | `json:key`  |
+| `PathValue` | `slice` | `json:PathValue`  |
 #### keyValue
 
 | Name | Type | JSON Tag |
@@ -487,6 +610,12 @@ Description : Validates every document in the cluster's bucket
 | `End` | `int64` | `json:end`  |
 | `FieldsToChange` | `slice` | `json:fieldsToChange`  |
 | `Exceptions` | `struct` | `json:exceptions,omitempty`  |
+#### pathValue
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `Path` | `string` | `json:path`  |
+| `Value` | `interface` | `json:value,omitempty`  |
 #### queryOperationConfig
 
 | Name | Type | JSON Tag |
@@ -545,6 +674,11 @@ Description : Validates every document in the cluster's bucket
 | `ErrorString` | `string` | `json:errorString`  |
 | `Status` | `bool` | `json:status`  |
 | `Cas` | `uint64` | `json:cas`  |
+#### singleSubDocOperationConfig
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `KeyPathValue` | `slice` | `json:keyPathValue`  |
 #### subDocOperationConfig
 
 | Name | Type | JSON Tag |

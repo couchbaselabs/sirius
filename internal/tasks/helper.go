@@ -11,32 +11,38 @@ import (
 )
 
 const (
-	MaxConcurrentRoutines          = 45
-	DefaultIdentifierToken         = "default"
-	MaxQueryRuntime         int    = 86400
-	DefaultQueryRunTime     int    = 100
-	WatchIndexDuration      int    = 120
-	InsertOperation         string = "insert"
-	QueryOperation          string = "query"
-	DeleteOperation         string = "delete"
-	UpsertOperation         string = "upsert"
-	ReadOperation           string = "read"
-	ValidateOperation       string = "validate"
-	SingleInsertOperation   string = "singleInsert"
-	SingleDeleteOperation   string = "singleDelete"
-	SingleUpsertOperation   string = "singleUpsert"
-	SingleReadOperation     string = "singleRead"
-	SingleTouchOperation    string = "singleTouch"
-	SingleReplaceOperation  string = "singleReplace"
-	CreatePrimaryIndex      string = "createPrimaryIndex"
-	CreateIndex             string = "createIndex"
-	BuildIndex              string = "buildIndex"
-	RetryExceptionOperation string = "retryException"
-	SubDocInsertOperation   string = "subDocInsert"
-	SubDocDeleteOperation   string = "subDocDelete"
-	SubDocUpsertOperation   string = "subDocUpsert"
-	SubDocReadOperation     string = "subDocRead"
-	SubDocReplaceOperation  string = "subDocReplace"
+	MaxConcurrentRoutines                 = 45
+	DefaultIdentifierToken                = "default"
+	MaxQueryRuntime                int    = 86400
+	DefaultQueryRunTime            int    = 100
+	WatchIndexDuration             int    = 120
+	InsertOperation                string = "insert"
+	QueryOperation                 string = "query"
+	DeleteOperation                string = "delete"
+	UpsertOperation                string = "upsert"
+	ReadOperation                  string = "read"
+	ValidateOperation              string = "validate"
+	SingleInsertOperation          string = "singleInsert"
+	SingleDeleteOperation          string = "singleDelete"
+	SingleUpsertOperation          string = "singleUpsert"
+	SingleReadOperation            string = "singleRead"
+	SingleTouchOperation           string = "singleTouch"
+	SingleReplaceOperation         string = "singleReplace"
+	CreatePrimaryIndex             string = "createPrimaryIndex"
+	CreateIndex                    string = "createIndex"
+	BuildIndex                     string = "buildIndex"
+	RetryExceptionOperation        string = "retryException"
+	SubDocInsertOperation          string = "subDocInsert"
+	SubDocDeleteOperation          string = "subDocDelete"
+	SubDocUpsertOperation          string = "subDocUpsert"
+	SubDocReadOperation            string = "subDocRead"
+	SubDocReplaceOperation         string = "subDocReplace"
+	SingleSubDocInsertOperation    string = "singleSubDocInsert"
+	SingleSubDocUpsertOperation    string = "singleSubDocUpsert"
+	SingleSubDocReplaceOperation   string = "singleSubDocReplace"
+	SingleSubDocDeleteOperation    string = "singleSubDocDelete"
+	SingleSubDocReadOperation      string = "singleSubDocRead"
+	SingleSubDocIncrementOperation string = "singleSubDocReadIncrement"
 )
 
 const (
@@ -379,6 +385,7 @@ func configReplaceSpecOptions(r *ReplaceSpecOptions) error {
 
 type MutateInOptions struct {
 	Expiry         int    `json:"expiry,omitempty" doc:"true"`
+	Cas            uint64 `json:"cas,omitempty" doc:"true"`
 	PersistTo      uint   `json:"persistTo,omitempty" doc:"true"`
 	ReplicateTo    uint   `json:"replicateTo,omitempty" doc:"true"`
 	Durability     string `json:"durability,omitempty" doc:"true"`
@@ -437,4 +444,24 @@ func buildKeyAndValues(doc map[string]any, result map[string]any, startString st
 			result[startString+key] = value
 		}
 	}
+}
+
+type PathValue struct {
+	Path  string `json:"path" doc:"true"`
+	Value any    `json:"value,omitempty" doc:"true"`
+}
+type KeyPathValue struct {
+	Key       string      `json:"key" doc:"true"`
+	PathValue []PathValue `json:"PathValue" doc:"true"`
+}
+
+type SingleSubDocOperationConfig struct {
+	KeyPathValue []KeyPathValue `json:"keyPathValue" doc:"true"`
+}
+
+func configSingleSubDocOperationConfig(s *SingleSubDocOperationConfig) error {
+	if s == nil {
+		return fmt.Errorf("unable to parse SingleSubDocOperationConfig")
+	}
+	return nil
 }

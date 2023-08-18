@@ -298,7 +298,7 @@ func (task *SubDocUpsert) PostTaskExceptionHandling(collectionObject *sdk.Collec
 
 						var iOps []gocb.MutateInSpec
 						for path, value := range task.gen.Template.GenerateSubPathAndValue(&fake) {
-							iOps = append(iOps, gocb.InsertSpec(path, value, &gocb.InsertSpecOptions{
+							iOps = append(iOps, gocb.UpsertSpec(path, value, &gocb.UpsertSpecOptions{
 								CreatePath: task.InsertSpecOptions.CreatePath,
 								IsXattr:    task.InsertSpecOptions.IsXattr,
 							}))
