@@ -26,6 +26,8 @@ func InitialiseTemplate(template string) Template {
 	switch strings.ToLower(template) {
 	case "person":
 		return &Person{}
+	case "hotel":
+		return &Hotel{}
 	case "small":
 		return &SmallTemplate{}
 	default:

@@ -24,6 +24,7 @@ func (app *Config) readJSON(w http.ResponseWriter, r *http.Request, data interfa
 	r.Body = http.MaxBytesReader(w, r.Body, int64(maxBytes))
 
 	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(data); err != nil {
 		return err
 	}
@@ -70,6 +71,7 @@ func registerInterfaces() {
 	gob.Register(&map[string]any{})
 	gob.Register(&tasks.Request{})
 	gob.Register(&template.Person{})
+	gob.Register(&template.Hotel{})
 	gob.Register(&template.SmallTemplate{})
 	gob.Register(&server_requests.ServerRequests{})
 	gob.Register(&tasks.InsertTask{})
