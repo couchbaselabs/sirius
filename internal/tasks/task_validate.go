@@ -26,7 +26,6 @@ type ValidateTask struct {
 	Scope           string                             `json:"scope,omitempty" doc:"true"`
 	Collection      string                             `json:"collection,omitempty" doc:"true"`
 	OperationConfig *OperationConfig                   `json:"operationConfig,omitempty" doc:"true"`
-	Template        interface{}                        `json:"-" doc:"false"`
 	Operation       string                             `json:"operation" doc:"false"`
 	ResultSeed      int64                              `json:"resultSeed" doc:"false"`
 	TaskPending     bool                               `json:"taskPending" doc:"false"`
@@ -98,8 +97,6 @@ func (task *ValidateTask) Config(req *Request, reRun bool) (int64, error) {
 			task.TaskPending = false
 			return 0, fmt.Errorf(err.Error())
 		}
-
-		task.Template = template.InitialiseTemplate(task.OperationConfig.TemplateName)
 
 		task.MetaData = task.req.MetaData.GetCollectionMetadata(task.CollectionIdentifier(),
 			task.OperationConfig.KeySize, task.OperationConfig.DocSize, task.OperationConfig.DocType, task.OperationConfig.KeyPrefix,
@@ -207,9 +204,6 @@ func validateDocuments(task *ValidateTask, collectionObject *sdk.CollectionObjec
 
 			mutationCount := task.req.countMutation(task.CollectionIdentifier(), offset, task.ResultSeed)
 
-			result := &gocb.GetResult{}
-			var resultFromHost map[string]any
-
 			updatedDocumentBytes, err := json.Marshal(updatedDocument)
 			if err != nil {
 				log.Println(err)
@@ -224,6 +218,10 @@ func validateDocuments(task *ValidateTask, collectionObject *sdk.CollectionObjec
 				return err
 			}
 			updatedDocumentMap[template.MutatedPath] = float64(mutationCount)
+
+			result := &gocb.GetResult{}
+			var resultFromHost map[string]any
+			resultFromHostTemplate := template.InitialiseTemplate(task.MetaData.TemplateName)
 
 			for retry := 0; retry <= int(math.Max(float64(1), float64(task.OperationConfig.Exceptions.
 				RetryAttempts))); retry++ {
@@ -259,10 +257,17 @@ func validateDocuments(task *ValidateTask, collectionObject *sdk.CollectionObjec
 				return err
 			}
 
+			resultFromHostBytes, _ := json.Marshal(resultFromHost)
+			json.Unmarshal(resultFromHostBytes, &resultFromHostTemplate)
+
 			if !compareDocumentsIsSame(resultFromHost, updatedDocumentMap, subDocumentMap) {
-				task.result.IncrementFailure(docId, updatedDocument, errors.New("integrity lost"), false, 0, offset)
-				<-routineLimiter
-				return err
+				ok, err := task.gen.Template.Compare(resultFromHostTemplate, updatedDocument)
+				if err != nil || !ok {
+					task.result.IncrementFailure(docId, updatedDocument, errors.New("integrity Lost"), false, 0, offset)
+					task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
+					<-routineLimiter
+					return err
+				}
 			}
 
 			task.State.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
@@ -277,152 +282,6 @@ func validateDocuments(task *ValidateTask, collectionObject *sdk.CollectionObjec
 }
 
 func (task *ValidateTask) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
-	task.State.StopStoringState()
-
-	// Get all the errorOffset
-	errorOffsetMaps := task.State.ReturnErrOffset()
-	// Get all the completed offset
-	completedOffsetMaps := task.State.ReturnCompletedOffset()
-
-	// For the offset in ignore exceptions :-> move them from error to completed
-	shiftErrToCompletedOnIgnore(task.OperationConfig.Exceptions.IgnoreExceptions, task.result, errorOffsetMaps, completedOffsetMaps)
-
-	deletedOffset, err1 := task.req.retracePreviousDeletions(task.CollectionIdentifier(), task.ResultSeed)
-	if err1 != nil {
-		log.Println(err1)
-		return
-	}
-
-	deletedOffsetSubDoc, err2 := task.req.retracePreviousSubDocDeletions(task.CollectionIdentifier(), task.ResultSeed)
-	if err2 != nil {
-		log.Println(err2)
-		return
-	}
-
-	if task.OperationConfig.Exceptions.RetryAttempts > 0 {
-
-		exceptionList := getExceptions(task.result, task.OperationConfig.Exceptions.RetryExceptions)
-
-		// For the retry exceptions :-> move them on success after retrying from err to completed
-		for _, exception := range exceptionList {
-
-			errorOffsetListMap := make([]map[int64]RetriedResult, 0)
-			for _, failedDocs := range task.result.BulkError[exception] {
-				m := make(map[int64]RetriedResult)
-				m[failedDocs.Offset] = RetriedResult{}
-				errorOffsetListMap = append(errorOffsetListMap, m)
-			}
-
-			routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
-			dataChannel := make(chan map[int64]RetriedResult, MaxConcurrentRoutines)
-			wg := errgroup.Group{}
-			for _, x := range errorOffsetListMap {
-				dataChannel <- x
-				routineLimiter <- struct{}{}
-				wg.Go(func() error {
-					m := <-dataChannel
-					var offset = int64(-1)
-					for k, _ := range m {
-						offset = k
-					}
-					key := task.State.SeedStart + offset
-					docId := task.gen.BuildKey(key)
-
-					fake := faker.NewWithSeed(rand.NewSource(int64(key)))
-					fakeSub := faker.NewWithSeed(rand.NewSource(int64(key)))
-					originalDocument, err := task.gen.Template.GenerateDocument(&fake, task.MetaData.DocSize)
-					if err != nil {
-						task.result.IncrementFailure(docId, originalDocument, err, false, 0, offset)
-						task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
-						<-routineLimiter
-						return err
-					}
-					updatedDocument, err := task.req.retracePreviousMutations(task.CollectionIdentifier(), offset,
-						originalDocument, *task.gen,
-						&fake,
-						task.ResultSeed)
-					if err != nil {
-						task.result.IncrementFailure(docId, updatedDocument, err, false, 0, offset)
-						task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
-						<-routineLimiter
-						return err
-					}
-
-					task.gen.Template.GenerateSubPathAndValue(&fakeSub)
-					subDocumentMap := task.req.retracePreviousSubDocMutations(task.CollectionIdentifier(), offset, *task.gen, &fakeSub,
-						task.ResultSeed)
-
-					mutationCount := task.req.countMutation(task.CollectionIdentifier(), offset, task.ResultSeed)
-
-					result := &gocb.GetResult{}
-					var resultFromHost map[string]any
-
-					updatedDocumentBytes, err := json.Marshal(updatedDocument)
-					if err != nil {
-						log.Println(err)
-						<-routineLimiter
-						return err
-					}
-
-					var updatedDocumentMap map[string]any
-					if err := json.Unmarshal(updatedDocumentBytes, &updatedDocumentMap); err != nil {
-						log.Println(err)
-						<-routineLimiter
-						return err
-					}
-					updatedDocumentMap[template.MutatedPath] = float64(mutationCount)
-
-					for retry := 0; retry <= int(math.Max(float64(1), float64(task.OperationConfig.Exceptions.
-						RetryAttempts))); retry++ {
-						result, err = collectionObject.Collection.Get(docId, nil)
-						if err == nil {
-							break
-						}
-					}
-
-					if err != nil {
-						if errors.Is(err, gocb.ErrDocumentNotFound) {
-							if _, ok := deletedOffset[offset]; ok {
-								<-routineLimiter
-								return nil
-							}
-							if _, ok := deletedOffsetSubDoc[offset]; ok {
-								<-routineLimiter
-								return nil
-							}
-						}
-						<-routineLimiter
-						return err
-					}
-
-					if err := result.Content(&resultFromHost); err != nil {
-						<-routineLimiter
-						return err
-					}
-
-					if !compareDocumentsIsSame(resultFromHost, updatedDocumentMap, subDocumentMap) {
-						<-routineLimiter
-						return err
-					} else {
-						m[offset] = RetriedResult{
-							Status: true,
-							CAS:    uint64(result.Cas()),
-						}
-					}
-
-					<-routineLimiter
-					return nil
-				})
-			}
-			_ = wg.Wait()
-
-			shiftErrToCompletedOnRetrying(exception, task.result, errorOffsetListMap, errorOffsetMaps, completedOffsetMaps)
-		}
-	}
-
-	task.State.MakeCompleteKeyFromMap(completedOffsetMaps)
-	task.State.MakeErrorKeyFromMap(errorOffsetMaps)
-	task.result.Failure = int64(len(task.State.KeyStates.Err))
 }
 
 func (task *ValidateTask) GetResultSeed() string {

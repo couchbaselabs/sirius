@@ -13,11 +13,11 @@ func TestGeneratePerson(t *testing.T) {
 	fake1 := faker.NewWithSeed(rand.NewSource(1678693916037126000))
 	fake2 := faker.NewWithSeed(rand.NewSource(1678693916037126000))
 	template := InitialiseTemplate("person")
-	document1, err := template.GenerateDocument(&fake1, 1024)
+	document1, err := template.GenerateDocument(&fake1, 0)
 	if err != nil {
 		t.Fail()
 	}
-	document2, err := template.GenerateDocument(&fake2, 1024)
+	document2, err := template.GenerateDocument(&fake2, 0)
 	if err != nil {
 		t.Fail()
 	}
