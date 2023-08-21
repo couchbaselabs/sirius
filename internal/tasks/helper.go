@@ -87,28 +87,15 @@ type OperationConfig struct {
 	Exceptions       Exceptions `json:"exceptions,omitempty" doc:"true"`
 }
 
-type KeyValue struct {
-	Key string      `json:"key" doc:"true"`
-	Doc interface{} `json:"value,omitempty" doc:"true"`
-}
-
 type SingleOperationConfig struct {
-	KeyValue         []KeyValue `json:"keyValue" doc:"true"`
-	ReadYourOwnWrite bool       `json:"readYourOwnWrite,omitempty" doc:"true"`
+	Keys     []string `json:"keys" doc:"true"`
+	Template string   `json:"template" doc:"true"`
 }
 
 func configSingleOperationConfig(s *SingleOperationConfig) error {
 	if s == nil {
 		return fmt.Errorf("unable to parse SingleOperationConfig")
 	}
-
-	var finalKeyValue []KeyValue
-	for _, kv := range s.KeyValue {
-		if kv.Key != "" {
-			finalKeyValue = append(finalKeyValue, kv)
-		}
-	}
-	s.KeyValue = finalKeyValue
 	return nil
 }
 
