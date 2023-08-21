@@ -55,7 +55,6 @@ func (r *Register) HelperStruct() map[string]any {
 		"removeOptions":               &tasks.RemoveOptions{},
 		"replaceOption":               &tasks.ReplaceOptions{},
 		"singleOperationConfig":       &tasks.SingleOperationConfig{},
-		"keyValue":                    &tasks.KeyValue{},
 		"bulkError":                   &task_result.FailedDocument{},
 		"retriedError":                &task_result.FailedDocument{},
 		"singleResult":                &task_result.SingleOperationResult{},

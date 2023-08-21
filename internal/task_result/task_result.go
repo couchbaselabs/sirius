@@ -136,6 +136,11 @@ func ReadResultFromFile(seed string, deleteRecord bool) (*TaskResult, error) {
 }
 
 func (t *TaskResult) CreateSingleErrorResult(docId string, errorString string, status bool, cas uint64) {
+	defer t.lock.Unlock()
+	t.lock.Lock()
+	if !status {
+		t.Failure++
+	}
 	t.SingleResult[docId] = SingleOperationResult{
 		ErrorString: errorString,
 		Status:      status,

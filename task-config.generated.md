@@ -181,7 +181,7 @@ Description : Single insert task create key value in Couchbase.
 | `Scope` | `string` | `json:scope,omitempty`  |
 | `Collection` | `string` | `json:collection,omitempty`  |
 | `InsertOptions` | `ptr` | `json:insertOptions,omitempty`  |
-| `OperationConfig` | `ptr` | `json:singleOperationConfig`  |
+| `SingleOperationConfig` | `ptr` | `json:singleOperationConfig`  |
 
 ---
 #### /single-delete
@@ -199,7 +199,7 @@ Description : Single delete task deletes key in Couchbase.
 | `Scope` | `string` | `json:scope,omitempty`  |
 | `Collection` | `string` | `json:collection,omitempty`  |
 | `RemoveOptions` | `ptr` | `json:removeOptions,omitempty`  |
-| `OperationConfig` | `ptr` | `json:singleOperationConfig`  |
+| `SingleOperationConfig` | `ptr` | `json:singleOperationConfig`  |
 
 ---
 #### /single-read
@@ -216,7 +216,7 @@ Description : Single read task reads key value in couchbase and validates.
 | `Bucket` | `string` | `json:bucket`  |
 | `Scope` | `string` | `json:scope,omitempty`  |
 | `Collection` | `string` | `json:collection,omitempty`  |
-| `OperationConfig` | `ptr` | `json:singleOperationConfig`  |
+| `SingleOperationConfig` | `ptr` | `json:singleOperationConfig`  |
 
 ---
 #### /single-replace
@@ -234,7 +234,7 @@ Description : Single replace task a document in the collection in Couchbase.
 | `Scope` | `string` | `json:scope,omitempty`  |
 | `Collection` | `string` | `json:collection,omitempty`  |
 | `ReplaceOptions` | `ptr` | `json:replaceOptions,omitempty`  |
-| `OperationConfig` | `ptr` | `json:singleOperationConfig`  |
+| `SingleOperationConfig` | `ptr` | `json:singleOperationConfig`  |
 
 ---
 #### /single-sub-doc-delete
@@ -360,7 +360,7 @@ Description : Single touch task specifies a new expiry time for a document in Co
 | `Scope` | `string` | `json:scope,omitempty`  |
 | `Collection` | `string` | `json:collection,omitempty`  |
 | `InsertOptions` | `ptr` | `json:insertOptions,omitempty`  |
-| `OperationConfig` | `ptr` | `json:singleOperationConfig`  |
+| `SingleOperationConfig` | `ptr` | `json:singleOperationConfig`  |
 
 ---
 #### /single-upsert
@@ -378,7 +378,7 @@ Description : Single insert task updates key value in Couchbase.
 | `Scope` | `string` | `json:scope,omitempty`  |
 | `Collection` | `string` | `json:collection,omitempty`  |
 | `InsertOptions` | `ptr` | `json:insertOptions,omitempty`  |
-| `OperationConfig` | `ptr` | `json:singleOperationConfig`  |
+| `SingleOperationConfig` | `ptr` | `json:singleOperationConfig`  |
 
 ---
 #### /sub-doc-bulk-delete
@@ -497,7 +497,6 @@ Description : Validates every document in the cluster's bucket
  * [insertOptions](#insertoptions)
  * [insertSpecOptions](#insertspecoptions)
  * [keyPathValue](#keypathvalue)
- * [keyValue](#keyvalue)
  * [lookupInOptions](#lookupinoptions)
  * [mutateInOptions](#mutateinoptions)
  * [operationConfig](#operationconfig)
@@ -572,12 +571,6 @@ Description : Validates every document in the cluster's bucket
 | ---- | ---- | -------- |
 | `Key` | `string` | `json:key`  |
 | `PathValue` | `slice` | `json:PathValue`  |
-#### keyValue
-
-| Name | Type | JSON Tag |
-| ---- | ---- | -------- |
-| `Key` | `string` | `json:key`  |
-| `Doc` | `interface` | `json:value,omitempty`  |
 #### lookupInOptions
 
 | Name | Type | JSON Tag |
@@ -666,8 +659,8 @@ Description : Validates every document in the cluster's bucket
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
-| `KeyValue` | `slice` | `json:keyValue`  |
-| `ReadYourOwnWrite` | `bool` | `json:readYourOwnWrite,omitempty`  |
+| `Keys` | `slice` | `json:keys`  |
+| `Template` | `string` | `json:template`  |
 #### singleResult
 
 | Name | Type | JSON Tag |

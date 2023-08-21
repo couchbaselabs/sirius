@@ -1,31 +1,31 @@
 package tasks
 
 import (
-	"bytes"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/sdk"
 	"github.com/couchbaselabs/sirius/internal/task_result"
+	"github.com/couchbaselabs/sirius/internal/template"
+	"github.com/jaswdr/faker"
 	"golang.org/x/sync/errgroup"
 	"log"
+	"math/rand"
 	"time"
 )
 
 type SingleUpsertTask struct {
-	IdentifierToken string                  `json:"identifierToken" doc:"true"`
-	ClusterConfig   *sdk.ClusterConfig      `json:"clusterConfig" doc:"true"`
-	Bucket          string                  `json:"bucket" doc:"true"`
-	Scope           string                  `json:"scope,omitempty" doc:"true"`
-	Collection      string                  `json:"collection,omitempty" doc:"true"`
-	InsertOptions   *InsertOptions          `json:"insertOptions,omitempty" doc:"true"`
-	OperationConfig *SingleOperationConfig  `json:"singleOperationConfig" doc:"true"`
-	Operation       string                  `json:"operation" doc:"false"`
-	ResultSeed      int64                   `json:"resultSeed" doc:"false"`
-	TaskPending     bool                    `json:"taskPending" doc:"false"`
-	result          *task_result.TaskResult `json:"-" doc:"false"`
-	req             *Request                `json:"-" doc:"false"`
+	IdentifierToken       string                  `json:"identifierToken" doc:"true"`
+	ClusterConfig         *sdk.ClusterConfig      `json:"clusterConfig" doc:"true"`
+	Bucket                string                  `json:"bucket" doc:"true"`
+	Scope                 string                  `json:"scope,omitempty" doc:"true"`
+	Collection            string                  `json:"collection,omitempty" doc:"true"`
+	InsertOptions         *InsertOptions          `json:"insertOptions,omitempty" doc:"true"`
+	SingleOperationConfig *SingleOperationConfig  `json:"singleOperationConfig" doc:"true"`
+	Operation             string                  `json:"operation" doc:"false"`
+	ResultSeed            int64                   `json:"resultSeed" doc:"false"`
+	TaskPending           bool                    `json:"taskPending" doc:"false"`
+	result                *task_result.TaskResult `json:"-" doc:"false"`
+	req                   *Request                `json:"-" doc:"false"`
 }
 
 func (task *SingleUpsertTask) Describe() string {
@@ -63,6 +63,8 @@ func (task *SingleUpsertTask) Config(req *Request, reRun bool) (int64, error) {
 		return 0, err
 	}
 
+	task.req.ReconfigureDocumentManager()
+
 	if !reRun {
 		task.ResultSeed = int64(time.Now().UnixNano())
 		task.Operation = SingleUpsertOperation
@@ -82,7 +84,7 @@ func (task *SingleUpsertTask) Config(req *Request, reRun bool) (int64, error) {
 			return 0, err
 		}
 
-		if err := configSingleOperationConfig(task.OperationConfig); err != nil {
+		if err := configSingleOperationConfig(task.SingleOperationConfig); err != nil {
 			task.TaskPending = false
 			return 0, err
 		}
@@ -109,17 +111,13 @@ func (task *SingleUpsertTask) Do() error {
 
 	if err1 != nil {
 		task.result.ErrorOther = err1.Error()
-		var docIds []string
-		for _, kV := range task.OperationConfig.KeyValue {
-			docIds = append(docIds, kV.Key)
-		}
-		task.result.FailWholeSingleOperation(docIds, err1)
+		task.result.FailWholeSingleOperation(task.SingleOperationConfig.Keys, err1)
 		return task.tearUp()
 	}
 
 	singleUpsertDocuments(task, collectionObject)
 
-	task.result.Success = int64(len(task.OperationConfig.KeyValue)) - task.result.Failure
+	task.result.Success = int64(len(task.SingleOperationConfig.Keys)) - task.result.Failure
 	return task.tearUp()
 }
 
@@ -127,75 +125,45 @@ func (task *SingleUpsertTask) Do() error {
 func singleUpsertDocuments(task *SingleUpsertTask, collectionObject *sdk.CollectionObject) {
 
 	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
-	dataChannel := make(chan interface{}, MaxConcurrentRoutines)
+	dataChannel := make(chan string, MaxConcurrentRoutines)
 
 	group := errgroup.Group{}
 
-	for _, data := range task.OperationConfig.KeyValue {
+	for _, data := range task.SingleOperationConfig.Keys {
 		routineLimiter <- struct{}{}
 		dataChannel <- data
 
 		group.Go(func() error {
-			keyValue := <-dataChannel
-			kV, ok := keyValue.(KeyValue)
-			if !ok {
-				log.Println(task.Operation, task.CollectionIdentifier(), task.ResultSeed, errors.New("unable to decode Key Value for single crud"))
-				<-routineLimiter
-				return errors.New("unable to decode Key Value for single crud")
-			}
+			key := <-dataChannel
 
-			m, err := collectionObject.Collection.Upsert(kV.Key, kV.Doc, &gocb.UpsertOptions{
+			documentMetaData := task.req.documentsMeta.GetDocumentsMetadata(key, task.SingleOperationConfig.Template,
+				false)
+
+			fake := faker.NewWithSeed(rand.NewSource(int64(documentMetaData.Seed)))
+
+			t := template.InitialiseTemplate(documentMetaData.Template)
+
+			doc, _ := t.GenerateDocument(&fake, 0)
+
+			documentMetaData.RetracePreviousMutations(t, doc, &fake)
+
+			updatedDoc := documentMetaData.UpdateDocument(t, doc, &fake)
+
+			m, err := collectionObject.Collection.Upsert(key, updatedDoc, &gocb.UpsertOptions{
 				DurabilityLevel: getDurability(task.InsertOptions.Durability),
 				PersistTo:       task.InsertOptions.PersistTo,
 				ReplicateTo:     task.InsertOptions.ReplicateTo,
 				Timeout:         time.Duration(task.InsertOptions.Timeout) * time.Second,
 				Expiry:          time.Duration(task.InsertOptions.Expiry) * time.Second,
 			})
-			if task.OperationConfig.ReadYourOwnWrite {
 
-				var resultFromHost map[string]any
-				result, err := collectionObject.Collection.Get(kV.Key, nil)
-				if err != nil {
-					task.result.CreateSingleErrorResult(kV.Key, "document validation failed on read your own write",
-						false, 0)
-					<-routineLimiter
-					return err
-				}
-				if err := result.Content(&resultFromHost); err != nil {
-					task.result.CreateSingleErrorResult(kV.Key, "document validation failed on read your own write",
-						false, 0)
-					<-routineLimiter
-					return err
-				}
-
-				resultFromHostBytes, err := json.Marshal(resultFromHost)
-				if err != nil {
-					task.result.CreateSingleErrorResult(kV.Key, "document validation failed on read your own write",
-						false, 0)
-					<-routineLimiter
-					return err
-				}
-				resultFromDocBytes, err := json.Marshal(kV.Doc)
-				if err != nil {
-					task.result.CreateSingleErrorResult(kV.Key, "document validation failed on read your own write",
-						false, 0)
-					<-routineLimiter
-					return err
-				}
-
-				if !bytes.Equal(resultFromHostBytes, resultFromDocBytes) {
-					task.result.CreateSingleErrorResult(kV.Key, "document validation failed on read your own write",
-						false, 0)
-					<-routineLimiter
-					return err
-				}
-			} else {
-				task.result.CreateSingleErrorResult(kV.Key, err.Error(), false, 0)
+			if err != nil {
+				task.result.CreateSingleErrorResult(key, err.Error(), false, 0)
 				<-routineLimiter
 				return err
 			}
 
-			task.result.CreateSingleErrorResult(kV.Key, "", true, uint64(m.Cas()))
+			task.result.CreateSingleErrorResult(key, "", true, uint64(m.Cas()))
 			<-routineLimiter
 			return nil
 		})

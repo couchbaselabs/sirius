@@ -20,11 +20,12 @@ type TaskWithIdentifier struct {
 }
 
 type Request struct {
-	Identifier        string                   `json:"identifier" doc:"false" `
-	Tasks             []TaskWithIdentifier     `json:"tasks" doc:"false"`
-	MetaData          *task_meta_data.MetaData `json:"metaData" doc:"false"`
-	connectionManager *sdk.ConnectionManager   `json:"-" doc:"false"`
-	lock              sync.Mutex               `json:"-" doc:"false"`
+	Identifier        string                            `json:"identifier" doc:"false" `
+	Tasks             []TaskWithIdentifier              `json:"tasks" doc:"false"`
+	MetaData          *task_meta_data.MetaData          `json:"metaData" doc:"false"`
+	documentsMeta     *task_meta_data.DocumentsMetaData `json:"documentMeta" doc:"false"`
+	connectionManager *sdk.ConnectionManager            `json:"-" doc:"false"`
+	lock              sync.Mutex                        `json:"-" doc:"false"`
 }
 
 // NewRequest return  an instance of Request
@@ -32,6 +33,7 @@ func NewRequest(identifier string) *Request {
 	return &Request{
 		Identifier:        identifier,
 		MetaData:          task_meta_data.NewMetaData(),
+		documentsMeta:     task_meta_data.NewDocumentsMetaData(),
 		connectionManager: sdk.ConfigConnectionManager(),
 		lock:              sync.Mutex{},
 	}
@@ -43,6 +45,15 @@ func (r *Request) ReconnectionManager() {
 	r.lock.Lock()
 	if r.connectionManager == nil {
 		r.connectionManager = sdk.ConfigConnectionManager()
+	}
+}
+
+// ReconfigureDocumentManager setups again sdk.ConnectionManager
+func (r *Request) ReconfigureDocumentManager() {
+	defer r.lock.Unlock()
+	r.lock.Lock()
+	if r.documentsMeta == nil {
+		r.documentsMeta = task_meta_data.NewDocumentsMetaData()
 	}
 }
 
