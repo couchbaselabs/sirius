@@ -145,7 +145,7 @@ func singleUpsertDocuments(task *SingleUpsertTask, collectionObject *sdk.Collect
 
 			doc, _ := t.GenerateDocument(&fake, documentMetaData.DocSize)
 
-			documentMetaData.RetracePreviousMutations(t, doc, &fake)
+			doc = documentMetaData.RetracePreviousMutations(t, doc, &fake)
 
 			updatedDoc := documentMetaData.UpdateDocument(t, doc, &fake)
 
@@ -158,6 +158,7 @@ func singleUpsertDocuments(task *SingleUpsertTask, collectionObject *sdk.Collect
 			})
 
 			if err != nil {
+				documentMetaData.DecrementCount()
 				task.result.CreateSingleErrorResult(key, err.Error(), false, 0)
 				<-routineLimiter
 				return err

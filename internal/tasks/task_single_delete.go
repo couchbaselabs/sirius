@@ -132,8 +132,8 @@ func singleDeleteDocuments(task *SingleDeleteTask, collectionObject *sdk.Collect
 
 		group.Go(func() error {
 			key := <-dataChannel
-			task.req.documentsMeta.GetDocumentsMetadata(key, task.SingleOperationConfig.Template,
-				task.SingleOperationConfig.DocSize, false)
+
+			task.req.documentsMeta.RemoveDocument(key)
 
 			r, err := collectionObject.Collection.Remove(key, &gocb.RemoveOptions{
 				Cas:             gocb.Cas(task.RemoveOptions.Cas),
