@@ -661,6 +661,7 @@ Description : Validates every document in the cluster's bucket
 | ---- | ---- | -------- |
 | `Keys` | `slice` | `json:keys`  |
 | `Template` | `string` | `json:template`  |
+| `DocSize` | `int` | `json:docSize`  |
 #### singleResult
 
 | Name | Type | JSON Tag |

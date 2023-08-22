@@ -137,13 +137,13 @@ func singleUpsertDocuments(task *SingleUpsertTask, collectionObject *sdk.Collect
 			key := <-dataChannel
 
 			documentMetaData := task.req.documentsMeta.GetDocumentsMetadata(key, task.SingleOperationConfig.Template,
-				false)
+				task.SingleOperationConfig.DocSize, false)
 
 			fake := faker.NewWithSeed(rand.NewSource(int64(documentMetaData.Seed)))
 
 			t := template.InitialiseTemplate(documentMetaData.Template)
 
-			doc, _ := t.GenerateDocument(&fake, 0)
+			doc, _ := t.GenerateDocument(&fake, documentMetaData.DocSize)
 
 			documentMetaData.RetracePreviousMutations(t, doc, &fake)
 

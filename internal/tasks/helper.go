@@ -90,6 +90,7 @@ type OperationConfig struct {
 type SingleOperationConfig struct {
 	Keys     []string `json:"keys" doc:"true"`
 	Template string   `json:"template" doc:"true"`
+	DocSize  int      `json:"docSize" doc:"true"`
 }
 
 func configSingleOperationConfig(s *SingleOperationConfig) error {

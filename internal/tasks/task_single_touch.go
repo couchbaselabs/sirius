@@ -134,7 +134,8 @@ func singleTouchDocuments(task *SingleTouchTask, collectionObject *sdk.Collectio
 		group.Go(func() error {
 			key := <-dataChannel
 
-			task.req.documentsMeta.GetDocumentsMetadata(key, task.SingleOperationConfig.Template, false)
+			task.req.documentsMeta.GetDocumentsMetadata(key, task.SingleOperationConfig.Template,
+				task.SingleOperationConfig.DocSize, false)
 
 			result, err := collectionObject.Collection.Touch(key, time.Duration(task.InsertOptions.Timeout)*time.Second,
 				&gocb.TouchOptions{

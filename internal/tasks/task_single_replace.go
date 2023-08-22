@@ -138,13 +138,13 @@ func singleReplaceDocuments(task *SingleReplaceTask, collectionObject *sdk.Colle
 			key := <-dataChannel
 
 			documentMetaData := task.req.documentsMeta.GetDocumentsMetadata(key, task.SingleOperationConfig.Template,
-				true)
+				task.SingleOperationConfig.DocSize, true)
 
 			fake := faker.NewWithSeed(rand.NewSource(int64(documentMetaData.Seed)))
 
 			t := template.InitialiseTemplate(documentMetaData.Template)
 
-			doc, _ := t.GenerateDocument(&fake, 0)
+			doc, _ := t.GenerateDocument(&fake, documentMetaData.DocSize)
 
 			result, err := collectionObject.Collection.Replace(key, doc, &gocb.ReplaceOptions{
 				Expiry:          time.Duration(task.ReplaceOptions.Expiry) * time.Second,
