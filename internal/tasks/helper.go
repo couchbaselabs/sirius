@@ -43,6 +43,7 @@ const (
 	SingleSubDocDeleteOperation    string = "singleSubDocDelete"
 	SingleSubDocReadOperation      string = "singleSubDocRead"
 	SingleSubDocIncrementOperation string = "singleSubDocReadIncrement"
+	SingleDocValidateOperation     string = "SingleDocValidate"
 )
 
 const (
@@ -434,17 +435,11 @@ func buildKeyAndValues(doc map[string]any, result map[string]any, startString st
 	}
 }
 
-type PathValue struct {
-	Path  string `json:"path" doc:"true"`
-	Value any    `json:"value,omitempty" doc:"true"`
-}
-type KeyPathValue struct {
-	Key       string      `json:"key" doc:"true"`
-	PathValue []PathValue `json:"PathValue" doc:"true"`
-}
-
 type SingleSubDocOperationConfig struct {
-	KeyPathValue []KeyPathValue `json:"keyPathValue" doc:"true"`
+	Key      string   `json:"key" doc:"true"`
+	Paths    []string `json:"paths" doc:true`
+	Template string   `json:"template" doc:"true"`
+	DocSize  int      `json:"docSize" doc:"true"`
 }
 
 func configSingleSubDocOperationConfig(s *SingleSubDocOperationConfig) error {

@@ -908,15 +908,15 @@ func (app *Config) SingleSubDocRead(w http.ResponseWriter, r *http.Request) {
 	_ = app.writeJSON(w, http.StatusOK, resPayload)
 }
 
-// SingleSubDocIncrement is used to read user's sub document
-func (app *Config) SingleSubDocIncrement(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.SingleSubDocIncrement{}
+// SingleDocValidate is used to read user's sub document
+func (app *Config) SingleDocValidate(w http.ResponseWriter, r *http.Request) {
+	task := &tasks.SingleValidate{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	log.Print(task, tasks.SingleSubDocIncrementOperation)
-	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SingleSubDocIncrementOperation, task)
+	log.Print(task, tasks.SingleDocValidateOperation)
+	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SingleDocValidateOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return

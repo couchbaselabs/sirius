@@ -5,7 +5,10 @@ import (
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/sdk"
 	"github.com/couchbaselabs/sirius/internal/task_result"
+	"github.com/couchbaselabs/sirius/internal/template"
+	"github.com/jaswdr/faker"
 	"log"
+	"math/rand"
 	"time"
 )
 
@@ -60,6 +63,8 @@ func (task *SingleSubDocUpsert) Config(req *Request, reRun bool) (int64, error) 
 		return 0, err
 	}
 
+	task.req.ReconfigureDocumentManager()
+
 	if !reRun {
 		task.ResultSeed = int64(time.Now().UnixNano())
 		task.Operation = SingleSubDocUpsertOperation
@@ -111,50 +116,72 @@ func (task *SingleSubDocUpsert) Do() error {
 
 	if err1 != nil {
 		task.result.ErrorOther = err1.Error()
-		var docIds []string
-		for _, data := range task.SingleSubDocOperationConfig.KeyPathValue {
-			docIds = append(docIds, data.Key)
-		}
-		task.result.FailWholeSingleOperation(docIds, err1)
+		task.result.FailWholeSingleOperation([]string{task.SingleSubDocOperationConfig.Key}, err1)
 		return task.tearUp()
 	}
 
 	singleUpsertSubDocuments(task, collectionObject)
 
-	task.result.Success = int64(len(task.SingleSubDocOperationConfig.KeyPathValue)) - task.result.Failure
+	task.result.Success = int64(1) - task.result.Failure
 	return task.tearUp()
 }
 
 // singleInsertSubDocuments uploads new documents in a bucket.scope.collection in a defined batch size at multiple iterations.
 func singleUpsertSubDocuments(task *SingleSubDocUpsert, collectionObject *sdk.CollectionObject) {
-	for _, data := range task.SingleSubDocOperationConfig.KeyPathValue {
 
-		var iOps []gocb.MutateInSpec
+	var iOps []gocb.MutateInSpec
+	key := task.SingleSubDocOperationConfig.Key
+	documentMetaData := task.req.documentsMeta.GetDocumentsMetadata(key, "", 0, false)
 
-		for i := range data.PathValue {
-			iOps = append(iOps, gocb.UpsertSpec(data.PathValue[i].Path, data.PathValue[i].Value, &gocb.UpsertSpecOptions{
-				CreatePath: task.InsertSpecOptions.CreatePath,
-				IsXattr:    task.InsertSpecOptions.IsXattr,
+	for _, path := range task.SingleSubDocOperationConfig.Paths {
+		subDocument := documentMetaData.SubDocument(path, task.SingleSubDocOperationConfig.Template,
+			task.SingleSubDocOperationConfig.DocSize, false)
+
+		fake := faker.NewWithSeed(rand.NewSource(int64(subDocument.Seed)))
+
+		value := subDocument.GenerateValue(&fake)
+
+		value = subDocument.RetracePreviousMutations(value, &fake)
+
+		value = subDocument.UpdateValue(value, &fake)
+
+		iOps = append(iOps, gocb.UpsertSpec(path, value, &gocb.UpsertSpecOptions{
+			CreatePath: task.InsertSpecOptions.CreatePath,
+			IsXattr:    task.InsertSpecOptions.IsXattr,
+		}))
+	}
+
+	if !task.InsertSpecOptions.IsXattr {
+		iOps = append(iOps, gocb.IncrementSpec(template.MutatedPath,
+			int64(template.MutateFieldIncrement), &gocb.CounterSpecOptions{
+				CreatePath: true,
+				IsXattr:    false,
 			}))
-		}
+	}
 
-		result, err := collectionObject.Collection.MutateIn(data.Key, iOps, &gocb.MutateInOptions{
-			Expiry:          time.Duration(task.MutateInOptions.Expiry) * time.Second,
-			Cas:             gocb.Cas(task.MutateInOptions.Cas),
-			PersistTo:       task.MutateInOptions.PersistTo,
-			ReplicateTo:     task.MutateInOptions.ReplicateTo,
-			DurabilityLevel: getDurability(task.MutateInOptions.Durability),
-			StoreSemantic:   getStoreSemantic(task.MutateInOptions.StoreSemantic),
-			Timeout:         time.Duration(task.MutateInOptions.Expiry) * time.Second,
-			PreserveExpiry:  task.MutateInOptions.PreserveExpiry,
-		})
+	result, err := collectionObject.Collection.MutateIn(key, iOps, &gocb.MutateInOptions{
+		Expiry:          time.Duration(task.MutateInOptions.Expiry) * time.Second,
+		Cas:             gocb.Cas(task.MutateInOptions.Cas),
+		PersistTo:       task.MutateInOptions.PersistTo,
+		ReplicateTo:     task.MutateInOptions.ReplicateTo,
+		DurabilityLevel: getDurability(task.MutateInOptions.Durability),
+		StoreSemantic:   getStoreSemantic(task.MutateInOptions.StoreSemantic),
+		Timeout:         time.Duration(task.MutateInOptions.Timeout) * time.Second,
+		PreserveExpiry:  task.MutateInOptions.PreserveExpiry,
+	})
 
-		if err != nil {
-			task.result.Failure++
-			task.result.CreateSingleErrorResult(data.Key, err.Error(), false, 0)
-		} else {
-			task.result.CreateSingleErrorResult(data.Key, "", true, uint64(result.Cas()))
+	if err != nil {
+		for _, path := range task.SingleSubDocOperationConfig.Paths {
+
+			subDocument := documentMetaData.SubDocument(path, task.SingleSubDocOperationConfig.Template,
+				task.SingleSubDocOperationConfig.DocSize, false)
+
+			subDocument.DecrementCount()
 		}
+		task.result.CreateSingleErrorResult(key, err.Error(), false, 0)
+	} else {
+		documentMetaData.IncrementMutationCount()
+		task.result.CreateSingleErrorResult(key, "", true, uint64(result.Cas()))
 	}
 
 	task.PostTaskExceptionHandling(collectionObject)

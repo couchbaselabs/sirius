@@ -1,8 +1,8 @@
 package tasks
 
 import (
+	"encoding/json"
 	"fmt"
-	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/sdk"
 	"github.com/couchbaselabs/sirius/internal/task_result"
 	"github.com/couchbaselabs/sirius/internal/template"
@@ -13,42 +13,34 @@ import (
 	"time"
 )
 
-type SingleUpsertTask struct {
+type SingleValidate struct {
 	IdentifierToken       string                  `json:"identifierToken" doc:"true"`
 	ClusterConfig         *sdk.ClusterConfig      `json:"clusterConfig" doc:"true"`
 	Bucket                string                  `json:"bucket" doc:"true"`
 	Scope                 string                  `json:"scope,omitempty" doc:"true"`
 	Collection            string                  `json:"collection,omitempty" doc:"true"`
-	InsertOptions         *InsertOptions          `json:"insertOptions,omitempty" doc:"true"`
 	SingleOperationConfig *SingleOperationConfig  `json:"singleOperationConfig" doc:"true"`
 	Operation             string                  `json:"operation" doc:"false"`
 	ResultSeed            int64                   `json:"resultSeed" doc:"false"`
 	TaskPending           bool                    `json:"taskPending" doc:"false"`
-	result                *task_result.TaskResult `json:"-" doc:"false"`
+	result                *task_result.TaskResult `json:"result" doc:"false"`
 	req                   *Request                `json:"-" doc:"false"`
 }
 
-func (task *SingleUpsertTask) Describe() string {
-	return "Single insert task updates key value in Couchbase.\n"
+func (task *SingleValidate) Describe() string {
+	return "validate the document integrity by document ID"
 }
 
-func (task *SingleUpsertTask) BuildIdentifier() string {
-	if task.IdentifierToken == "" {
-		task.IdentifierToken = DefaultIdentifierToken
+func (task *SingleValidate) tearUp() error {
+	if err := task.result.SaveResultIntoFile(); err != nil {
+		log.Println("not able to save result into ", task.ResultSeed)
 	}
-	return task.IdentifierToken
+	task.result = nil
+	task.TaskPending = false
+	return task.req.SaveRequestIntoFile()
 }
 
-func (task *SingleUpsertTask) CollectionIdentifier() string {
-	return task.IdentifierToken + task.ClusterConfig.ConnectionString + task.Bucket + task.Scope + task.Collection
-}
-
-func (task *SingleUpsertTask) CheckIfPending() bool {
-	return task.TaskPending
-}
-
-// Config configures  the insert task
-func (task *SingleUpsertTask) Config(req *Request, reRun bool) (int64, error) {
+func (task *SingleValidate) Config(req *Request, reRun bool) (int64, error) {
 	task.TaskPending = true
 	task.req = req
 
@@ -67,7 +59,7 @@ func (task *SingleUpsertTask) Config(req *Request, reRun bool) (int64, error) {
 
 	if !reRun {
 		task.ResultSeed = int64(time.Now().UnixNano())
-		task.Operation = SingleUpsertOperation
+		task.Operation = SingleDocValidateOperation
 
 		if task.Bucket == "" {
 			task.Bucket = DefaultBucket
@@ -79,32 +71,25 @@ func (task *SingleUpsertTask) Config(req *Request, reRun bool) (int64, error) {
 			task.Collection = DefaultCollection
 		}
 
-		if err := configInsertOptions(task.InsertOptions); err != nil {
-			task.TaskPending = false
-			return 0, err
-		}
-
 		if err := configSingleOperationConfig(task.SingleOperationConfig); err != nil {
 			task.TaskPending = false
 			return 0, err
 		}
+
 	} else {
 		log.Println("retrying :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 	}
 	return task.ResultSeed, nil
 }
 
-func (task *SingleUpsertTask) tearUp() error {
-	if err := task.result.SaveResultIntoFile(); err != nil {
-		log.Println("not able to save result into ", task.ResultSeed)
+func (task *SingleValidate) BuildIdentifier() string {
+	if task.IdentifierToken == "" {
+		task.IdentifierToken = DefaultIdentifierToken
 	}
-	task.result = nil
-	task.TaskPending = false
-	return task.req.SaveRequestIntoFile()
+	return task.IdentifierToken
 }
 
-func (task *SingleUpsertTask) Do() error {
-
+func (task *SingleValidate) Do() error {
 	task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
 	collectionObject, err1 := task.GetCollectionObject()
@@ -115,15 +100,14 @@ func (task *SingleUpsertTask) Do() error {
 		return task.tearUp()
 	}
 
-	singleUpsertDocuments(task, collectionObject)
+	validateSingleDocuments(task, collectionObject)
 
 	task.result.Success = int64(len(task.SingleOperationConfig.Keys)) - task.result.Failure
 	return task.tearUp()
 }
 
-// singleUpsertDocuments uploads new documents in a bucket.scope.collection in a defined batch size at multiple iterations.
-func singleUpsertDocuments(task *SingleUpsertTask, collectionObject *sdk.CollectionObject) {
-
+// validateSingleDocuments validates the document integrity as per meta-data stored in Sirius
+func validateSingleDocuments(task *SingleValidate, collectionObject *sdk.CollectionObject) {
 	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
 	dataChannel := make(chan string, MaxConcurrentRoutines)
 
@@ -143,28 +127,63 @@ func singleUpsertDocuments(task *SingleUpsertTask, collectionObject *sdk.Collect
 
 			t := template.InitialiseTemplate(documentMetaData.Template)
 
-			doc, _ := t.GenerateDocument(&fake, documentMetaData.DocSize)
-
+			doc, err := t.GenerateDocument(&fake, documentMetaData.DocSize)
+			if err != nil {
+				task.result.CreateSingleErrorResult(key, err.Error(), false, 0)
+				<-routineLimiter
+				return err
+			}
 			doc = documentMetaData.RetracePreviousMutations(t, doc, &fake)
 
-			updatedDoc := documentMetaData.UpdateDocument(t, doc, &fake)
-
-			m, err := collectionObject.Collection.Upsert(key, updatedDoc, &gocb.UpsertOptions{
-				DurabilityLevel: getDurability(task.InsertOptions.Durability),
-				PersistTo:       task.InsertOptions.PersistTo,
-				ReplicateTo:     task.InsertOptions.ReplicateTo,
-				Timeout:         time.Duration(task.InsertOptions.Timeout) * time.Second,
-				Expiry:          time.Duration(task.InsertOptions.Expiry) * time.Second,
-			})
-
+			docBytes, err := json.Marshal(&doc)
 			if err != nil {
-				documentMetaData.DecrementCount()
 				task.result.CreateSingleErrorResult(key, err.Error(), false, 0)
 				<-routineLimiter
 				return err
 			}
 
-			task.result.CreateSingleErrorResult(key, "", true, uint64(m.Cas()))
+			var docMap map[string]any
+			if err := json.Unmarshal(docBytes, &docMap); err != nil {
+				task.result.CreateSingleErrorResult(key, err.Error(), false, 0)
+				<-routineLimiter
+				return err
+			}
+
+			subDocumentMap := make(map[string]any)
+
+			for path, subDocument := range documentMetaData.SubDocMutations {
+
+				fakeSub := faker.NewWithSeed(rand.NewSource(int64(subDocument.Seed)))
+
+				value := subDocument.GenerateValue(&fakeSub)
+
+				value = subDocument.RetracePreviousMutations(value, &fakeSub)
+
+				subDocumentMap[path] = value
+			}
+
+			docMap[template.MutatedPath] = documentMetaData.SubDocMutationCount()
+
+			result, err := collectionObject.Collection.Get(key, nil)
+			if err != nil {
+				task.result.CreateSingleErrorResult(key, err.Error(), false, 0)
+				<-routineLimiter
+				return err
+			}
+			var resultFromHostMap map[string]any
+			if err := result.Content(&resultFromHostMap); err != nil {
+				task.result.CreateSingleErrorResult(key, err.Error(), false, 0)
+				<-routineLimiter
+				return err
+			}
+
+			if !compareDocumentsIsSame(resultFromHostMap, docMap, subDocumentMap) {
+				task.result.CreateSingleErrorResult(key, err.Error(), false, 0)
+				<-routineLimiter
+				return err
+			}
+
+			task.result.CreateSingleErrorResult(key, "", true, uint64(result.Cas()))
 			<-routineLimiter
 			return nil
 		})
@@ -176,21 +195,29 @@ func singleUpsertDocuments(task *SingleUpsertTask, collectionObject *sdk.Collect
 	log.Println("completed :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 }
 
-func (task *SingleUpsertTask) PostTaskExceptionHandling(_ *sdk.CollectionObject) {
-	//TODO implement me
+func (task *SingleValidate) CollectionIdentifier() string {
+	return task.IdentifierToken + task.ClusterConfig.ConnectionString + task.Bucket + task.Scope + task.Collection
 }
 
-func (task *SingleUpsertTask) GetResultSeed() string {
+func (task *SingleValidate) CheckIfPending() bool {
+	return task.TaskPending
+}
+
+func (task *SingleValidate) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
+}
+
+func (task *SingleValidate) GetResultSeed() string {
 	if task.result == nil {
 		return ""
 	}
 	return fmt.Sprintf("%d", task.result.ResultSeed)
 }
 
-func (task *SingleUpsertTask) GetCollectionObject() (*sdk.CollectionObject, error) {
+func (task *SingleValidate) GetCollectionObject() (*sdk.CollectionObject, error) {
 	return task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
 		task.Collection)
 }
 
-func (task *SingleUpsertTask) SetException(exceptions Exceptions) {
+func (task *SingleValidate) SetException(exceptions Exceptions) {
+
 }

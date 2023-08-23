@@ -51,7 +51,7 @@ func (app *Config) routes() http.Handler {
 	mux.Post("/single-sub-doc-replace", app.SingleSubDocReplace)
 	mux.Post("/single-sub-doc-delete", app.SingleSubDocDelete)
 	mux.Post("/single-sub-doc-read", app.SingleSubDocRead)
-	mux.Post("/single-sub-doc-increment", app.SingleSubDocIncrement)
+	mux.Post("/single-doc-validate", app.SingleDocValidate)
 
 	return mux
 }

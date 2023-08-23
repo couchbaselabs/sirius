@@ -112,56 +112,51 @@ func (task *SingleSubDocRead) Do() error {
 
 	if err1 != nil {
 		task.result.ErrorOther = err1.Error()
-		var docIds []string
-		for _, data := range task.SingleSubDocOperationConfig.KeyPathValue {
-			docIds = append(docIds, data.Key)
-		}
-		task.result.FailWholeSingleOperation(docIds, err1)
+		task.result.FailWholeSingleOperation([]string{task.SingleSubDocOperationConfig.Key}, err1)
 		return task.tearUp()
 	}
 
 	singleReadSubDocuments(task, collectionObject)
-	task.result.Success = int64(len(task.SingleSubDocOperationConfig.KeyPathValue)) - task.result.Failure
+	task.result.Success = int64(1) - task.result.Failure
 	return task.tearUp()
 }
 
 // singleInsertSubDocuments uploads new documents in a bucket.scope.collection in a defined batch size at multiple iterations.
 func singleReadSubDocuments(task *SingleSubDocRead, collectionObject *sdk.CollectionObject) {
+	var iOps []gocb.LookupInSpec
+	key := task.SingleSubDocOperationConfig.Key
+	documentMetaData := task.req.documentsMeta.GetDocumentsMetadata(key, "", 0, false)
 
-	for _, data := range task.SingleSubDocOperationConfig.KeyPathValue {
+	for _, path := range task.SingleSubDocOperationConfig.Paths {
 
-		var iOps []gocb.LookupInSpec
-		var paths []string
-		for _, pathValue := range data.PathValue {
-			paths = append(paths, pathValue.Path)
-			iOps = append(iOps, gocb.GetSpec(pathValue.Path, &gocb.GetSpecOptions{
-				IsXattr: task.GetSpecOptions.IsXattr,
-			}))
-		}
+		documentMetaData.SubDocument(path, task.SingleSubDocOperationConfig.Template,
+			task.SingleSubDocOperationConfig.DocSize, false)
 
-		result, err := collectionObject.Collection.LookupIn(data.Key, iOps, &gocb.LookupInOptions{
-			Timeout: time.Duration(task.LookupInOptions.Timeout) * time.Second,
-		})
+		iOps = append(iOps, gocb.GetSpec(path, &gocb.GetSpecOptions{
+			IsXattr: task.GetSpecOptions.IsXattr,
+		}))
+	}
 
-		if err != nil {
-			task.result.Failure++
-			task.result.CreateSingleErrorResult(data.Key, err.Error(), false, 0)
-		} else {
-			flag := true
-			for index, _ := range paths {
-				var val interface{}
-				if err := result.ContentAt(uint(index), &val); err != nil {
-					task.result.Failure++
-					task.result.CreateSingleErrorResult(data.Key, err.Error(), false, 0)
-					flag = false
-					break
-				}
-			}
-			if flag {
-				task.result.CreateSingleErrorResult(data.Key, "", true, uint64(result.Cas()))
+	result, err := collectionObject.Collection.LookupIn(key, iOps, &gocb.LookupInOptions{
+		Timeout: time.Duration(task.LookupInOptions.Timeout) * time.Second,
+	})
+
+	if err != nil {
+		task.result.CreateSingleErrorResult(key, err.Error(), false, 0)
+	} else {
+		flag := true
+		for index := range task.SingleSubDocOperationConfig.Paths {
+			var val interface{}
+			if err := result.ContentAt(uint(index), &val); err != nil {
+				task.result.Failure++
+				task.result.CreateSingleErrorResult(key, err.Error(), false, 0)
+				flag = false
+				break
 			}
 		}
-
+		if flag {
+			task.result.CreateSingleErrorResult(key, "", true, uint64(result.Cas()))
+		}
 	}
 
 	task.PostTaskExceptionHandling(collectionObject)

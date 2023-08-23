@@ -14,10 +14,10 @@ configuration that is also available on a per-task basis:
  * [/run-template-query](#run-template-query)
  * [/single-create](#single-create)
  * [/single-delete](#single-delete)
+ * [/single-doc-validate](#single-doc-validate)
  * [/single-read](#single-read)
  * [/single-replace](#single-replace)
  * [/single-sub-doc-delete](#single-sub-doc-delete)
- * [/single-sub-doc-increment](#single-sub-doc-increment)
  * [/single-sub-doc-insert](#single-sub-doc-insert)
  * [/single-sub-doc-read](#single-sub-doc-read)
  * [/single-sub-doc-replace](#single-sub-doc-replace)
@@ -202,6 +202,22 @@ Description : Single delete task deletes key in Couchbase.
 | `SingleOperationConfig` | `ptr` | `json:singleOperationConfig`  |
 
 ---
+#### /single-doc-validate
+
+ REST : POST
+
+Description : validate the document integrity by document ID
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `SingleOperationConfig` | `ptr` | `json:singleOperationConfig`  |
+
+---
 #### /single-read
 
  REST : POST
@@ -252,24 +268,6 @@ Description : SingleSingleSubDocDelete inserts a Sub-Document as per user's inpu
 | `Collection` | `string` | `json:collection,omitempty`  |
 | `SingleSubDocOperationConfig` | `ptr` | `json:singleSubDocOperationConfig`  |
 | `RemoveSpecOptions` | `ptr` | `json:removeSpecOptions`  |
-| `MutateInOptions` | `ptr` | `json:mutateInOptions`  |
-
----
-#### /single-sub-doc-increment
-
- REST : POST
-
-Description : SingleSingleSubDocIncrement increment the value of paths by delta as a sub-Document opertion.
-
-| Name | Type | JSON Tag |
-| ---- | ---- | -------- |
-| `IdentifierToken` | `string` | `json:identifierToken`  |
-| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
-| `Bucket` | `string` | `json:bucket`  |
-| `Scope` | `string` | `json:scope,omitempty`  |
-| `Collection` | `string` | `json:collection,omitempty`  |
-| `SingleSubDocOperationConfig` | `ptr` | `json:singleSubDocOperationConfig`  |
-| `InsertSpecOptions` | `ptr` | `json:insertSpecOptions`  |
 | `MutateInOptions` | `ptr` | `json:mutateInOptions`  |
 
 ---
@@ -496,11 +494,9 @@ Description : Validates every document in the cluster's bucket
  * [getSpecOptions](#getspecoptions)
  * [insertOptions](#insertoptions)
  * [insertSpecOptions](#insertspecoptions)
- * [keyPathValue](#keypathvalue)
  * [lookupInOptions](#lookupinoptions)
  * [mutateInOptions](#mutateinoptions)
  * [operationConfig](#operationconfig)
- * [pathValue](#pathvalue)
  * [queryOperationConfig](#queryoperationconfig)
  * [removeOptions](#removeoptions)
  * [removeSpecOptions](#removespecoptions)
@@ -565,12 +561,6 @@ Description : Validates every document in the cluster's bucket
 | ---- | ---- | -------- |
 | `CreatePath` | `bool` | `json:createPath,omitempty`  |
 | `IsXattr` | `bool` | `json:isXattr,omitempty`  |
-#### keyPathValue
-
-| Name | Type | JSON Tag |
-| ---- | ---- | -------- |
-| `Key` | `string` | `json:key`  |
-| `PathValue` | `slice` | `json:PathValue`  |
 #### lookupInOptions
 
 | Name | Type | JSON Tag |
@@ -604,12 +594,6 @@ Description : Validates every document in the cluster's bucket
 | `End` | `int64` | `json:end`  |
 | `FieldsToChange` | `slice` | `json:fieldsToChange`  |
 | `Exceptions` | `struct` | `json:exceptions,omitempty`  |
-#### pathValue
-
-| Name | Type | JSON Tag |
-| ---- | ---- | -------- |
-| `Path` | `string` | `json:path`  |
-| `Value` | `interface` | `json:value,omitempty`  |
 #### queryOperationConfig
 
 | Name | Type | JSON Tag |
@@ -673,7 +657,9 @@ Description : Validates every document in the cluster's bucket
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
-| `KeyPathValue` | `slice` | `json:keyPathValue`  |
+| `Key` | `string` | `json:key`  |
+| `Template` | `string` | `json:template`  |
+| `DocSize` | `int` | `json:docSize`  |
 #### subDocOperationConfig
 
 | Name | Type | JSON Tag |
