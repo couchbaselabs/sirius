@@ -129,8 +129,7 @@ func singleReadSubDocuments(task *SingleSubDocRead, collectionObject *sdk.Collec
 
 	for _, path := range task.SingleSubDocOperationConfig.Paths {
 
-		documentMetaData.SubDocument(path, task.SingleSubDocOperationConfig.Template,
-			task.SingleSubDocOperationConfig.DocSize, false)
+		documentMetaData.SubDocument(path, task.SingleSubDocOperationConfig.DocSize, false)
 
 		iOps = append(iOps, gocb.GetSpec(path, &gocb.GetSpecOptions{
 			IsXattr: task.GetSpecOptions.IsXattr,

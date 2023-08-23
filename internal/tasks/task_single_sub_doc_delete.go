@@ -132,7 +132,7 @@ func singleDeleteSubDocuments(task *SingleSubDocDelete, collectionObject *sdk.Co
 	documentMetaData := task.req.documentsMeta.GetDocumentsMetadata(key, "", 0, false)
 
 	for _, path := range task.SingleSubDocOperationConfig.Paths {
-		_ = documentMetaData.SubDocument(path, task.SingleSubDocOperationConfig.Template,
+		_ = documentMetaData.SubDocument(path,
 			task.SingleSubDocOperationConfig.DocSize, false)
 
 		documentMetaData.RemovePath(path)

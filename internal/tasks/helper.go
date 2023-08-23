@@ -436,10 +436,9 @@ func buildKeyAndValues(doc map[string]any, result map[string]any, startString st
 }
 
 type SingleSubDocOperationConfig struct {
-	Key      string   `json:"key" doc:"true"`
-	Paths    []string `json:"paths" doc:true`
-	Template string   `json:"template" doc:"true"`
-	DocSize  int      `json:"docSize" doc:"true"`
+	Key     string   `json:"key" doc:"true"`
+	Paths   []string `json:"paths" doc:true`
+	DocSize int      `json:"docSize" doc:"true"`
 }
 
 func configSingleSubDocOperationConfig(s *SingleSubDocOperationConfig) error {

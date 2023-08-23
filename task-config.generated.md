@@ -658,7 +658,6 @@ Description : Validates every document in the cluster's bucket
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
 | `Key` | `string` | `json:key`  |
-| `Template` | `string` | `json:template`  |
 | `DocSize` | `int` | `json:docSize`  |
 #### subDocOperationConfig
 

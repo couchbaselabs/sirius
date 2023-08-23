@@ -1,6 +1,7 @@
 package task_meta_data
 
 import (
+	"github.com/couchbaselabs/sirius/internal/docgenerator"
 	"github.com/couchbaselabs/sirius/internal/template"
 	"github.com/jaswdr/faker"
 	"sync"
@@ -89,10 +90,13 @@ func (d *DocumentMetaData) UpdateDocument(t template.Template, doc interface{}, 
 	return updatedDoc
 }
 
-func (d *DocumentMetaData) SubDocument(subPath, template string, docSize int, reset bool) *SubDocMutations {
+func (d *DocumentMetaData) SubDocument(subPath string, docSize int, reset bool) *SubDocMutations {
 	defer d.lock.Unlock()
 	d.lock.Lock()
 	seed := int64(time.Now().UnixNano())
+	if docSize == 0 {
+		docSize = 50
+	}
 	if _, ok := d.SubDocMutations[subPath]; !ok {
 		d.SubDocMutations[subPath] = &SubDocMutations{
 			Seed:            seed,
@@ -145,6 +149,9 @@ func (m *DocumentsMetaData) GetDocumentsMetadata(docId, template string, docSize
 	m.lock.Lock()
 	seed := int64(time.Now().UnixNano())
 	_, ok := m.MetaData[docId]
+	if docSize == 0 {
+		docSize = docgenerator.DefaultDocSize
+	}
 	if !ok {
 		dObj := &DocumentMetaData{
 			Seed:                 seed,
