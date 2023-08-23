@@ -130,8 +130,7 @@ func singleReplaceSubDocuments(task *SingleSubDocReplace, collectionObject *sdk.
 	documentMetaData := task.req.documentsMeta.GetDocumentsMetadata(key, "", 0, false)
 
 	for _, path := range task.SingleSubDocOperationConfig.Paths {
-		subDocument := documentMetaData.SubDocument(path, task.SingleSubDocOperationConfig.Template,
-			task.SingleSubDocOperationConfig.DocSize, true)
+		subDocument := documentMetaData.SubDocument(path, task.SingleSubDocOperationConfig.DocSize, true)
 
 		fake := faker.NewWithSeed(rand.NewSource(int64(subDocument.Seed)))
 

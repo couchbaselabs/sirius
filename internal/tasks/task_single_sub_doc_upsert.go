@@ -134,8 +134,7 @@ func singleUpsertSubDocuments(task *SingleSubDocUpsert, collectionObject *sdk.Co
 	documentMetaData := task.req.documentsMeta.GetDocumentsMetadata(key, "", 0, false)
 
 	for _, path := range task.SingleSubDocOperationConfig.Paths {
-		subDocument := documentMetaData.SubDocument(path, task.SingleSubDocOperationConfig.Template,
-			task.SingleSubDocOperationConfig.DocSize, false)
+		subDocument := documentMetaData.SubDocument(path, task.SingleSubDocOperationConfig.DocSize, false)
 
 		fake := faker.NewWithSeed(rand.NewSource(int64(subDocument.Seed)))
 
@@ -173,8 +172,7 @@ func singleUpsertSubDocuments(task *SingleSubDocUpsert, collectionObject *sdk.Co
 	if err != nil {
 		for _, path := range task.SingleSubDocOperationConfig.Paths {
 
-			subDocument := documentMetaData.SubDocument(path, task.SingleSubDocOperationConfig.Template,
-				task.SingleSubDocOperationConfig.DocSize, false)
+			subDocument := documentMetaData.SubDocument(path, task.SingleSubDocOperationConfig.DocSize, false)
 
 			subDocument.DecrementCount()
 		}
