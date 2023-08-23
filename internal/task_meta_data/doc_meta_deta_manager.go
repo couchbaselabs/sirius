@@ -49,13 +49,14 @@ func (m *SubDocMutations) IncrementCount() {
 }
 
 type DocumentMetaData struct {
-	Seed            int64                       `json:"seed"`
-	DocId           string                      `json:"docId"`
-	DocSize         int                         `json:"docSize"`
-	Template        string                      `json:"template"`
-	countOfMutation int                         `json:"countOfMutation"`
-	SubDocMutations map[string]*SubDocMutations `json:"subDocMutations"`
-	lock            sync.Mutex                  `json:"-"`
+	Seed                 int64                       `json:"seed"`
+	DocId                string                      `json:"docId"`
+	DocSize              int                         `json:"docSize"`
+	Template             string                      `json:"template"`
+	countOfMutation      int                         `json:"countOfMutation"`
+	SubDocMutations      map[string]*SubDocMutations `json:"subDocMutations"`
+	subDocMutationsCount int                         `json:"subDocMutationsCount"`
+	lock                 sync.Mutex                  `json:"-"`
 }
 
 func (d *DocumentMetaData) IncrementCount() {
@@ -83,6 +84,7 @@ func (d *DocumentMetaData) UpdateDocument(t template.Template, doc interface{}, 
 	defer d.lock.Lock()
 	updatedDoc, _ := t.UpdateDocument([]string{}, doc, fake)
 	d.SubDocMutations = make(map[string]*SubDocMutations)
+	d.subDocMutationsCount = 0
 	d.IncrementCount()
 	return updatedDoc
 }
@@ -113,6 +115,18 @@ func (d *DocumentMetaData) RemovePath(path string) {
 	delete(d.SubDocMutations, path)
 }
 
+func (d *DocumentMetaData) IncrementMutationCount() {
+	defer d.lock.Unlock()
+	d.lock.Lock()
+	d.subDocMutationsCount++
+}
+
+func (d *DocumentMetaData) SubDocMutationCount() float64 {
+	defer d.lock.Unlock()
+	d.lock.Lock()
+	return float64(d.subDocMutationsCount)
+}
+
 type DocumentsMetaData struct {
 	MetaData map[string]*DocumentMetaData `json:"metaData"`
 	lock     sync.Mutex                   `json:"-"`
@@ -133,13 +147,14 @@ func (m *DocumentsMetaData) GetDocumentsMetadata(docId, template string, docSize
 	_, ok := m.MetaData[docId]
 	if !ok {
 		dObj := &DocumentMetaData{
-			Seed:            seed,
-			DocId:           docId,
-			DocSize:         docSize,
-			Template:        template,
-			countOfMutation: 0,
-			SubDocMutations: make(map[string]*SubDocMutations),
-			lock:            sync.Mutex{},
+			Seed:                 seed,
+			DocId:                docId,
+			DocSize:              docSize,
+			Template:             template,
+			countOfMutation:      0,
+			SubDocMutations:      make(map[string]*SubDocMutations),
+			subDocMutationsCount: 0,
+			lock:                 sync.Mutex{},
 		}
 		m.MetaData[docId] = dObj
 	}
@@ -149,6 +164,7 @@ func (m *DocumentsMetaData) GetDocumentsMetadata(docId, template string, docSize
 		m.MetaData[docId].DocSize = docSize
 		m.MetaData[docId].Template = template
 		m.MetaData[docId].SubDocMutations = make(map[string]*SubDocMutations)
+		m.MetaData[docId].subDocMutationsCount = 0
 	}
 	return m.MetaData[docId]
 }

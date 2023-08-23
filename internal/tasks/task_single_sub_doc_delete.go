@@ -164,6 +164,7 @@ func singleDeleteSubDocuments(task *SingleSubDocDelete, collectionObject *sdk.Co
 	if err != nil {
 		task.result.CreateSingleErrorResult(key, err.Error(), false, 0)
 	} else {
+		documentMetaData.IncrementMutationCount()
 		task.result.CreateSingleErrorResult(key, "", true, uint64(result.Cas()))
 	}
 

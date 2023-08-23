@@ -180,6 +180,7 @@ func singleUpsertSubDocuments(task *SingleSubDocUpsert, collectionObject *sdk.Co
 		}
 		task.result.CreateSingleErrorResult(key, err.Error(), false, 0)
 	} else {
+		documentMetaData.IncrementMutationCount()
 		task.result.CreateSingleErrorResult(key, "", true, uint64(result.Cas()))
 	}
 

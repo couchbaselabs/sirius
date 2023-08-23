@@ -14,6 +14,7 @@ configuration that is also available on a per-task basis:
  * [/run-template-query](#run-template-query)
  * [/single-create](#single-create)
  * [/single-delete](#single-delete)
+ * [/single-doc-validate](#single-doc-validate)
  * [/single-read](#single-read)
  * [/single-replace](#single-replace)
  * [/single-sub-doc-delete](#single-sub-doc-delete)
@@ -198,6 +199,22 @@ Description : Single delete task deletes key in Couchbase.
 | `Scope` | `string` | `json:scope,omitempty`  |
 | `Collection` | `string` | `json:collection,omitempty`  |
 | `RemoveOptions` | `ptr` | `json:removeOptions,omitempty`  |
+| `SingleOperationConfig` | `ptr` | `json:singleOperationConfig`  |
+
+---
+#### /single-doc-validate
+
+ REST : POST
+
+Description : validate the document integrity by document ID
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
 | `SingleOperationConfig` | `ptr` | `json:singleOperationConfig`  |
 
 ---

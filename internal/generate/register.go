@@ -41,6 +41,7 @@ func (r *Register) RegisteredTasks() map[string]TaskRegister {
 		"/single-sub-doc-replace": {"POST", &tasks.SingleSubDocReplace{}},
 		"/single-sub-doc-delete":  {"POST", &tasks.SingleSubDocDelete{}},
 		"/single-sub-doc-read":    {"POST", &tasks.SingleSubDocRead{}},
+		"/single-doc-validate":    {"POST", &tasks.SingleValidate{}},
 	}
 }
 

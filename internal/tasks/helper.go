@@ -43,6 +43,7 @@ const (
 	SingleSubDocDeleteOperation    string = "singleSubDocDelete"
 	SingleSubDocReadOperation      string = "singleSubDocRead"
 	SingleSubDocIncrementOperation string = "singleSubDocReadIncrement"
+	SingleDocValidateOperation     string = "SingleDocValidate"
 )
 
 const (
