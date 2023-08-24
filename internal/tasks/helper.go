@@ -437,7 +437,7 @@ func buildKeyAndValues(doc map[string]any, result map[string]any, startString st
 
 type SingleSubDocOperationConfig struct {
 	Key     string   `json:"key" doc:"true"`
-	Paths   []string `json:"paths" doc:true`
+	Paths   []string `json:"paths" doc:"true"`
 	DocSize int      `json:"docSize" doc:"true"`
 }
 
