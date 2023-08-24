@@ -121,6 +121,7 @@ func (t *TaskState) StoreState() {
 		var completed []int64
 		var err []int64
 		d := time.NewTicker(30 * time.Second)
+		defer d.Stop()
 		if t.ctx.Err() != nil {
 			log.Print("Ctx closed for StoreState()")
 			return

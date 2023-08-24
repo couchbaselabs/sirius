@@ -33,6 +33,10 @@ func (r *RetryExceptions) Config(req *Request, reRun bool) (int64, error) {
 	if r.req == nil {
 		return 0, fmt.Errorf("request.Request struct is nil")
 	}
+
+	if r.req.Tasks == nil {
+		return 0, fmt.Errorf("request.Task struct is nil")
+	}
 	for i := range r.req.Tasks {
 
 		if r.req.Tasks[i].Task.GetResultSeed() == r.ResultSeed {
