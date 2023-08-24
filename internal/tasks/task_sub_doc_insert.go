@@ -188,7 +188,7 @@ func insertSubDocuments(task *SubDocInsert, collectionObject *sdk.CollectionObje
 			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
 
 			var err error
-			for retry := 0; retry <= int(math.Max(float64(1), float64(task.SubDocOperationConfig.Exceptions.
+			for retry := 0; retry < int(math.Max(float64(1), float64(task.SubDocOperationConfig.Exceptions.
 				RetryAttempts))); retry++ {
 
 				var iOps []gocb.MutateInSpec

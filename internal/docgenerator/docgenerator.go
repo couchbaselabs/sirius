@@ -49,7 +49,7 @@ func ConfigQueryGenerator(template template.Template) *QueryGenerator {
 
 // GetDocIdAndKey will return key for the next document
 func (g *Generator) GetDocIdAndKey(iteration int64) (string, int64) {
-	newKey := iteration + g.SeedEnd
+	newKey := iteration + g.Seed
 	return fmt.Sprintf("%s%d%s", g.KeyPrefix, newKey, g.KeySuffix), newKey
 }
 

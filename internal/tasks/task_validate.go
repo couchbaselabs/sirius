@@ -223,7 +223,7 @@ func validateDocuments(task *ValidateTask, collectionObject *sdk.CollectionObjec
 			var resultFromHost map[string]any
 			resultFromHostTemplate := template.InitialiseTemplate(task.MetaData.TemplateName)
 
-			for retry := 0; retry <= int(math.Max(float64(1), float64(task.OperationConfig.Exceptions.
+			for retry := 0; retry < int(math.Max(float64(1), float64(task.OperationConfig.Exceptions.
 				RetryAttempts))); retry++ {
 				result, err = collectionObject.Collection.Get(docId, nil)
 				if err == nil {

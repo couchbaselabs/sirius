@@ -1,7 +1,6 @@
 package tasks
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/couchbase/gocb/v2"
@@ -35,6 +34,7 @@ type InsertTask struct {
 	result          *task_result.TaskResult            `json:"-" doc:"false"`
 	gen             *docgenerator.Generator            `json:"-" doc:"false"`
 	req             *Request                           `json:"-" doc:"false"`
+	rerun           bool                               `json:"-" doc:"false"`
 }
 
 func (task *InsertTask) Describe() string {
@@ -76,6 +76,8 @@ func (task *InsertTask) Config(req *Request, reRun bool) (int64, error) {
 		return 0, err
 	}
 
+	task.rerun = reRun
+
 	if !reRun {
 		task.ResultSeed = int64(time.Now().UnixNano())
 		task.Operation = InsertOperation
@@ -105,8 +107,10 @@ func (task *InsertTask) Config(req *Request, reRun bool) (int64, error) {
 			task.OperationConfig.KeySuffix, task.OperationConfig.TemplateName)
 
 		task.req.lock.Lock()
+		if task.OperationConfig.End+task.MetaData.Seed > task.MetaData.SeedEnd {
+			task.req.AddToSeedEnd(task.MetaData, (task.OperationConfig.End+task.MetaData.Seed)-(task.MetaData.SeedEnd))
+		}
 		task.State = task_state.ConfigTaskState(task.MetaData.Seed, task.MetaData.SeedEnd, task.ResultSeed)
-		task.req.AddToSeedEnd(task.MetaData, task.OperationConfig.Count)
 		task.req.lock.Unlock()
 
 	} else {
@@ -151,7 +155,7 @@ func (task *InsertTask) Do() error {
 	}
 
 	insertDocuments(task, collectionObject)
-	task.result.Success = task.OperationConfig.Count - task.result.Failure
+	task.result.Success = task.OperationConfig.End - task.OperationConfig.Start - task.result.Failure
 
 	return task.tearUp()
 }
@@ -170,19 +174,22 @@ func insertDocuments(task *InsertTask, collectionObject *sdk.CollectionObject) {
 		skip[offset] = struct{}{}
 	}
 	group := errgroup.Group{}
-	for iteration := int64(0); iteration < task.OperationConfig.Count; iteration++ {
+	for iteration := task.OperationConfig.Start; iteration < task.OperationConfig.End; iteration++ {
 
 		routineLimiter <- struct{}{}
 		dataChannel <- iteration
 
 		group.Go(func() error {
 			offset := <-dataChannel
-			docId, key := task.gen.GetDocIdAndKey(offset)
+			key := offset + task.MetaData.Seed
+			docId := task.gen.BuildKey(key)
+
 			if _, ok := skip[offset]; ok {
 				<-routineLimiter
 				return fmt.Errorf("alreday performed operation on " + docId)
 			}
 			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
+
 			doc, err := task.gen.Template.GenerateDocument(&fake, task.MetaData.DocSize)
 			if err != nil {
 				task.result.IncrementFailure(docId, doc, err, false, 0, offset)
@@ -190,7 +197,7 @@ func insertDocuments(task *InsertTask, collectionObject *sdk.CollectionObject) {
 				return err
 			}
 
-			for retry := 0; retry <= int(math.Max(float64(1), float64(task.OperationConfig.Exceptions.
+			for retry := 0; retry < int(math.Max(float64(1), float64(task.OperationConfig.Exceptions.
 				RetryAttempts))); retry++ {
 				_, err = collectionObject.Collection.Insert(docId, doc, &gocb.InsertOptions{
 					DurabilityLevel: getDurability(task.InsertOptions.Durability),
@@ -204,45 +211,16 @@ func insertDocuments(task *InsertTask, collectionObject *sdk.CollectionObject) {
 				}
 			}
 
-			if task.OperationConfig.ReadYourOwnWrite {
-				var resultFromHost map[string]any
-				documentFromHost := template.InitialiseTemplate(task.OperationConfig.TemplateName)
-				result, err := collectionObject.Collection.Get(docId, nil)
-				if err != nil {
+			if err != nil {
+				if errors.Is(err, gocb.ErrDocumentExists) && task.rerun {
+					task.State.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
+					<-routineLimiter
+					return nil
+				} else {
 					task.result.IncrementFailure(docId, doc, err, false, 0, offset)
+					task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 					<-routineLimiter
 					return err
-				}
-				if err := result.Content(&resultFromHost); err != nil {
-					task.result.IncrementFailure(docId, doc, err, false, 0, offset)
-					<-routineLimiter
-					return err
-				}
-				resultBytes, err := json.Marshal(resultFromHost)
-				err = json.Unmarshal(resultBytes, &documentFromHost)
-				if err != nil {
-					task.result.IncrementFailure(docId, doc, err, false, 0, offset)
-					<-routineLimiter
-					return err
-				}
-				ok, err := task.gen.Template.Compare(documentFromHost, doc)
-				if err != nil || !ok {
-					task.result.IncrementFailure(docId, documentFromHost, errors.New("integrity lost"), false, 0, offset)
-					<-routineLimiter
-					return err
-				}
-			} else {
-				if err != nil {
-					if errors.Is(err, gocb.ErrDocumentExists) {
-						task.State.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
-						<-routineLimiter
-						return nil
-					} else {
-						task.result.IncrementFailure(docId, doc, err, false, 0, offset)
-						task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
-						<-routineLimiter
-						return err
-					}
 				}
 			}
 
@@ -296,7 +274,9 @@ func (task *InsertTask) PostTaskExceptionHandling(collectionObject *sdk.Collecti
 					for k, _ := range m {
 						offset = k
 					}
-					docId, key := task.gen.GetDocIdAndKey(offset)
+					key := offset + task.MetaData.Seed
+					docId := task.gen.BuildKey(key)
+
 					fake := faker.NewWithSeed(rand.NewSource(int64(key)))
 					doc, _ := task.gen.Template.GenerateDocument(&fake, task.MetaData.DocSize)
 
@@ -354,7 +334,7 @@ func (task *InsertTask) PostTaskExceptionHandling(collectionObject *sdk.Collecti
 	task.State.MakeCompleteKeyFromMap(completedOffsetMaps)
 	task.State.MakeErrorKeyFromMap(errorOffsetMaps)
 	task.result.Failure = int64(len(task.State.KeyStates.Err))
-
+	task.result.Success = task.OperationConfig.End - task.OperationConfig.Start - task.result.Failure
 }
 
 func (task *InsertTask) GetResultSeed() string {
