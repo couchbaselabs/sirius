@@ -74,13 +74,13 @@ func (h *Hotel) GenerateDocument(fake *faker.Faker, documentSize int) (interface
 		City:          fake.Address().City(),
 		Type:          "Hotel",
 		URL:           fake.Internet().URL(),
-		Reviews:       buildReview(fake, fake.IntBetween(0, 100)),
+		Reviews:       buildReview(fake, fake.IntBetween(0, 10)),
 		Phone:         fake.Phone().Number(),
 		Price:         float64(fake.IntBetween(1000, 10000)),
 		AvgRating:     fake.Float(4, 0, 1),
 		FreeBreakfast: fake.Bool(),
 		Name:          fake.Person().Name(),
-		PublicLikes:   buildPublicLikes(fake, fake.IntBetween(0, 100)),
+		PublicLikes:   buildPublicLikes(fake, fake.IntBetween(0, 10)),
 		Email:         fake.Internet().CompanyEmail(),
 		Mutated:       MutatedPathDefaultValue,
 	}
@@ -125,7 +125,7 @@ func (h *Hotel) UpdateDocument(fieldsToChange []string, lastUpdatedDocument inte
 		hotel.URL = fake.Internet().URL()
 	}
 	if _, ok := checkFields["reviews"]; ok || len(checkFields) == 0 {
-		hotel.Reviews = buildReview(fake, fake.IntBetween(0, 100))
+		hotel.Reviews = buildReview(fake, fake.IntBetween(0, 10))
 	}
 	if _, ok := checkFields["phone"]; ok || len(checkFields) == 0 {
 		hotel.Phone = fake.Phone().Number()
@@ -143,7 +143,7 @@ func (h *Hotel) UpdateDocument(fieldsToChange []string, lastUpdatedDocument inte
 		hotel.Name = fake.Person().Name()
 	}
 	if _, ok := checkFields["public_likes"]; ok || len(checkFields) == 0 {
-		hotel.PublicLikes = buildPublicLikes(fake, fake.IntBetween(0, 100))
+		hotel.PublicLikes = buildPublicLikes(fake, fake.IntBetween(0, 10))
 	}
 	if _, ok := checkFields["email"]; ok || len(checkFields) == 0 {
 		hotel.Email = fake.Internet().CompanyEmail()

@@ -32,6 +32,7 @@ type DeleteTask struct {
 	result          *task_result.TaskResult            `json:"-" doc:"false"`
 	gen             *docgenerator.Generator            `json:"-" doc:"false"`
 	req             *Request                           `json:"-" doc:"false"`
+	rerun           bool                               `json:"-" doc:"false"`
 }
 
 func (task *DeleteTask) Describe() string {
@@ -69,6 +70,8 @@ func (task *DeleteTask) Config(req *Request, reRun bool) (int64, error) {
 		task.TaskPending = false
 		return 0, err
 	}
+
+	task.rerun = reRun
 
 	if !reRun {
 		task.ResultSeed = int64(time.Now().UnixNano())
@@ -179,7 +182,7 @@ func deleteDocuments(task *DeleteTask, collectionObject *sdk.CollectionObject) {
 				return fmt.Errorf("docId out of bound")
 			}
 			var err error
-			for retry := 0; retry <= int(math.Max(float64(1), float64(task.OperationConfig.Exceptions.
+			for retry := 0; retry < int(math.Max(float64(1), float64(task.OperationConfig.Exceptions.
 				RetryAttempts))); retry++ {
 				_, err = collectionObject.Collection.Remove(docId, &gocb.RemoveOptions{
 					Cas:             gocb.Cas(task.RemoveOptions.Cas),
@@ -193,10 +196,16 @@ func deleteDocuments(task *DeleteTask, collectionObject *sdk.CollectionObject) {
 				}
 			}
 			if err != nil {
-				task.result.IncrementFailure(docId, nil, err, false, uint64(0), offset)
-				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
-				<-routineLimiter
-				return err
+				if errors.Is(err, gocb.ErrDocumentNotFound) && task.rerun {
+					task.State.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
+					<-routineLimiter
+					return nil
+				} else {
+					task.result.IncrementFailure(docId, nil, err, false, uint64(0), offset)
+					task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
+					<-routineLimiter
+					return err
+				}
 			}
 
 			task.State.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
@@ -296,6 +305,7 @@ func (task *DeleteTask) PostTaskExceptionHandling(collectionObject *sdk.Collecti
 	task.State.MakeCompleteKeyFromMap(completedOffsetMaps)
 	task.State.MakeErrorKeyFromMap(errorOffsetMaps)
 	task.result.Failure = int64(len(task.State.KeyStates.Err))
+	task.result.Success = task.OperationConfig.End - task.OperationConfig.Start - task.result.Failure
 }
 
 func (task *DeleteTask) GetResultSeed() string {

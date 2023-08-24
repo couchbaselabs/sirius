@@ -188,7 +188,7 @@ func replaceSubDocuments(task *SubDocReplace, collectionObject *sdk.CollectionOb
 				task.ResultSeed)
 
 			var err error
-			for retry := 0; retry <= int(math.Max(float64(1), float64(task.SubDocOperationConfig.Exceptions.
+			for retry := 0; retry < int(math.Max(float64(1), float64(task.SubDocOperationConfig.Exceptions.
 				RetryAttempts))); retry++ {
 
 				var iOps []gocb.MutateInSpec

@@ -172,7 +172,7 @@ func getDocuments(task *ReadTask, collectionObject *sdk.CollectionObject) {
 				return err
 			}
 
-			for retry := 0; retry <= int(math.Max(float64(1), float64(task.OperationConfig.Exceptions.
+			for retry := 0; retry < int(math.Max(float64(1), float64(task.OperationConfig.Exceptions.
 				RetryAttempts))); retry++ {
 				_, err = collectionObject.Collection.Get(docId, nil)
 				if err == nil {
@@ -270,6 +270,7 @@ func (task *ReadTask) PostTaskExceptionHandling(collectionObject *sdk.Collection
 	task.State.MakeCompleteKeyFromMap(completedOffsetMaps)
 	task.State.MakeErrorKeyFromMap(errorOffsetMaps)
 	task.result.Failure = int64(len(task.State.KeyStates.Err))
+	task.result.Success = task.OperationConfig.End - task.OperationConfig.Start - task.result.Failure
 }
 
 func (task *ReadTask) GetResultSeed() string {
