@@ -275,7 +275,7 @@ func (task *ReadTask) PostTaskExceptionHandling(collectionObject *sdk.Collection
 
 func (task *ReadTask) GetResultSeed() string {
 	if task.result == nil {
-		return ""
+		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 	}
 	return fmt.Sprintf("%d", task.result.ResultSeed)
 }

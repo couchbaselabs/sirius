@@ -351,9 +351,9 @@ func (task *SubDocReplace) PostTaskExceptionHandling(collectionObject *sdk.Colle
 
 func (task *SubDocReplace) GetResultSeed() string {
 	if task.result == nil {
-		return ""
+		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 	}
-	return fmt.Sprintf("%d", task.result.ResultSeed)
+	return fmt.Sprintf("%d", task.ResultSeed)
 }
 
 func (task *SubDocReplace) GetCollectionObject() (*sdk.CollectionObject, error) {

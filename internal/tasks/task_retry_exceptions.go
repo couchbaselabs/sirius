@@ -44,6 +44,11 @@ func (r *RetryExceptions) Config(req *Request, reRun bool) (int64, error) {
 			break
 		}
 	}
+
+	if r.Task == nil {
+		return 0, fmt.Errorf("no such task found in " + r.req.Identifier)
+	}
+
 	return r.Task.Config(req, true)
 
 }
@@ -78,6 +83,6 @@ func (r *RetryExceptions) GetCollectionObject() (*sdk.CollectionObject, error) {
 	return r.Task.GetCollectionObject()
 }
 
-func (r RetryExceptions) SetException(exceptions Exceptions) {
+func (r *RetryExceptions) SetException(exceptions Exceptions) {
 	r.Task.SetException(r.Exceptions)
 }

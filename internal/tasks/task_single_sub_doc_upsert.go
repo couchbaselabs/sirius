@@ -191,9 +191,9 @@ func (task *SingleSubDocUpsert) PostTaskExceptionHandling(collectionObject *sdk.
 
 func (task *SingleSubDocUpsert) GetResultSeed() string {
 	if task.result == nil {
-		return ""
+		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 	}
-	return fmt.Sprintf("%d", task.result.ResultSeed)
+	return fmt.Sprintf("%d", task.ResultSeed)
 }
 
 func (task *SingleSubDocUpsert) GetCollectionObject() (*sdk.CollectionObject, error) {

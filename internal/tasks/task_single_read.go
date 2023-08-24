@@ -152,9 +152,9 @@ func (task *SingleReadTask) PostTaskExceptionHandling(_ *sdk.CollectionObject) {
 
 func (task *SingleReadTask) GetResultSeed() string {
 	if task.result == nil {
-		return ""
+		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 	}
-	return fmt.Sprintf("%d", task.result.ResultSeed)
+	return fmt.Sprintf("%d", task.ResultSeed)
 }
 
 func (task *SingleReadTask) GetCollectionObject() (*sdk.CollectionObject, error) {

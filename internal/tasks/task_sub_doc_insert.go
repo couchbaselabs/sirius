@@ -355,9 +355,9 @@ func (task *SubDocInsert) PostTaskExceptionHandling(collectionObject *sdk.Collec
 
 func (task *SubDocInsert) GetResultSeed() string {
 	if task.result == nil {
-		return ""
+		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 	}
-	return fmt.Sprintf("%d", task.result.ResultSeed)
+	return fmt.Sprintf("%d", task.ResultSeed)
 }
 
 func (task *SubDocInsert) GetCollectionObject() (*sdk.CollectionObject, error) {

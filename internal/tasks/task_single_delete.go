@@ -167,7 +167,7 @@ func (task *SingleDeleteTask) PostTaskExceptionHandling(_ *sdk.CollectionObject)
 
 func (task *SingleDeleteTask) GetResultSeed() string {
 	if task.result == nil {
-		return ""
+		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 	}
 	return fmt.Sprintf("%d", task.result.ResultSeed)
 }
