@@ -164,12 +164,20 @@ func validateSingleDocuments(task *SingleValidate, collectionObject *sdk.Collect
 				subDocumentMap[path] = value
 
 				if subDocument.IsXattr() {
-					result, _ := collectionObject.Collection.LookupIn(key, []gocb.LookupInSpec{
+					result, err := collectionObject.Collection.LookupIn(key, []gocb.LookupInSpec{
 						gocb.GetSpec(path, &gocb.GetSpecOptions{IsXattr: true}),
 					}, nil)
-
+					if err != nil {
+						task.result.CreateSingleErrorResult(key, err.Error(), false, 0)
+						<-routineLimiter
+						return err
+					}
 					var tempResult string
-					result.ContentAt(0, &tempResult)
+					if err = result.ContentAt(0, &tempResult); err != nil {
+						task.result.CreateSingleErrorResult(key, err.Error(), false, 0)
+						<-routineLimiter
+						return err
+					}
 					xAttrFromHostMap[path] = tempResult
 				}
 			}
