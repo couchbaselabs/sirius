@@ -10,10 +10,16 @@ import (
 
 type SubDocMutations struct {
 	Seed            int64      `json:"seed"`
-	SubPath         string     `json:"subPath"`
+	xattr           bool       `json:"xattr"`
 	countOfMutation int        `json:"countOfMutation"`
 	DocSize         int        `json:"docSize"`
 	lock            sync.Mutex `json:"-"`
+}
+
+func (m *SubDocMutations) IsXattr() bool {
+	defer m.lock.Unlock()
+	m.lock.Lock()
+	return m.xattr
 }
 
 func (m *SubDocMutations) GenerateValue(f *faker.Faker) interface{} {
@@ -90,7 +96,7 @@ func (d *DocumentMetaData) UpdateDocument(t template.Template, doc interface{}, 
 	return updatedDoc
 }
 
-func (d *DocumentMetaData) SubDocument(subPath string, docSize int, reset bool) *SubDocMutations {
+func (d *DocumentMetaData) SubDocument(subPath string, xattr bool, docSize int, reset bool) *SubDocMutations {
 	defer d.lock.Unlock()
 	d.lock.Lock()
 	seed := int64(time.Now().UnixNano())
@@ -100,7 +106,7 @@ func (d *DocumentMetaData) SubDocument(subPath string, docSize int, reset bool) 
 	if _, ok := d.SubDocMutations[subPath]; !ok {
 		d.SubDocMutations[subPath] = &SubDocMutations{
 			Seed:            seed,
-			SubPath:         subPath,
+			xattr:           xattr,
 			DocSize:         docSize,
 			countOfMutation: 0,
 			lock:            sync.Mutex{},

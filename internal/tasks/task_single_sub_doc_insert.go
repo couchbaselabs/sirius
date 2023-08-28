@@ -134,7 +134,8 @@ func singleInsertSubDocuments(task *SingleSubDocInsert, collectionObject *sdk.Co
 	documentMetaData := task.req.documentsMeta.GetDocumentsMetadata(key, "", 0, false)
 
 	for _, path := range task.SingleSubDocOperationConfig.Paths {
-		subDocument := documentMetaData.SubDocument(path, task.SingleSubDocOperationConfig.DocSize, false)
+		subDocument := documentMetaData.SubDocument(path, task.InsertSpecOptions.IsXattr,
+			task.SingleSubDocOperationConfig.DocSize, false)
 
 		fake := faker.NewWithSeed(rand.NewSource(int64(subDocument.Seed)))
 
@@ -168,7 +169,9 @@ func singleInsertSubDocuments(task *SingleSubDocInsert, collectionObject *sdk.Co
 	if err != nil {
 		task.result.CreateSingleErrorResult(key, err.Error(), false, 0)
 	} else {
-		documentMetaData.IncrementMutationCount()
+		if !task.InsertSpecOptions.IsXattr {
+			documentMetaData.IncrementMutationCount()
+		}
 		task.result.CreateSingleErrorResult(key, "", true, uint64(result.Cas()))
 	}
 

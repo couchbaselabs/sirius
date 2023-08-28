@@ -132,8 +132,8 @@ func singleDeleteSubDocuments(task *SingleSubDocDelete, collectionObject *sdk.Co
 	documentMetaData := task.req.documentsMeta.GetDocumentsMetadata(key, "", 0, false)
 
 	for _, path := range task.SingleSubDocOperationConfig.Paths {
-		_ = documentMetaData.SubDocument(path,
-			task.SingleSubDocOperationConfig.DocSize, false)
+		_ = documentMetaData.SubDocument(path, task.RemoveSpecOptions.IsXattr, task.SingleSubDocOperationConfig.DocSize,
+			false)
 
 		documentMetaData.RemovePath(path)
 
@@ -164,7 +164,9 @@ func singleDeleteSubDocuments(task *SingleSubDocDelete, collectionObject *sdk.Co
 	if err != nil {
 		task.result.CreateSingleErrorResult(key, err.Error(), false, 0)
 	} else {
-		documentMetaData.IncrementMutationCount()
+		if !task.RemoveSpecOptions.IsXattr {
+			documentMetaData.IncrementMutationCount()
+		}
 		task.result.CreateSingleErrorResult(key, "", true, uint64(result.Cas()))
 	}
 
