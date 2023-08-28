@@ -171,14 +171,14 @@ func validateSingleDocuments(task *SingleValidate, collectionObject *sdk.Collect
 				return err
 			}
 			var resultFromHostMap map[string]any
-			if err := result.Content(&resultFromHostMap); err != nil {
+			if err = result.Content(&resultFromHostMap); err != nil {
 				task.result.CreateSingleErrorResult(key, err.Error(), false, 0)
 				<-routineLimiter
 				return err
 			}
 
 			if !compareDocumentsIsSame(resultFromHostMap, docMap, subDocumentMap) {
-				task.result.CreateSingleErrorResult(key, err.Error(), false, 0)
+				task.result.CreateSingleErrorResult(key, "integrity lost", false, 0)
 				<-routineLimiter
 				return err
 			}
