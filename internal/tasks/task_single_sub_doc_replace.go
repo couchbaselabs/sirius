@@ -130,7 +130,8 @@ func singleReplaceSubDocuments(task *SingleSubDocReplace, collectionObject *sdk.
 	documentMetaData := task.req.documentsMeta.GetDocumentsMetadata(key, "", 0, false)
 
 	for _, path := range task.SingleSubDocOperationConfig.Paths {
-		subDocument := documentMetaData.SubDocument(path, task.SingleSubDocOperationConfig.DocSize, true)
+		subDocument := documentMetaData.SubDocument(path, task.ReplaceSpecOptions.IsXattr, task.SingleSubDocOperationConfig.
+			DocSize, true)
 
 		fake := faker.NewWithSeed(rand.NewSource(int64(subDocument.Seed)))
 
@@ -163,7 +164,9 @@ func singleReplaceSubDocuments(task *SingleSubDocReplace, collectionObject *sdk.
 	if err != nil {
 		task.result.CreateSingleErrorResult(key, err.Error(), false, 0)
 	} else {
-		documentMetaData.IncrementMutationCount()
+		if !task.ReplaceSpecOptions.IsXattr {
+			documentMetaData.IncrementMutationCount()
+		}
 		task.result.CreateSingleErrorResult(key, "", true, uint64(result.Cas()))
 	}
 

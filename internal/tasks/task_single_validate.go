@@ -3,6 +3,7 @@ package tasks
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/sdk"
 	"github.com/couchbaselabs/sirius/internal/task_result"
 	"github.com/couchbaselabs/sirius/internal/template"
@@ -150,6 +151,7 @@ func validateSingleDocuments(task *SingleValidate, collectionObject *sdk.Collect
 			}
 
 			subDocumentMap := make(map[string]any)
+			xAttrFromHostMap := make(map[string]any)
 
 			for path, subDocument := range documentMetaData.SubDocMutations {
 
@@ -160,6 +162,16 @@ func validateSingleDocuments(task *SingleValidate, collectionObject *sdk.Collect
 				value = subDocument.RetracePreviousMutations(value, &fakeSub)
 
 				subDocumentMap[path] = value
+
+				if subDocument.IsXattr() {
+					result, _ := collectionObject.Collection.LookupIn(key, []gocb.LookupInSpec{
+						gocb.GetSpec(path, &gocb.GetSpecOptions{IsXattr: true}),
+					}, nil)
+
+					var tempResult string
+					result.ContentAt(0, &tempResult)
+					xAttrFromHostMap[path] = tempResult
+				}
 			}
 
 			docMap[template.MutatedPath] = documentMetaData.SubDocMutationCount()
@@ -170,11 +182,16 @@ func validateSingleDocuments(task *SingleValidate, collectionObject *sdk.Collect
 				<-routineLimiter
 				return err
 			}
+
 			var resultFromHostMap map[string]any
 			if err = result.Content(&resultFromHostMap); err != nil {
 				task.result.CreateSingleErrorResult(key, err.Error(), false, 0)
 				<-routineLimiter
 				return err
+			}
+
+			for k, v := range xAttrFromHostMap {
+				resultFromHostMap[k] = v
 			}
 
 			if !compareDocumentsIsSame(resultFromHostMap, docMap, subDocumentMap) {
