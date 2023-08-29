@@ -149,11 +149,12 @@ func NewDocumentsMetaData() *DocumentsMetaData {
 	}
 }
 
-func (m *DocumentsMetaData) GetDocumentsMetadata(docId, template string, docSize int,
+func (m *DocumentsMetaData) GetDocumentsMetadata(collectionIdentifier, docId, template string, docSize int,
 	resetValue bool) *DocumentMetaData {
 	defer m.lock.Unlock()
 	m.lock.Lock()
 	seed := int64(time.Now().UnixNano())
+	docId = docId + " " + collectionIdentifier
 	_, ok := m.MetaData[docId]
 	if docSize == 0 {
 		docSize = docgenerator.DefaultDocSize
@@ -182,6 +183,7 @@ func (m *DocumentsMetaData) GetDocumentsMetadata(docId, template string, docSize
 	return m.MetaData[docId]
 }
 
-func (m *DocumentsMetaData) RemoveDocument(key string) {
-	delete(m.MetaData, key)
+func (m *DocumentsMetaData) RemoveDocument(collectionIdentifier, docId string) {
+	docId = docId + " " + collectionIdentifier
+	delete(m.MetaData, docId)
 }

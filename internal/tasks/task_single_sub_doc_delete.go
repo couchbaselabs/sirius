@@ -129,7 +129,7 @@ func singleDeleteSubDocuments(task *SingleSubDocDelete, collectionObject *sdk.Co
 
 	var iOps []gocb.MutateInSpec
 	key := task.SingleSubDocOperationConfig.Key
-	documentMetaData := task.req.documentsMeta.GetDocumentsMetadata(key, "", 0, false)
+	documentMetaData := task.req.documentsMeta.GetDocumentsMetadata(task.CollectionIdentifier(), key, "", 0, false)
 
 	for _, path := range task.SingleSubDocOperationConfig.Paths {
 		_ = documentMetaData.SubDocument(path, task.RemoveSpecOptions.IsXattr, task.SingleSubDocOperationConfig.DocSize,

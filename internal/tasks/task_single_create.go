@@ -137,7 +137,8 @@ func singleInsertDocuments(task *SingleInsertTask, collectionObject *sdk.Collect
 		group.Go(func() error {
 			key := <-dataChannel
 
-			documentMetaData := task.req.documentsMeta.GetDocumentsMetadata(key, task.SingleOperationConfig.Template,
+			documentMetaData := task.req.documentsMeta.GetDocumentsMetadata(task.CollectionIdentifier(), key,
+				task.SingleOperationConfig.Template,
 				task.SingleOperationConfig.DocSize, false)
 
 			fake := faker.NewWithSeed(rand.NewSource(int64(documentMetaData.Seed)))
