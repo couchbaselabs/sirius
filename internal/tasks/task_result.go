@@ -2,7 +2,7 @@ package tasks
 
 import "github.com/couchbaselabs/sirius/internal/sdk"
 
-// TaskResult represents a request structure for retrieving result of the task.
+// TaskResult represents a request structure for retrieving Result of the task.
 type TaskResult struct {
 	Seed         string `json:"seed" doc:"true"`
 	DeleteRecord bool   `json:"deleteRecord" doc:"true"`
@@ -10,7 +10,7 @@ type TaskResult struct {
 }
 
 func (r *TaskResult) Describe() string {
-	return " Task result is retrieved via this endpoint.\n"
+	return " Task Result is retrieved via this endpoint.\n"
 }
 
 func (r *TaskResult) tearUp() error {

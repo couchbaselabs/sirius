@@ -31,7 +31,7 @@ type UpsertTask struct {
 	TaskPending     bool                               `json:"taskPending" doc:"false"`
 	State           *task_state.TaskState              `json:"State" doc:"false"`
 	MetaData        *task_meta_data.CollectionMetaData `json:"metaData" doc:"false"`
-	result          *task_result.TaskResult            `json:"-" doc:"false"`
+	Result          *task_result.TaskResult            `json:"-" doc:"false"`
 	gen             *docgenerator.Generator            `json:"-" doc:"false"`
 	req             *Request                           `json:"-" doc:"false"`
 }
@@ -113,15 +113,15 @@ func (task *UpsertTask) Config(req *Request, reRun bool) (int64, error) {
 		}
 
 		task.State.SetupStoringKeys()
-
+		_ = DeleteResultFile(task.ResultSeed)
 		log.Println("retrying :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 	}
 	return task.ResultSeed, nil
 }
 
 func (task *UpsertTask) tearUp() error {
-	if err := task.result.SaveResultIntoFile(); err != nil {
-		log.Println("not able to save result into ", task.ResultSeed, task.Operation)
+	if err := task.Result.SaveResultIntoFile(); err != nil {
+		log.Println("not able to save Result into ", task.ResultSeed, task.Operation)
 	}
 	task.State.StopStoringState()
 	task.TaskPending = false
@@ -130,7 +130,7 @@ func (task *UpsertTask) tearUp() error {
 
 func (task *UpsertTask) Do() error {
 
-	task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+	task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
 	collectionObject, err1 := task.GetCollectionObject()
 
@@ -139,14 +139,14 @@ func (task *UpsertTask) Do() error {
 		template.InitialiseTemplate(task.MetaData.TemplateName))
 
 	if err1 != nil {
-		task.result.ErrorOther = err1.Error()
-		task.result.FailWholeBulkOperation(task.OperationConfig.Start, task.OperationConfig.End,
+		task.Result.ErrorOther = err1.Error()
+		task.Result.FailWholeBulkOperation(task.OperationConfig.Start, task.OperationConfig.End,
 			task.MetaData.DocSize, task.gen, err1, task.State)
 		return task.tearUp()
 	}
 
 	upsertDocuments(task, collectionObject)
-	task.result.Success = task.OperationConfig.End - task.OperationConfig.Start - task.result.Failure
+	task.Result.Success = task.OperationConfig.End - task.OperationConfig.Start - task.Result.Failure
 
 	return task.tearUp()
 }
@@ -178,6 +178,7 @@ func upsertDocuments(task *UpsertTask, collectionObject *sdk.CollectionObject) {
 				return fmt.Errorf("alreday performed operation on " + docId)
 			}
 
+			initTime := time.Now().UTC().Format(time.RFC850)
 			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
 			originalDoc, err := task.gen.Template.GenerateDocument(&fake, task.MetaData.DocSize)
 			if err != nil {
@@ -187,7 +188,7 @@ func upsertDocuments(task *UpsertTask, collectionObject *sdk.CollectionObject) {
 			originalDoc, err = task.req.retracePreviousMutations(task.CollectionIdentifier(), offset, originalDoc, *task.gen, &fake,
 				task.ResultSeed)
 			if err != nil {
-				task.result.IncrementFailure(docId, originalDoc, err, false, 0, offset)
+				task.Result.IncrementFailure(initTime, docId, originalDoc, err, false, 0, offset)
 				<-routineLimiter
 				return err
 			}
@@ -195,6 +196,7 @@ func upsertDocuments(task *UpsertTask, collectionObject *sdk.CollectionObject) {
 
 			for retry := 0; retry < int(math.Max(float64(1), float64(task.OperationConfig.Exceptions.
 				RetryAttempts))); retry++ {
+				initTime = time.Now().UTC().Format(time.RFC850)
 				_, err = collectionObject.Collection.Upsert(docId, docUpdated, &gocb.UpsertOptions{
 					DurabilityLevel: getDurability(task.InsertOptions.Durability),
 					PersistTo:       task.InsertOptions.PersistTo,
@@ -209,7 +211,7 @@ func upsertDocuments(task *UpsertTask, collectionObject *sdk.CollectionObject) {
 			}
 
 			if err != nil {
-				task.result.IncrementFailure(docId, docUpdated, err, false, 0, offset)
+				task.Result.IncrementFailure(initTime, docId, docUpdated, err, false, 0, offset)
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 				<-routineLimiter
 				return err
@@ -237,17 +239,17 @@ func (task *UpsertTask) PostTaskExceptionHandling(collectionObject *sdk.Collecti
 	completedOffsetMaps := task.State.ReturnCompletedOffset()
 
 	// For the offset in ignore exceptions :-> move them from error to completed
-	shiftErrToCompletedOnIgnore(task.OperationConfig.Exceptions.IgnoreExceptions, task.result, errorOffsetMaps, completedOffsetMaps)
+	shiftErrToCompletedOnIgnore(task.OperationConfig.Exceptions.IgnoreExceptions, task.Result, errorOffsetMaps, completedOffsetMaps)
 
 	if task.OperationConfig.Exceptions.RetryAttempts > 0 {
 
-		exceptionList := getExceptions(task.result, task.OperationConfig.Exceptions.RetryExceptions)
+		exceptionList := getExceptions(task.Result, task.OperationConfig.Exceptions.RetryExceptions)
 
 		// For the retry exceptions :-> move them on success after retrying from err to completed
 		for _, exception := range exceptionList {
 
 			errorOffsetListMap := make([]map[int64]RetriedResult, 0)
-			for _, failedDocs := range task.result.BulkError[exception] {
+			for _, failedDocs := range task.Result.BulkError[exception] {
 				m := make(map[int64]RetriedResult)
 				m[failedDocs.Offset] = RetriedResult{}
 				errorOffsetListMap = append(errorOffsetListMap, m)
@@ -277,7 +279,8 @@ func (task *UpsertTask) PostTaskExceptionHandling(collectionObject *sdk.Collecti
 					originalDoc, err = task.req.retracePreviousMutations(task.CollectionIdentifier(), offset, originalDoc, *task.gen, &fake,
 						task.ResultSeed)
 					if err != nil {
-						task.result.IncrementFailure(docId, originalDoc, err, false, 0, offset)
+						initTime := time.Now().UTC().Format(time.RFC850)
+						task.Result.IncrementFailure(initTime, docId, originalDoc, err, false, 0, offset)
 						<-routineLimiter
 						return err
 					}
@@ -285,6 +288,8 @@ func (task *UpsertTask) PostTaskExceptionHandling(collectionObject *sdk.Collecti
 
 					retry := 0
 					result := &gocb.MutationResult{}
+
+					initTime := time.Now().UTC().Format(time.RFC850)
 					for retry = 0; retry <= task.OperationConfig.Exceptions.RetryAttempts; retry++ {
 						result, err = collectionObject.Collection.Upsert(docId, docUpdated, &gocb.UpsertOptions{
 							DurabilityLevel: getDurability(task.InsertOptions.Durability),
@@ -301,8 +306,15 @@ func (task *UpsertTask) PostTaskExceptionHandling(collectionObject *sdk.Collecti
 
 					if err == nil {
 						m[offset] = RetriedResult{
-							Status: true,
-							CAS:    uint64(result.Cas()),
+							Status:   true,
+							CAS:      uint64(result.Cas()),
+							InitTime: initTime,
+							AckTime:  time.Now().UTC().Format(time.RFC850),
+						}
+					} else {
+						m[offset] = RetriedResult{
+							InitTime: initTime,
+							AckTime:  time.Now().UTC().Format(time.RFC850),
 						}
 					}
 
@@ -312,19 +324,19 @@ func (task *UpsertTask) PostTaskExceptionHandling(collectionObject *sdk.Collecti
 			}
 			_ = wg.Wait()
 
-			shiftErrToCompletedOnRetrying(exception, task.result, errorOffsetListMap, errorOffsetMaps, completedOffsetMaps)
+			shiftErrToCompletedOnRetrying(exception, task.Result, errorOffsetListMap, errorOffsetMaps, completedOffsetMaps)
 		}
 	}
 
 	task.State.MakeCompleteKeyFromMap(completedOffsetMaps)
 	task.State.MakeErrorKeyFromMap(errorOffsetMaps)
-	task.result.Failure = int64(len(task.State.KeyStates.Err))
-	task.result.Success = task.OperationConfig.End - task.OperationConfig.Start - task.result.Failure
+	task.Result.Failure = int64(len(task.State.KeyStates.Err))
+	task.Result.Success = task.OperationConfig.End - task.OperationConfig.Start - task.Result.Failure
 }
 
 func (task *UpsertTask) GetResultSeed() string {
-	if task.result == nil {
-		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+	if task.Result == nil {
+		task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 	}
 	return fmt.Sprintf("%d", task.ResultSeed)
 }

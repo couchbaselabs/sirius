@@ -32,7 +32,7 @@ type SubDocDelete struct {
 	TaskPending           bool                               `json:"taskPending" doc:"false"`
 	State                 *task_state.TaskState              `json:"State" doc:"false"`
 	MetaData              *task_meta_data.CollectionMetaData `json:"metaData" doc:"false"`
-	result                *task_result.TaskResult            `json:"-" doc:"false"`
+	Result                *task_result.TaskResult            `json:"-" doc:"false"`
 	gen                   *docgenerator.Generator            `json:"-" doc:"false"`
 	req                   *Request                           `json:"-" doc:"false"`
 }
@@ -113,6 +113,7 @@ func (task *SubDocDelete) Config(req *Request, reRun bool) (int64, error) {
 			return task.ResultSeed, task_errors.ErrTaskStateIsNil
 		}
 		task.State.SetupStoringKeys()
+		_ = DeleteResultFile(task.ResultSeed)
 		log.Println("retrying :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 	}
 	return task.ResultSeed, nil
@@ -123,8 +124,8 @@ func (task *SubDocDelete) tearUp() error {
 	//if err := task.State.SaveTaskSateOnDisk(); err != nil {
 	//	log.Println("Error in storing TASK State on DISK")
 	//}
-	if err := task.result.SaveResultIntoFile(); err != nil {
-		log.Println("not able to save result into ", task.ResultSeed, task.Operation)
+	if err := task.Result.SaveResultIntoFile(); err != nil {
+		log.Println("not able to save Result into ", task.ResultSeed, task.Operation)
 	}
 	task.State.StopStoringState()
 	task.TaskPending = false
@@ -133,7 +134,7 @@ func (task *SubDocDelete) tearUp() error {
 
 func (task *SubDocDelete) Do() error {
 
-	task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+	task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
 	collectionObject, err1 := task.GetCollectionObject()
 
@@ -142,14 +143,14 @@ func (task *SubDocDelete) Do() error {
 		template.InitialiseTemplate(task.MetaData.TemplateName))
 
 	if err1 != nil {
-		task.result.ErrorOther = err1.Error()
-		task.result.FailWholeBulkOperation(task.SubDocOperationConfig.Start, task.SubDocOperationConfig.End,
+		task.Result.ErrorOther = err1.Error()
+		task.Result.FailWholeBulkOperation(task.SubDocOperationConfig.Start, task.SubDocOperationConfig.End,
 			task.MetaData.DocSize, task.gen, err1, task.State)
 		return task.tearUp()
 	}
 
 	deleteSubDocuments(task, collectionObject)
-	task.result.Success = (task.SubDocOperationConfig.End - task.SubDocOperationConfig.Start) - task.result.Failure
+	task.Result.Success = (task.SubDocOperationConfig.End - task.SubDocOperationConfig.Start) - task.Result.Failure
 
 	return task.tearUp()
 }
@@ -185,6 +186,7 @@ func deleteSubDocuments(task *SubDocDelete, collectionObject *sdk.CollectionObje
 			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
 
 			var err error
+			initTime := time.Now().UTC().Format(time.RFC850)
 			for retry := 0; retry < int(math.Max(float64(1), float64(task.SubDocOperationConfig.Exceptions.
 				RetryAttempts))); retry++ {
 
@@ -203,6 +205,7 @@ func deleteSubDocuments(task *SubDocDelete, collectionObject *sdk.CollectionObje
 						}))
 				}
 
+				initTime = time.Now().UTC().Format(time.RFC850)
 				_, err = collectionObject.Collection.MutateIn(docId, iOps, &gocb.MutateInOptions{
 					Expiry:          time.Duration(task.MutateInOptions.Expiry) * time.Second,
 					PersistTo:       task.MutateInOptions.PersistTo,
@@ -219,8 +222,7 @@ func deleteSubDocuments(task *SubDocDelete, collectionObject *sdk.CollectionObje
 			}
 			if err != nil {
 
-				task.result.IncrementFailure(docId, struct {
-				}{}, err, false, 0, offset)
+				task.Result.IncrementFailure(initTime, docId, nil, err, false, 0, offset)
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 				<-routineLimiter
 				return err
@@ -249,17 +251,17 @@ func (task *SubDocDelete) PostTaskExceptionHandling(collectionObject *sdk.Collec
 	completedOffsetMaps := task.State.ReturnCompletedOffset()
 
 	// For the offset in ignore exceptions :-> move them from error to completed
-	shiftErrToCompletedOnIgnore(task.SubDocOperationConfig.Exceptions.IgnoreExceptions, task.result, errorOffsetMaps, completedOffsetMaps)
+	shiftErrToCompletedOnIgnore(task.SubDocOperationConfig.Exceptions.IgnoreExceptions, task.Result, errorOffsetMaps, completedOffsetMaps)
 
 	if task.SubDocOperationConfig.Exceptions.RetryAttempts > 0 {
 
-		exceptionList := getExceptions(task.result, task.SubDocOperationConfig.Exceptions.RetryExceptions)
+		exceptionList := getExceptions(task.Result, task.SubDocOperationConfig.Exceptions.RetryExceptions)
 
 		// For the retry exceptions :-> move them on success after retrying from err to completed
 		for _, exception := range exceptionList {
 
 			errorOffsetListMap := make([]map[int64]RetriedResult, 0)
-			for _, failedDocs := range task.result.BulkError[exception] {
+			for _, failedDocs := range task.Result.BulkError[exception] {
 				m := make(map[int64]RetriedResult)
 				m[failedDocs.Offset] = RetriedResult{}
 				errorOffsetListMap = append(errorOffsetListMap, m)
@@ -283,7 +285,7 @@ func (task *SubDocDelete) PostTaskExceptionHandling(collectionObject *sdk.Collec
 					retry := 0
 					var err error
 					result := &gocb.MutateInResult{}
-
+					initTime := time.Now().UTC().Format(time.RFC850)
 					for retry = 0; retry <= task.SubDocOperationConfig.Exceptions.RetryAttempts; retry++ {
 
 						var iOps []gocb.MutateInSpec
@@ -301,6 +303,7 @@ func (task *SubDocDelete) PostTaskExceptionHandling(collectionObject *sdk.Collec
 								}))
 						}
 
+						initTime = time.Now().UTC().Format(time.RFC850)
 						result, err = collectionObject.Collection.MutateIn(docId, iOps, &gocb.MutateInOptions{
 							Expiry:          time.Duration(task.MutateInOptions.Expiry) * time.Second,
 							PersistTo:       task.MutateInOptions.PersistTo,
@@ -318,13 +321,17 @@ func (task *SubDocDelete) PostTaskExceptionHandling(collectionObject *sdk.Collec
 
 					if err != nil {
 						m[offset] = RetriedResult{
-							Status: true,
-							CAS:    0,
+							Status:   true,
+							CAS:      0,
+							InitTime: initTime,
+							AckTime:  time.Now().UTC().Format(time.RFC850),
 						}
 					} else {
 						m[offset] = RetriedResult{
-							Status: true,
-							CAS:    uint64(result.Cas()),
+							Status:   true,
+							CAS:      uint64(result.Cas()),
+							InitTime: initTime,
+							AckTime:  time.Now().UTC().Format(time.RFC850),
 						}
 					}
 
@@ -334,19 +341,19 @@ func (task *SubDocDelete) PostTaskExceptionHandling(collectionObject *sdk.Collec
 			}
 			_ = wg.Wait()
 
-			shiftErrToCompletedOnRetrying(exception, task.result, errorOffsetListMap, errorOffsetMaps, completedOffsetMaps)
+			shiftErrToCompletedOnRetrying(exception, task.Result, errorOffsetListMap, errorOffsetMaps, completedOffsetMaps)
 		}
 	}
 
 	task.State.MakeCompleteKeyFromMap(completedOffsetMaps)
 	task.State.MakeErrorKeyFromMap(errorOffsetMaps)
-	task.result.Failure = int64(len(task.State.KeyStates.Err))
+	task.Result.Failure = int64(len(task.State.KeyStates.Err))
 
 }
 
 func (task *SubDocDelete) GetResultSeed() string {
-	if task.result == nil {
-		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+	if task.Result == nil {
+		task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 	}
 	return fmt.Sprintf("%d", task.ResultSeed)
 }

@@ -25,7 +25,7 @@ type QueryTask struct {
 	ResultSeed           int64                        `json:"resultSeed" doc:"false"`
 	TaskPending          bool                         `json:"taskPending" doc:"false"`
 	BuildIndex           bool                         `json:"buildIndex" doc:"false"`
-	result               *task_result.TaskResult      `json:"-" doc:"false"`
+	Result               *task_result.TaskResult      `json:"-" doc:"false"`
 	gen                  *docgenerator.QueryGenerator `json:"-" doc:"false"`
 	req                  *Request                     `json:"-" doc:"false"`
 }
@@ -81,7 +81,7 @@ func (task *QueryTask) Config(req *Request, reRun bool) (int64, error) {
 		}
 
 		if err := configQueryOperationConfig(task.QueryOperationConfig); err != nil {
-			task.result.ErrorOther = err.Error()
+			task.Result.ErrorOther = err.Error()
 		}
 
 		task.Template = template.InitialiseTemplate(task.QueryOperationConfig.Template)
@@ -93,8 +93,8 @@ func (task *QueryTask) Config(req *Request, reRun bool) (int64, error) {
 }
 
 func (task *QueryTask) tearUp() error {
-	if err := task.result.SaveResultIntoFile(); err != nil {
-		log.Println("not able to save result into ", task.ResultSeed)
+	if err := task.Result.SaveResultIntoFile(); err != nil {
+		log.Println("not able to save Result into ", task.ResultSeed)
 	}
 	task.TaskPending = false
 	return task.req.SaveRequestIntoFile()
@@ -102,25 +102,25 @@ func (task *QueryTask) tearUp() error {
 
 func (task *QueryTask) Do() error {
 
-	task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+	task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
 	cluster, err := task.req.connectionManager.GetCluster(task.ClusterConfig)
 	if err != nil {
-		task.result.ErrorOther = err.Error()
+		task.Result.ErrorOther = err.Error()
 		return task.tearUp()
 	}
 
 	s, err1 := task.req.connectionManager.GetScope(task.ClusterConfig, task.Bucket, task.Scope)
 	if err1 != nil {
-		task.result.ErrorOther = err1.Error()
+		task.Result.ErrorOther = err1.Error()
 		return task.tearUp()
 	}
 
 	c, err := task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope, task.Collection)
 	if err != nil {
-		task.result.ErrorOther = err1.Error()
-		if err := task.result.SaveResultIntoFile(); err != nil {
-			log.Println("not able to save result into ", task.ResultSeed)
+		task.Result.ErrorOther = err1.Error()
+		if err := task.Result.SaveResultIntoFile(); err != nil {
+			log.Println("not able to save Result into ", task.ResultSeed)
 			return err
 		}
 		return task.tearUp()
@@ -139,8 +139,8 @@ func (task *QueryTask) Do() error {
 
 	runN1qlQuery(task, cluster, s, c.Collection)
 
-	if err := task.result.SaveResultIntoFile(); err != nil {
-		log.Println("not able to save result into ", task.ResultSeed)
+	if err := task.Result.SaveResultIntoFile(); err != nil {
+		log.Println("not able to save Result into ", task.ResultSeed)
 	}
 	return task.tearUp()
 }
@@ -179,7 +179,7 @@ func buildIndexWithSDKs(task *QueryTask, cluster *gocb.Cluster, scope *gocb.Scop
 
 	if err := buildIndexSDKManager(cluster, task.Bucket, scope.Name(), collection.Name(),
 		CreatePrimaryIndex, "", []string{""}); err != nil {
-		task.result.IncrementQueryFailure(fmt.Sprintf("Create primary index on `%s`.%s.%s",
+		task.Result.IncrementQueryFailure(fmt.Sprintf("Create primary index on `%s`.%s.%s",
 			task.Bucket, scope.Name(), collection.Name()), err)
 	}
 
@@ -191,14 +191,14 @@ func buildIndexWithSDKs(task *QueryTask, cluster *gocb.Cluster, scope *gocb.Scop
 	for indexName, indexFields := range indexes {
 		if err = buildIndexSDKManager(cluster, task.Bucket, scope.Name(), collection.Name(),
 			CreateIndex, indexName, indexFields); err != nil {
-			task.result.IncrementQueryFailure(fmt.Sprintf("Create index %s On `%s`.%s.%s (%s)",
+			task.Result.IncrementQueryFailure(fmt.Sprintf("Create index %s On `%s`.%s.%s (%s)",
 				indexName, task.Bucket, scope.Name(), collection.Name(), indexFields), err)
 		}
 	}
 
 	if err = buildIndexSDKManager(cluster, task.Bucket, scope.Name(), collection.Name(),
 		BuildIndex, "", []string{""}); err != nil {
-		task.result.IncrementQueryFailure(fmt.Sprintf("Build index on `%s`.%s.%s",
+		task.Result.IncrementQueryFailure(fmt.Sprintf("Build index on `%s`.%s.%s",
 			task.Bucket, scope.Name(), collection.Name()), err)
 	}
 }
@@ -207,7 +207,7 @@ func buildIndexWithSDKs(task *QueryTask, cluster *gocb.Cluster, scope *gocb.Scop
 func buildIndexViaN1QL(task *QueryTask, cluster *gocb.Cluster, scope *gocb.Scope, collection *gocb.Collection) {
 	query := fmt.Sprintf("CREATE PRIMARY INDEX ON `%s`.`%s`.`%s`;", task.Bucket, scope.Name(), collection.Name())
 	if _, err := cluster.Query(query, &gocb.QueryOptions{}); err != nil {
-		task.result.IncrementQueryFailure(query, err)
+		task.Result.IncrementQueryFailure(query, err)
 	}
 
 	indexes, err := task.gen.Template.GenerateIndexes(task.Bucket, scope.Name(), collection.Name())
@@ -217,7 +217,7 @@ func buildIndexViaN1QL(task *QueryTask, cluster *gocb.Cluster, scope *gocb.Scope
 
 	for i := 0; i < len(indexes); i++ {
 		if _, err := cluster.Query(indexes[i], &gocb.QueryOptions{}); err != nil {
-			task.result.IncrementQueryFailure(indexes[i], err)
+			task.Result.IncrementQueryFailure(indexes[i], err)
 		}
 	}
 }
@@ -239,7 +239,7 @@ func runN1qlQuery(task *QueryTask, cluster *gocb.Cluster, scope *gocb.Scope, col
 			for i := 0; i < len(queries); i++ {
 				_, err := cluster.Query(queries[i], &gocb.QueryOptions{})
 				if err != nil {
-					task.result.IncrementQueryFailure(queries[i], err)
+					task.Result.IncrementQueryFailure(queries[i], err)
 				}
 			}
 
@@ -259,8 +259,8 @@ func (task *QueryTask) PostTaskExceptionHandling(_ *sdk.CollectionObject) {
 }
 
 func (task *QueryTask) GetResultSeed() string {
-	if task.result == nil {
-		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+	if task.Result == nil {
+		task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 	}
 	return fmt.Sprintf("%d", task.ResultSeed)
 }

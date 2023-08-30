@@ -6,7 +6,9 @@ import (
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
 	"github.com/couchbaselabs/sirius/internal/sdk"
 	"github.com/couchbaselabs/sirius/internal/task_meta_data"
+	"github.com/couchbaselabs/sirius/internal/task_result"
 	"github.com/jaswdr/faker"
+	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -364,4 +366,19 @@ func ReadRequestFromFile(identifier string) (*Request, error) {
 		return nil, err
 	}
 	return r, nil
+}
+
+// DeleteResultFile deletes the result file
+func DeleteResultFile(resultSeed int64) error {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	fileName := filepath.Join(cwd, task_result.ResultPath, fmt.Sprintf("%d", resultSeed))
+
+	if err := os.Remove(fileName); err != nil {
+		log.Println("Manually clean " + fileName)
+		return err
+	}
+	return nil
 }

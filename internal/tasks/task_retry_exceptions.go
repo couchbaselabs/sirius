@@ -49,7 +49,6 @@ func (r *RetryExceptions) Config(req *Request, reRun bool) (int64, error) {
 	if r.Task == nil {
 		return 0, fmt.Errorf("no such task found in " + r.req.Identifier)
 	}
-
 	return r.Task.Config(req, true)
 
 }
