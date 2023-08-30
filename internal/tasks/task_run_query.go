@@ -5,6 +5,7 @@ import (
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
 	"github.com/couchbaselabs/sirius/internal/sdk"
+	"github.com/couchbaselabs/sirius/internal/task_errors"
 	"github.com/couchbaselabs/sirius/internal/task_result"
 	"github.com/couchbaselabs/sirius/internal/template"
 	"golang.org/x/sync/errgroup"
@@ -55,7 +56,7 @@ func (task *QueryTask) Config(req *Request, reRun bool) (int64, error) {
 
 	if task.req == nil {
 		task.TaskPending = false
-		return 0, fmt.Errorf("request.Request struct is nil")
+		return 0, task_errors.ErrRequestIsNil
 	}
 
 	task.req.ReconnectionManager()

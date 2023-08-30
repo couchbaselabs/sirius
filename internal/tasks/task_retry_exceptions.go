@@ -3,6 +3,7 @@ package tasks
 import (
 	"fmt"
 	"github.com/couchbaselabs/sirius/internal/sdk"
+	"github.com/couchbaselabs/sirius/internal/task_errors"
 )
 
 type RetryExceptions struct {
@@ -31,7 +32,7 @@ func (r *RetryExceptions) Do() error {
 func (r *RetryExceptions) Config(req *Request, reRun bool) (int64, error) {
 	r.req = req
 	if r.req == nil {
-		return 0, fmt.Errorf("request.Request struct is nil")
+		return 0, task_errors.ErrRequestIsNil
 	}
 
 	if r.req.Tasks == nil {

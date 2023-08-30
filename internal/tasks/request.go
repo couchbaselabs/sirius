@@ -354,7 +354,7 @@ func ReadRequestFromFile(identifier string) (*Request, error) {
 	r := &Request{}
 	file, err := os.Open(fileName)
 	if err != nil {
-		return nil, fmt.Errorf("no such file (request) found for an Identifier")
+		return nil, fmt.Errorf("no such file (request) found for an Identifier" + identifier)
 	}
 	decoder := gob.NewDecoder(file)
 	if err := decoder.Decode(r); err != nil {

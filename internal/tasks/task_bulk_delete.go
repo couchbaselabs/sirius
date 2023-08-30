@@ -6,6 +6,7 @@ import (
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
 	"github.com/couchbaselabs/sirius/internal/sdk"
+	"github.com/couchbaselabs/sirius/internal/task_errors"
 	"github.com/couchbaselabs/sirius/internal/task_meta_data"
 	"github.com/couchbaselabs/sirius/internal/task_result"
 	"github.com/couchbaselabs/sirius/internal/task_state"
@@ -62,7 +63,7 @@ func (task *DeleteTask) Config(req *Request, reRun bool) (int64, error) {
 
 	if task.req == nil {
 		task.TaskPending = false
-		return 0, fmt.Errorf("request.Request struct is nil")
+		return 0, task_errors.ErrRequestIsNil
 	}
 
 	task.req.ReconnectionManager()
@@ -89,12 +90,12 @@ func (task *DeleteTask) Config(req *Request, reRun bool) (int64, error) {
 
 		if err := configRemoveOptions(task.RemoveOptions); err != nil {
 			task.TaskPending = false
-			return 0, fmt.Errorf(err.Error())
+			return 0, err
 		}
 
 		if err := configureOperationConfig(task.OperationConfig); err != nil {
 			task.TaskPending = false
-			return 0, fmt.Errorf(err.Error())
+			return 0, err
 		}
 
 		task.MetaData = task.req.MetaData.GetCollectionMetadata(task.CollectionIdentifier(),
@@ -107,7 +108,7 @@ func (task *DeleteTask) Config(req *Request, reRun bool) (int64, error) {
 
 	} else {
 		if task.State == nil {
-			return task.ResultSeed, fmt.Errorf("task State is nil")
+			return task.ResultSeed, task_errors.ErrTaskStateIsNil
 		}
 
 		task.State.SetupStoringKeys()
@@ -176,11 +177,6 @@ func deleteDocuments(task *DeleteTask, collectionObject *sdk.CollectionObject) {
 				return fmt.Errorf("alreday performed operation on " + docId)
 			}
 
-			if key > task.State.SeedEnd || key < task.State.SeedStart {
-				task.result.IncrementFailure(docId, nil, errors.New("docId out of bound"), false, 0, offset)
-				<-routineLimiter
-				return fmt.Errorf("docId out of bound")
-			}
 			var err error
 			for retry := 0; retry < int(math.Max(float64(1), float64(task.OperationConfig.Exceptions.
 				RetryAttempts))); retry++ {

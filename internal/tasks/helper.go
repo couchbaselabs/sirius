@@ -1,9 +1,9 @@
 package tasks
 
 import (
-	"fmt"
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
+	"github.com/couchbaselabs/sirius/internal/task_errors"
 	"github.com/couchbaselabs/sirius/internal/task_result"
 	"golang.org/x/exp/slices"
 	"log"
@@ -96,7 +96,7 @@ type SingleOperationConfig struct {
 
 func configSingleOperationConfig(s *SingleOperationConfig) error {
 	if s == nil {
-		return fmt.Errorf("unable to parse SingleOperationConfig")
+		return task_errors.ErrParsingSingleOperationConfig
 	}
 	return nil
 }
@@ -110,7 +110,7 @@ type QueryOperationConfig struct {
 
 func configQueryOperationConfig(s *QueryOperationConfig) error {
 	if s == nil {
-		return fmt.Errorf("unable to parse QueryOperationConfig")
+		return task_errors.ErrParsingQueryConfig
 	}
 
 	if s.Duration == 0 || s.Duration > MaxQueryRuntime {
@@ -122,7 +122,7 @@ func configQueryOperationConfig(s *QueryOperationConfig) error {
 // configureOperationConfig configures and validate the OperationConfig
 func configureOperationConfig(o *OperationConfig) error {
 	if o == nil {
-		return fmt.Errorf("unable to parse OperationConfig")
+		return task_errors.ErrParsingOperatingConfig
 	}
 	if o.DocType == "" {
 		o.DocType = docgenerator.JsonDocument
@@ -143,7 +143,7 @@ func configureOperationConfig(o *OperationConfig) error {
 	}
 	if o.Start > o.End {
 		o.End = o.Start
-		return fmt.Errorf("operation start to end range is malformed")
+		return task_errors.ErrMalformedOperationRange
 	}
 	return nil
 }
@@ -160,7 +160,7 @@ type InsertOptions struct {
 // configInsertOptions configures and validate the InsertOptions
 func configInsertOptions(i *InsertOptions) error {
 	if i == nil {
-		return fmt.Errorf("unable to parse InsertOptions")
+		return task_errors.ErrParsingInsertOptions
 	}
 	if i.Timeout == 0 {
 		i.Timeout = 10
@@ -179,7 +179,7 @@ type RemoveOptions struct {
 
 func configRemoveOptions(r *RemoveOptions) error {
 	if r == nil {
-		return fmt.Errorf("unable to parse RemoveOptions")
+		return task_errors.ErrParsingRemoveOptions
 	}
 	if r.Timeout == 0 {
 		r.Timeout = 10
@@ -198,7 +198,7 @@ type ReplaceOptions struct {
 
 func configReplaceOptions(r *ReplaceOptions) error {
 	if r == nil {
-		return fmt.Errorf("unable to parse RemoveOptions")
+		return task_errors.ErrParsingReplaceOptions
 	}
 	if r.Timeout == 0 {
 		r.Timeout = 10
@@ -303,7 +303,7 @@ type SubDocOperationConfig struct {
 
 func configSubDocOperationConfig(sub *SubDocOperationConfig) error {
 	if sub == nil {
-		return fmt.Errorf("unable to parse configSubDocOperationConfig")
+		return task_errors.ErrParsingSubDocOperatingConfig
 	}
 	if sub.Start < 0 {
 		sub.Start = 0
@@ -311,7 +311,7 @@ func configSubDocOperationConfig(sub *SubDocOperationConfig) error {
 	}
 	if sub.Start > sub.End {
 		sub.End = sub.Start
-		return fmt.Errorf("operation start to end range is malformed")
+		return task_errors.ErrMalformedOperationRange
 	}
 	return nil
 }
@@ -322,7 +322,7 @@ type GetSpecOptions struct {
 
 func configGetSpecOptions(g *GetSpecOptions) error {
 	if g == nil {
-		return fmt.Errorf("unable to parse configGetSpecOptions")
+		return task_errors.ErrParsingGetSpecOptions
 	}
 	return nil
 }
@@ -333,7 +333,7 @@ type LookupInOptions struct {
 
 func configLookupInOptions(l *LookupInOptions) error {
 	if l == nil {
-		return fmt.Errorf("unable to parse configLookupInOptions")
+		return task_errors.ErrParsingLookupInOptions
 	}
 	return nil
 }
@@ -345,7 +345,7 @@ type InsertSpecOptions struct {
 
 func configInsertSpecOptions(i *InsertSpecOptions) error {
 	if i == nil {
-		return fmt.Errorf("unable to parse configInsertSpecOptions")
+		return task_errors.ErrParsingInsertSpecOptions
 	}
 	return nil
 }
@@ -356,7 +356,7 @@ type RemoveSpecOptions struct {
 
 func configRemoveSpecOptions(r *RemoveSpecOptions) error {
 	if r == nil {
-		return fmt.Errorf("unable to parse configRemoveSpecOptions")
+		return task_errors.ErrParsingRemoveSpecOptions
 	}
 	return nil
 }
@@ -367,7 +367,7 @@ type ReplaceSpecOptions struct {
 
 func configReplaceSpecOptions(r *ReplaceSpecOptions) error {
 	if r == nil {
-		return fmt.Errorf("unable to parse configReplaceSpecOptions")
+		return task_errors.ErrParsingReplaceSpecOptions
 	}
 	return nil
 }
@@ -385,7 +385,7 @@ type MutateInOptions struct {
 
 func configMutateInOptions(m *MutateInOptions) error {
 	if m == nil {
-		return fmt.Errorf("unable to parse configMutateInOptions")
+		return task_errors.ErrParsingMutateInOptions
 	}
 	return nil
 }
@@ -443,7 +443,7 @@ type SingleSubDocOperationConfig struct {
 
 func configSingleSubDocOperationConfig(s *SingleSubDocOperationConfig) error {
 	if s == nil {
-		return fmt.Errorf("unable to parse SingleSubDocOperationConfig")
+		return task_errors.ErrParsingSingleSubDocOperationConfig
 	}
 	return nil
 }
