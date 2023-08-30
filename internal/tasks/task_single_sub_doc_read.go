@@ -126,7 +126,7 @@ func (task *SingleSubDocRead) Do() error {
 func singleReadSubDocuments(task *SingleSubDocRead, collectionObject *sdk.CollectionObject) {
 	var iOps []gocb.LookupInSpec
 	key := task.SingleSubDocOperationConfig.Key
-	documentMetaData := task.req.documentsMeta.GetDocumentsMetadata(task.CollectionIdentifier(), key, "", 0, false)
+	documentMetaData := task.req.DocumentsMeta.GetDocumentsMetadata(task.CollectionIdentifier(), key, "", 0, false)
 
 	for _, path := range task.SingleSubDocOperationConfig.Paths {
 
