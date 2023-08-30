@@ -126,7 +126,7 @@ func singleReadDocuments(task *SingleReadTask, collectionObject *sdk.CollectionO
 
 		group.Go(func() error {
 			key := <-dataChannel
-			task.req.documentsMeta.GetDocumentsMetadata(task.CollectionIdentifier(), key, task.SingleOperationConfig.Template,
+			task.req.DocumentsMeta.GetDocumentsMetadata(task.CollectionIdentifier(), key, task.SingleOperationConfig.Template,
 				task.SingleOperationConfig.DocSize, false)
 
 			result, err := collectionObject.Collection.Get(key, nil)

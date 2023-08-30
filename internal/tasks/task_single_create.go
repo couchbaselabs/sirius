@@ -138,7 +138,7 @@ func singleInsertDocuments(task *SingleInsertTask, collectionObject *sdk.Collect
 		group.Go(func() error {
 			key := <-dataChannel
 
-			documentMetaData := task.req.documentsMeta.GetDocumentsMetadata(task.CollectionIdentifier(), key,
+			documentMetaData := task.req.DocumentsMeta.GetDocumentsMetadata(task.CollectionIdentifier(), key,
 				task.SingleOperationConfig.Template,
 				task.SingleOperationConfig.DocSize, false)
 
