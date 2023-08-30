@@ -22,7 +22,7 @@ type SingleSubDocRead struct {
 	Operation                   string                       `json:"operation" doc:"false"`
 	ResultSeed                  int64                        `json:"resultSeed" doc:"false"`
 	TaskPending                 bool                         `json:"taskPending" doc:"false"`
-	result                      *task_result.TaskResult      `json:"-" doc:"false"`
+	Result                      *task_result.TaskResult      `json:"-" doc:"false"`
 	req                         *Request                     `json:"-" doc:"false"`
 }
 
@@ -97,28 +97,28 @@ func (task *SingleSubDocRead) Config(req *Request, reRun bool) (int64, error) {
 }
 
 func (task *SingleSubDocRead) tearUp() error {
-	if err := task.result.SaveResultIntoFile(); err != nil {
-		log.Println("not able to save result into ", task.ResultSeed, task.Operation)
+	if err := task.Result.SaveResultIntoFile(); err != nil {
+		log.Println("not able to save Result into ", task.ResultSeed, task.Operation)
 	}
-	task.result = nil
+	task.Result = nil
 	task.TaskPending = false
 	return task.req.SaveRequestIntoFile()
 }
 
 func (task *SingleSubDocRead) Do() error {
 
-	task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+	task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
 	collectionObject, err1 := task.GetCollectionObject()
 
 	if err1 != nil {
-		task.result.ErrorOther = err1.Error()
-		task.result.FailWholeSingleOperation([]string{task.SingleSubDocOperationConfig.Key}, err1)
+		task.Result.ErrorOther = err1.Error()
+		task.Result.FailWholeSingleOperation([]string{task.SingleSubDocOperationConfig.Key}, err1)
 		return task.tearUp()
 	}
 
 	singleReadSubDocuments(task, collectionObject)
-	task.result.Success = int64(1) - task.result.Failure
+	task.Result.Success = int64(1) - task.Result.Failure
 	return task.tearUp()
 }
 
@@ -143,20 +143,20 @@ func singleReadSubDocuments(task *SingleSubDocRead, collectionObject *sdk.Collec
 	})
 
 	if err != nil {
-		task.result.CreateSingleErrorResult(key, err.Error(), false, 0)
+		task.Result.CreateSingleErrorResult(key, err.Error(), false, 0)
 	} else {
 		flag := true
 		for index := range task.SingleSubDocOperationConfig.Paths {
 			var val interface{}
 			if err := result.ContentAt(uint(index), &val); err != nil {
-				task.result.Failure++
-				task.result.CreateSingleErrorResult(key, err.Error(), false, 0)
+				task.Result.Failure++
+				task.Result.CreateSingleErrorResult(key, err.Error(), false, 0)
 				flag = false
 				break
 			}
 		}
 		if flag {
-			task.result.CreateSingleErrorResult(key, "", true, uint64(result.Cas()))
+			task.Result.CreateSingleErrorResult(key, "", true, uint64(result.Cas()))
 		}
 	}
 
@@ -168,8 +168,8 @@ func (task *SingleSubDocRead) PostTaskExceptionHandling(collectionObject *sdk.Co
 }
 
 func (task *SingleSubDocRead) GetResultSeed() string {
-	if task.result == nil {
-		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+	if task.Result == nil {
+		task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 	}
 	return fmt.Sprintf("%d", task.ResultSeed)
 }

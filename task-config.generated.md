@@ -123,7 +123,7 @@ the test was executed.
 
  REST : POST
 
-Description :  Task result is retrieved via this endpoint.
+Description :  Task Result is retrieved via this endpoint.
 
 
 | Name | Type | JSON Tag |

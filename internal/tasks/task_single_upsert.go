@@ -25,7 +25,7 @@ type SingleUpsertTask struct {
 	Operation             string                  `json:"operation" doc:"false"`
 	ResultSeed            int64                   `json:"resultSeed" doc:"false"`
 	TaskPending           bool                    `json:"taskPending" doc:"false"`
-	result                *task_result.TaskResult `json:"-" doc:"false"`
+	Result                *task_result.TaskResult `json:"-" doc:"false"`
 	req                   *Request                `json:"-" doc:"false"`
 }
 
@@ -96,29 +96,29 @@ func (task *SingleUpsertTask) Config(req *Request, reRun bool) (int64, error) {
 }
 
 func (task *SingleUpsertTask) tearUp() error {
-	if err := task.result.SaveResultIntoFile(); err != nil {
-		log.Println("not able to save result into ", task.ResultSeed)
+	if err := task.Result.SaveResultIntoFile(); err != nil {
+		log.Println("not able to save Result into ", task.ResultSeed)
 	}
-	task.result = nil
+	task.Result = nil
 	task.TaskPending = false
 	return task.req.SaveRequestIntoFile()
 }
 
 func (task *SingleUpsertTask) Do() error {
 
-	task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+	task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
 	collectionObject, err1 := task.GetCollectionObject()
 
 	if err1 != nil {
-		task.result.ErrorOther = err1.Error()
-		task.result.FailWholeSingleOperation(task.SingleOperationConfig.Keys, err1)
+		task.Result.ErrorOther = err1.Error()
+		task.Result.FailWholeSingleOperation(task.SingleOperationConfig.Keys, err1)
 		return task.tearUp()
 	}
 
 	singleUpsertDocuments(task, collectionObject)
 
-	task.result.Success = int64(len(task.SingleOperationConfig.Keys)) - task.result.Failure
+	task.Result.Success = int64(len(task.SingleOperationConfig.Keys)) - task.Result.Failure
 	return task.tearUp()
 }
 
@@ -160,12 +160,12 @@ func singleUpsertDocuments(task *SingleUpsertTask, collectionObject *sdk.Collect
 
 			if err != nil {
 				documentMetaData.DecrementCount()
-				task.result.CreateSingleErrorResult(key, err.Error(), false, 0)
+				task.Result.CreateSingleErrorResult(key, err.Error(), false, 0)
 				<-routineLimiter
 				return err
 			}
 
-			task.result.CreateSingleErrorResult(key, "", true, uint64(m.Cas()))
+			task.Result.CreateSingleErrorResult(key, "", true, uint64(m.Cas()))
 			<-routineLimiter
 			return nil
 		})
@@ -182,8 +182,8 @@ func (task *SingleUpsertTask) PostTaskExceptionHandling(_ *sdk.CollectionObject)
 }
 
 func (task *SingleUpsertTask) GetResultSeed() string {
-	if task.result == nil {
-		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+	if task.Result == nil {
+		task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 	}
 	return fmt.Sprintf("%d", task.ResultSeed)
 }

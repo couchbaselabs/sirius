@@ -30,7 +30,7 @@ type ReadTask struct {
 	TaskPending     bool                               `json:"taskPending" doc:"false"`
 	State           *task_state.TaskState              `json:"State" doc:"false"`
 	MetaData        *task_meta_data.CollectionMetaData `json:"metaData" doc:"false"`
-	result          *task_result.TaskResult            `json:"result" doc:"false"`
+	Result          *task_result.TaskResult            `json:"Result" doc:"false"`
 	gen             *docgenerator.Generator            `json:"-" doc:"false"`
 	req             *Request                           `json:"-" doc:"false"`
 }
@@ -55,8 +55,8 @@ func (task *ReadTask) CheckIfPending() bool {
 }
 
 func (task *ReadTask) tearUp() error {
-	if err := task.result.SaveResultIntoFile(); err != nil {
-		log.Println("not able to save result into ", task.ResultSeed, task.Operation)
+	if err := task.Result.SaveResultIntoFile(); err != nil {
+		log.Println("not able to save Result into ", task.ResultSeed, task.Operation)
 	}
 	task.State.StopStoringState()
 	task.TaskPending = false
@@ -118,7 +118,7 @@ func (task *ReadTask) Config(req *Request, reRun bool) (int64, error) {
 
 func (task *ReadTask) Do() error {
 
-	task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+	task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
 	collectionObject, err1 := task.GetCollectionObject()
 
@@ -127,14 +127,14 @@ func (task *ReadTask) Do() error {
 		template.InitialiseTemplate(task.MetaData.TemplateName))
 
 	if err1 != nil {
-		task.result.ErrorOther = err1.Error()
-		task.result.FailWholeBulkOperation(task.OperationConfig.Start, task.OperationConfig.End,
+		task.Result.ErrorOther = err1.Error()
+		task.Result.FailWholeBulkOperation(task.OperationConfig.Start, task.OperationConfig.End,
 			task.MetaData.DocSize, task.gen, err1, task.State)
 		return task.tearUp()
 	}
 
 	getDocuments(task, collectionObject)
-	task.result.Success = task.OperationConfig.End - task.OperationConfig.Start - task.result.Failure
+	task.Result.Success = task.OperationConfig.End - task.OperationConfig.Start - task.Result.Failure
 
 	return task.tearUp()
 }
@@ -167,7 +167,7 @@ func getDocuments(task *ReadTask, collectionObject *sdk.CollectionObject) {
 			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
 			originalDocument, err := task.gen.Template.GenerateDocument(&fake, task.MetaData.DocSize)
 			if err != nil {
-				task.result.IncrementFailure(docId, originalDocument, err, false, 0, offset)
+				task.Result.IncrementFailure(docId, originalDocument, err, false, 0, offset)
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 				<-routineLimiter
 				return err
@@ -183,7 +183,7 @@ func getDocuments(task *ReadTask, collectionObject *sdk.CollectionObject) {
 
 			if err != nil {
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
-				task.result.IncrementFailure(docId, originalDocument, err, false, 0, offset)
+				task.Result.IncrementFailure(docId, originalDocument, err, false, 0, offset)
 				<-routineLimiter
 				return err
 			}
@@ -209,17 +209,17 @@ func (task *ReadTask) PostTaskExceptionHandling(collectionObject *sdk.Collection
 	completedOffsetMaps := task.State.ReturnCompletedOffset()
 
 	// For the offset in ignore exceptions :-> move them from error to completed
-	shiftErrToCompletedOnIgnore(task.OperationConfig.Exceptions.IgnoreExceptions, task.result, errorOffsetMaps, completedOffsetMaps)
+	shiftErrToCompletedOnIgnore(task.OperationConfig.Exceptions.IgnoreExceptions, task.Result, errorOffsetMaps, completedOffsetMaps)
 
 	if task.OperationConfig.Exceptions.RetryAttempts > 0 {
 
-		exceptionList := getExceptions(task.result, task.OperationConfig.Exceptions.RetryExceptions)
+		exceptionList := getExceptions(task.Result, task.OperationConfig.Exceptions.RetryExceptions)
 
 		// For the retry exceptions :-> move them on success after retrying from err to completed
 		for _, exception := range exceptionList {
 
 			errorOffsetListMap := make([]map[int64]RetriedResult, 0)
-			for _, failedDocs := range task.result.BulkError[exception] {
+			for _, failedDocs := range task.Result.BulkError[exception] {
 				m := make(map[int64]RetriedResult)
 				m[failedDocs.Offset] = RetriedResult{}
 				errorOffsetListMap = append(errorOffsetListMap, m)
@@ -264,21 +264,21 @@ func (task *ReadTask) PostTaskExceptionHandling(collectionObject *sdk.Collection
 			}
 			_ = wg.Wait()
 
-			shiftErrToCompletedOnRetrying(exception, task.result, errorOffsetListMap, errorOffsetMaps, completedOffsetMaps)
+			shiftErrToCompletedOnRetrying(exception, task.Result, errorOffsetListMap, errorOffsetMaps, completedOffsetMaps)
 		}
 	}
 
 	task.State.MakeCompleteKeyFromMap(completedOffsetMaps)
 	task.State.MakeErrorKeyFromMap(errorOffsetMaps)
-	task.result.Failure = int64(len(task.State.KeyStates.Err))
-	task.result.Success = task.OperationConfig.End - task.OperationConfig.Start - task.result.Failure
+	task.Result.Failure = int64(len(task.State.KeyStates.Err))
+	task.Result.Success = task.OperationConfig.End - task.OperationConfig.Start - task.Result.Failure
 }
 
 func (task *ReadTask) GetResultSeed() string {
-	if task.result == nil {
-		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+	if task.Result == nil {
+		task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 	}
-	return fmt.Sprintf("%d", task.result.ResultSeed)
+	return fmt.Sprintf("%d", task.Result.ResultSeed)
 }
 
 func (task *ReadTask) GetCollectionObject() (*sdk.CollectionObject, error) {

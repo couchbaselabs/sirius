@@ -30,7 +30,7 @@ type DeleteTask struct {
 	TaskPending     bool                               `json:"taskPending" doc:"false"`
 	State           *task_state.TaskState              `json:"State" doc:"false"`
 	MetaData        *task_meta_data.CollectionMetaData `json:"metaData" doc:"false"`
-	result          *task_result.TaskResult            `json:"-" doc:"false"`
+	Result          *task_result.TaskResult            `json:"-" doc:"false"`
 	gen             *docgenerator.Generator            `json:"-" doc:"false"`
 	req             *Request                           `json:"-" doc:"false"`
 	rerun           bool                               `json:"-" doc:"false"`
@@ -119,8 +119,8 @@ func (task *DeleteTask) Config(req *Request, reRun bool) (int64, error) {
 }
 
 func (task *DeleteTask) tearUp() error {
-	if err := task.result.SaveResultIntoFile(); err != nil {
-		log.Println("not able to save result into ", task.ResultSeed, task.Operation)
+	if err := task.Result.SaveResultIntoFile(); err != nil {
+		log.Println("not able to save Result into ", task.ResultSeed, task.Operation)
 	}
 	task.State.StopStoringState()
 	task.TaskPending = false
@@ -129,7 +129,7 @@ func (task *DeleteTask) tearUp() error {
 
 func (task *DeleteTask) Do() error {
 
-	task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+	task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
 	collectionObject, err1 := task.GetCollectionObject()
 
@@ -138,14 +138,14 @@ func (task *DeleteTask) Do() error {
 		template.InitialiseTemplate(task.MetaData.TemplateName))
 
 	if err1 != nil {
-		task.result.ErrorOther = err1.Error()
-		task.result.FailWholeBulkOperation(task.OperationConfig.Start, task.OperationConfig.End,
+		task.Result.ErrorOther = err1.Error()
+		task.Result.FailWholeBulkOperation(task.OperationConfig.Start, task.OperationConfig.End,
 			task.MetaData.DocSize, task.gen, err1, task.State)
 		return task.tearUp()
 	}
 
 	deleteDocuments(task, collectionObject)
-	task.result.Success = task.OperationConfig.End - task.OperationConfig.Start - task.result.Failure
+	task.Result.Success = task.OperationConfig.End - task.OperationConfig.Start - task.Result.Failure
 
 	return task.tearUp()
 }
@@ -197,7 +197,7 @@ func deleteDocuments(task *DeleteTask, collectionObject *sdk.CollectionObject) {
 					<-routineLimiter
 					return nil
 				} else {
-					task.result.IncrementFailure(docId, nil, err, false, uint64(0), offset)
+					task.Result.IncrementFailure(docId, nil, err, false, uint64(0), offset)
 					task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 					<-routineLimiter
 					return err
@@ -225,17 +225,17 @@ func (task *DeleteTask) PostTaskExceptionHandling(collectionObject *sdk.Collecti
 	completedOffsetMaps := task.State.ReturnCompletedOffset()
 
 	// For the offset in ignore exceptions :-> move them from error to completed
-	shiftErrToCompletedOnIgnore(task.OperationConfig.Exceptions.IgnoreExceptions, task.result, errorOffsetMaps, completedOffsetMaps)
+	shiftErrToCompletedOnIgnore(task.OperationConfig.Exceptions.IgnoreExceptions, task.Result, errorOffsetMaps, completedOffsetMaps)
 
 	if task.OperationConfig.Exceptions.RetryAttempts > 0 {
 
-		exceptionList := getExceptions(task.result, task.OperationConfig.Exceptions.RetryExceptions)
+		exceptionList := getExceptions(task.Result, task.OperationConfig.Exceptions.RetryExceptions)
 
 		// For the retry exceptions :-> move them on success after retrying from err to completed
 		for _, exception := range exceptionList {
 
 			errorOffsetListMap := make([]map[int64]RetriedResult, 0)
-			for _, failedDocs := range task.result.BulkError[exception] {
+			for _, failedDocs := range task.Result.BulkError[exception] {
 				m := make(map[int64]RetriedResult)
 				m[failedDocs.Offset] = RetriedResult{}
 				errorOffsetListMap = append(errorOffsetListMap, m)
@@ -294,19 +294,19 @@ func (task *DeleteTask) PostTaskExceptionHandling(collectionObject *sdk.Collecti
 			}
 			_ = wg.Wait()
 
-			shiftErrToCompletedOnRetrying(exception, task.result, errorOffsetListMap, errorOffsetMaps, completedOffsetMaps)
+			shiftErrToCompletedOnRetrying(exception, task.Result, errorOffsetListMap, errorOffsetMaps, completedOffsetMaps)
 		}
 	}
 
 	task.State.MakeCompleteKeyFromMap(completedOffsetMaps)
 	task.State.MakeErrorKeyFromMap(errorOffsetMaps)
-	task.result.Failure = int64(len(task.State.KeyStates.Err))
-	task.result.Success = task.OperationConfig.End - task.OperationConfig.Start - task.result.Failure
+	task.Result.Failure = int64(len(task.State.KeyStates.Err))
+	task.Result.Success = task.OperationConfig.End - task.OperationConfig.Start - task.Result.Failure
 }
 
 func (task *DeleteTask) GetResultSeed() string {
-	if task.result == nil {
-		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+	if task.Result == nil {
+		task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 	}
 	return fmt.Sprintf("%d", task.ResultSeed)
 }

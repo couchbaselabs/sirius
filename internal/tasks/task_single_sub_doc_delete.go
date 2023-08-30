@@ -23,7 +23,7 @@ type SingleSubDocDelete struct {
 	Operation                   string                       `json:"operation" doc:"false"`
 	ResultSeed                  int64                        `json:"resultSeed" doc:"false"`
 	TaskPending                 bool                         `json:"taskPending" doc:"false"`
-	result                      *task_result.TaskResult      `json:"-" doc:"false"`
+	Result                      *task_result.TaskResult      `json:"-" doc:"false"`
 	req                         *Request                     `json:"-" doc:"false"`
 }
 
@@ -99,29 +99,29 @@ func (task *SingleSubDocDelete) Config(req *Request, reRun bool) (int64, error) 
 }
 
 func (task *SingleSubDocDelete) tearUp() error {
-	if err := task.result.SaveResultIntoFile(); err != nil {
-		log.Println("not able to save result into ", task.ResultSeed, task.Operation)
+	if err := task.Result.SaveResultIntoFile(); err != nil {
+		log.Println("not able to save Result into ", task.ResultSeed, task.Operation)
 	}
-	task.result = nil
+	task.Result = nil
 	task.TaskPending = false
 	return task.req.SaveRequestIntoFile()
 }
 
 func (task *SingleSubDocDelete) Do() error {
 
-	task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+	task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
 	collectionObject, err1 := task.GetCollectionObject()
 
 	if err1 != nil {
-		task.result.ErrorOther = err1.Error()
-		task.result.FailWholeSingleOperation([]string{task.SingleSubDocOperationConfig.Key}, err1)
+		task.Result.ErrorOther = err1.Error()
+		task.Result.FailWholeSingleOperation([]string{task.SingleSubDocOperationConfig.Key}, err1)
 		return task.tearUp()
 	}
 
 	singleDeleteSubDocuments(task, collectionObject)
 
-	task.result.Success = 1 - task.result.Failure
+	task.Result.Success = 1 - task.Result.Failure
 	return task.tearUp()
 }
 
@@ -163,12 +163,12 @@ func singleDeleteSubDocuments(task *SingleSubDocDelete, collectionObject *sdk.Co
 	})
 
 	if err != nil {
-		task.result.CreateSingleErrorResult(key, err.Error(), false, 0)
+		task.Result.CreateSingleErrorResult(key, err.Error(), false, 0)
 	} else {
 		if !task.RemoveSpecOptions.IsXattr {
 			documentMetaData.IncrementMutationCount()
 		}
-		task.result.CreateSingleErrorResult(key, "", true, uint64(result.Cas()))
+		task.Result.CreateSingleErrorResult(key, "", true, uint64(result.Cas()))
 	}
 
 	task.PostTaskExceptionHandling(collectionObject)
@@ -179,8 +179,8 @@ func (task *SingleSubDocDelete) PostTaskExceptionHandling(collectionObject *sdk.
 }
 
 func (task *SingleSubDocDelete) GetResultSeed() string {
-	if task.result == nil {
-		task.result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+	if task.Result == nil {
+		task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 	}
 	return fmt.Sprintf("%d", task.ResultSeed)
 }
