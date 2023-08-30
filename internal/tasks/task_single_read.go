@@ -3,6 +3,7 @@ package tasks
 import (
 	"fmt"
 	"github.com/couchbaselabs/sirius/internal/sdk"
+	"github.com/couchbaselabs/sirius/internal/task_errors"
 	"github.com/couchbaselabs/sirius/internal/task_result"
 	"golang.org/x/sync/errgroup"
 	"log"
@@ -49,7 +50,7 @@ func (task *SingleReadTask) Config(req *Request, reRun bool) (int64, error) {
 
 	if task.req == nil {
 		task.TaskPending = false
-		return 0, fmt.Errorf("request.Request struct is nil")
+		return 0, task_errors.ErrRequestIsNil
 	}
 
 	task.req.ReconnectionManager()

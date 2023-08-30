@@ -1,9 +1,9 @@
 package sdk
 
 import (
-	"errors"
 	"fmt"
 	"github.com/couchbase/gocb/v2"
+	"github.com/couchbaselabs/sirius/internal/task_errors"
 	"time"
 )
 
@@ -33,13 +33,13 @@ type ClusterConfig struct {
 
 func ValidateClusterConfig(c *ClusterConfig) error {
 	if c == nil {
-		return fmt.Errorf("clusterConfig is nil")
+		return task_errors.ErrParsingClusterConfig
 	}
 	if c.ConnectionString == "" {
-		return fmt.Errorf("empty connection string")
+		return task_errors.ErrInvalidConnectionString
 	}
 	if c.Username == "" || c.Password == "" {
-		return fmt.Errorf("connection string : %s | %w", c.ConnectionString, errors.New("credentials are missing"))
+		return fmt.Errorf("connection string : %s | %w", c.ConnectionString, task_errors.ErrCredentialMissing)
 	}
 	return nil
 }

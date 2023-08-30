@@ -20,6 +20,8 @@ type Config struct {
 
 func main() {
 	registerInterfaces()
+	//logger, _ := zap.NewProduction()
+	//defer logger.Sync()
 
 	app := Config{
 		taskManager:    tasks_manager.NewTasKManager(TaskQueueSize),
