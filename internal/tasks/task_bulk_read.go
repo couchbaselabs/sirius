@@ -10,11 +10,9 @@ import (
 	"github.com/couchbaselabs/sirius/internal/task_result"
 	"github.com/couchbaselabs/sirius/internal/task_state"
 	"github.com/couchbaselabs/sirius/internal/template"
-	"github.com/jaswdr/faker"
 	"golang.org/x/sync/errgroup"
 	"log"
 	"math"
-	"math/rand"
 	"time"
 )
 
@@ -110,7 +108,7 @@ func (task *ReadTask) Config(req *Request, reRun bool) (int64, error) {
 		}
 
 		task.State.SetupStoringKeys()
-
+		_ = DeleteResultFile(task.ResultSeed)
 		log.Println("retrying :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 	}
 	return task.ResultSeed, nil
@@ -164,17 +162,11 @@ func getDocuments(task *ReadTask, collectionObject *sdk.CollectionObject) {
 				return fmt.Errorf("alreday performed operation on " + docId)
 			}
 
-			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
-			originalDocument, err := task.gen.Template.GenerateDocument(&fake, task.MetaData.DocSize)
-			if err != nil {
-				task.Result.IncrementFailure(docId, originalDocument, err, false, 0, offset)
-				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
-				<-routineLimiter
-				return err
-			}
-
+			initTime := time.Now().UTC().Format(time.RFC850)
+			var err error
 			for retry := 0; retry < int(math.Max(float64(1), float64(task.OperationConfig.Exceptions.
 				RetryAttempts))); retry++ {
+				initTime = time.Now().UTC().Format(time.RFC850)
 				_, err = collectionObject.Collection.Get(docId, nil)
 				if err == nil {
 					break
@@ -183,7 +175,7 @@ func getDocuments(task *ReadTask, collectionObject *sdk.CollectionObject) {
 
 			if err != nil {
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
-				task.Result.IncrementFailure(docId, originalDocument, err, false, 0, offset)
+				task.Result.IncrementFailure(initTime, docId, nil, err, false, 0, offset)
 				<-routineLimiter
 				return err
 			}
@@ -243,6 +235,7 @@ func (task *ReadTask) PostTaskExceptionHandling(collectionObject *sdk.Collection
 					retry := 0
 					result := &gocb.GetResult{}
 					var err error
+					initTime := time.Now().UTC().Format(time.RFC850)
 					for retry = 0; retry <= task.OperationConfig.Exceptions.RetryAttempts; retry++ {
 						result, err = collectionObject.Collection.Get(docId, nil)
 
@@ -253,8 +246,15 @@ func (task *ReadTask) PostTaskExceptionHandling(collectionObject *sdk.Collection
 
 					if err == nil {
 						m[offset] = RetriedResult{
-							Status: true,
-							CAS:    uint64(result.Cas()),
+							Status:   true,
+							CAS:      uint64(result.Cas()),
+							InitTime: initTime,
+							AckTime:  time.Now().UTC().Format(time.RFC850),
+						}
+					} else {
+						m[offset] = RetriedResult{
+							InitTime: initTime,
+							AckTime:  time.Now().UTC().Format(time.RFC850),
 						}
 					}
 

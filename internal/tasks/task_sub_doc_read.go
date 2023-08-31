@@ -103,6 +103,7 @@ func (task *SubDocRead) Config(req *Request, reRun bool) (int64, error) {
 			return task.ResultSeed, task_errors.ErrTaskStateIsNil
 		}
 		task.State.SetupStoringKeys()
+		_ = DeleteResultFile(task.ResultSeed)
 		log.Println("retrying :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 	}
 	return task.ResultSeed, nil
@@ -178,7 +179,7 @@ func readSubDocuments(task *SubDocRead, collectionObject *sdk.CollectionObject) 
 			var err error
 			result := &gocb.LookupInResult{}
 			var paths []string
-
+			initTime := time.Now().UTC().Format(time.RFC850)
 			for retry := 0; retry < int(math.Max(float64(1), float64(task.SubDocOperationConfig.Exceptions.
 				RetryAttempts))); retry++ {
 
@@ -190,6 +191,7 @@ func readSubDocuments(task *SubDocRead, collectionObject *sdk.CollectionObject) 
 					}))
 				}
 
+				initTime = time.Now().UTC().Format(time.RFC850)
 				result, err = collectionObject.Collection.LookupIn(docId, iOps, &gocb.LookupInOptions{
 					Timeout: time.Duration(task.LookupInOptions.Timeout) * time.Second,
 				})
@@ -199,8 +201,7 @@ func readSubDocuments(task *SubDocRead, collectionObject *sdk.CollectionObject) 
 				}
 			}
 			if err != nil {
-				task.Result.IncrementFailure(docId, struct {
-				}{}, err, false, 0, offset)
+				task.Result.IncrementFailure(initTime, docId, nil, err, false, 0, offset)
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 				<-routineLimiter
 				return err
@@ -209,8 +210,7 @@ func readSubDocuments(task *SubDocRead, collectionObject *sdk.CollectionObject) 
 			for index, _ := range paths {
 				var val interface{}
 				if err := result.ContentAt(uint(index), &val); err != nil {
-					task.Result.IncrementFailure(docId, struct {
-					}{}, err, false, 0, offset)
+					task.Result.IncrementFailure(initTime, docId, nil, err, false, 0, offset)
 					task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 					<-routineLimiter
 					return err

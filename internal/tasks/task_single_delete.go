@@ -136,6 +136,7 @@ func singleDeleteDocuments(task *SingleDeleteTask, collectionObject *sdk.Collect
 
 			task.req.DocumentsMeta.RemoveDocument(task.CollectionIdentifier(), key)
 
+			initTime := time.Now().UTC().Format(time.RFC850)
 			r, err := collectionObject.Collection.Remove(key, &gocb.RemoveOptions{
 				Cas:             gocb.Cas(task.RemoveOptions.Cas),
 				PersistTo:       task.RemoveOptions.PersistTo,
@@ -144,12 +145,12 @@ func singleDeleteDocuments(task *SingleDeleteTask, collectionObject *sdk.Collect
 				Timeout:         time.Duration(task.RemoveOptions.Timeout) * time.Second,
 			})
 			if err != nil {
-				task.Result.CreateSingleErrorResult(key, err.Error(), false, 0)
+				task.Result.CreateSingleErrorResult(initTime, key, err.Error(), false, 0)
 				<-routineLimiter
 				return err
 			}
 
-			task.Result.CreateSingleErrorResult(key, "", true, uint64(r.Cas()))
+			task.Result.CreateSingleErrorResult(initTime, key, "", true, uint64(r.Cas()))
 			<-routineLimiter
 			return nil
 		})

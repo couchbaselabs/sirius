@@ -150,6 +150,7 @@ func singleUpsertDocuments(task *SingleUpsertTask, collectionObject *sdk.Collect
 
 			updatedDoc := documentMetaData.UpdateDocument(t, doc, &fake)
 
+			initTime := time.Now().UTC().Format(time.RFC850)
 			m, err := collectionObject.Collection.Upsert(key, updatedDoc, &gocb.UpsertOptions{
 				DurabilityLevel: getDurability(task.InsertOptions.Durability),
 				PersistTo:       task.InsertOptions.PersistTo,
@@ -160,12 +161,12 @@ func singleUpsertDocuments(task *SingleUpsertTask, collectionObject *sdk.Collect
 
 			if err != nil {
 				documentMetaData.DecrementCount()
-				task.Result.CreateSingleErrorResult(key, err.Error(), false, 0)
+				task.Result.CreateSingleErrorResult(initTime, key, err.Error(), false, 0)
 				<-routineLimiter
 				return err
 			}
 
-			task.Result.CreateSingleErrorResult(key, "", true, uint64(m.Cas()))
+			task.Result.CreateSingleErrorResult(initTime, key, "", true, uint64(m.Cas()))
 			<-routineLimiter
 			return nil
 		})

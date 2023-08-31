@@ -156,6 +156,7 @@ func singleInsertSubDocuments(task *SingleSubDocInsert, collectionObject *sdk.Co
 			}))
 	}
 
+	initTime := time.Now().UTC().Format(time.RFC850)
 	result, err := collectionObject.Collection.MutateIn(key, iOps, &gocb.MutateInOptions{
 		Expiry:          time.Duration(task.MutateInOptions.Expiry) * time.Second,
 		Cas:             gocb.Cas(task.MutateInOptions.Cas),
@@ -168,12 +169,12 @@ func singleInsertSubDocuments(task *SingleSubDocInsert, collectionObject *sdk.Co
 	})
 
 	if err != nil {
-		task.Result.CreateSingleErrorResult(key, err.Error(), false, 0)
+		task.Result.CreateSingleErrorResult(initTime, key, err.Error(), false, 0)
 	} else {
 		if !task.InsertSpecOptions.IsXattr {
 			documentMetaData.IncrementMutationCount()
 		}
-		task.Result.CreateSingleErrorResult(key, "", true, uint64(result.Cas()))
+		task.Result.CreateSingleErrorResult(initTime, key, "", true, uint64(result.Cas()))
 	}
 
 	task.PostTaskExceptionHandling(collectionObject)

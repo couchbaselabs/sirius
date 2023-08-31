@@ -113,6 +113,7 @@ func (task *SubDocDelete) Config(req *Request, reRun bool) (int64, error) {
 			return task.ResultSeed, task_errors.ErrTaskStateIsNil
 		}
 		task.State.SetupStoringKeys()
+		_ = DeleteResultFile(task.ResultSeed)
 		log.Println("retrying :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 	}
 	return task.ResultSeed, nil
@@ -185,6 +186,7 @@ func deleteSubDocuments(task *SubDocDelete, collectionObject *sdk.CollectionObje
 			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
 
 			var err error
+			initTime := time.Now().UTC().Format(time.RFC850)
 			for retry := 0; retry < int(math.Max(float64(1), float64(task.SubDocOperationConfig.Exceptions.
 				RetryAttempts))); retry++ {
 
@@ -203,6 +205,7 @@ func deleteSubDocuments(task *SubDocDelete, collectionObject *sdk.CollectionObje
 						}))
 				}
 
+				initTime = time.Now().UTC().Format(time.RFC850)
 				_, err = collectionObject.Collection.MutateIn(docId, iOps, &gocb.MutateInOptions{
 					Expiry:          time.Duration(task.MutateInOptions.Expiry) * time.Second,
 					PersistTo:       task.MutateInOptions.PersistTo,
@@ -219,8 +222,7 @@ func deleteSubDocuments(task *SubDocDelete, collectionObject *sdk.CollectionObje
 			}
 			if err != nil {
 
-				task.Result.IncrementFailure(docId, struct {
-				}{}, err, false, 0, offset)
+				task.Result.IncrementFailure(initTime, docId, nil, err, false, 0, offset)
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 				<-routineLimiter
 				return err
@@ -283,7 +285,7 @@ func (task *SubDocDelete) PostTaskExceptionHandling(collectionObject *sdk.Collec
 					retry := 0
 					var err error
 					result := &gocb.MutateInResult{}
-
+					initTime := time.Now().UTC().Format(time.RFC850)
 					for retry = 0; retry <= task.SubDocOperationConfig.Exceptions.RetryAttempts; retry++ {
 
 						var iOps []gocb.MutateInSpec
@@ -301,6 +303,7 @@ func (task *SubDocDelete) PostTaskExceptionHandling(collectionObject *sdk.Collec
 								}))
 						}
 
+						initTime = time.Now().UTC().Format(time.RFC850)
 						result, err = collectionObject.Collection.MutateIn(docId, iOps, &gocb.MutateInOptions{
 							Expiry:          time.Duration(task.MutateInOptions.Expiry) * time.Second,
 							PersistTo:       task.MutateInOptions.PersistTo,
@@ -318,13 +321,17 @@ func (task *SubDocDelete) PostTaskExceptionHandling(collectionObject *sdk.Collec
 
 					if err != nil {
 						m[offset] = RetriedResult{
-							Status: true,
-							CAS:    0,
+							Status:   true,
+							CAS:      0,
+							InitTime: initTime,
+							AckTime:  time.Now().UTC().Format(time.RFC850),
 						}
 					} else {
 						m[offset] = RetriedResult{
-							Status: true,
-							CAS:    uint64(result.Cas()),
+							Status:   true,
+							CAS:      uint64(result.Cas()),
+							InitTime: initTime,
+							AckTime:  time.Now().UTC().Format(time.RFC850),
 						}
 					}
 

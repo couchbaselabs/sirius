@@ -148,6 +148,7 @@ func singleInsertDocuments(task *SingleInsertTask, collectionObject *sdk.Collect
 
 			doc, _ := t.GenerateDocument(&fake, documentMetaData.DocSize)
 
+			initTime := time.Now().UTC().Format(time.RFC850)
 			m, err := collectionObject.Collection.Insert(key, doc, &gocb.InsertOptions{
 				DurabilityLevel: getDurability(task.InsertOptions.Durability),
 				PersistTo:       task.InsertOptions.PersistTo,
@@ -157,13 +158,13 @@ func singleInsertDocuments(task *SingleInsertTask, collectionObject *sdk.Collect
 			})
 
 			if err != nil {
-				task.Result.CreateSingleErrorResult(key, err.Error(), false, 0)
+				task.Result.CreateSingleErrorResult(initTime, key, err.Error(), false, 0)
 				<-routineLimiter
 				return err
 
 			}
 
-			task.Result.CreateSingleErrorResult(key, "", true, uint64(m.Cas()))
+			task.Result.CreateSingleErrorResult(initTime, key, "", true, uint64(m.Cas()))
 			<-routineLimiter
 			return nil
 		})

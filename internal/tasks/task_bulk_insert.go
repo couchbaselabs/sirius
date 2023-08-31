@@ -119,6 +119,7 @@ func (task *InsertTask) Config(req *Request, reRun bool) (int64, error) {
 			return task.ResultSeed, task_errors.ErrTaskStateIsNil
 		}
 		task.State.SetupStoringKeys()
+		_ = DeleteResultFile(task.ResultSeed)
 		log.Println("retrying :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 	}
 	return task.ResultSeed, nil
@@ -191,15 +192,17 @@ func insertDocuments(task *InsertTask, collectionObject *sdk.CollectionObject) {
 			}
 			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
 
+			initTime := time.Now().UTC().Format(time.RFC850)
 			doc, err := task.gen.Template.GenerateDocument(&fake, task.MetaData.DocSize)
 			if err != nil {
-				task.Result.IncrementFailure(docId, doc, err, false, 0, offset)
+				task.Result.IncrementFailure(initTime, docId, doc, err, false, 0, offset)
 				<-routineLimiter
 				return err
 			}
 
 			for retry := 0; retry < int(math.Max(float64(1), float64(task.OperationConfig.Exceptions.
 				RetryAttempts))); retry++ {
+				initTime = time.Now().UTC().Format(time.RFC850)
 				_, err = collectionObject.Collection.Insert(docId, doc, &gocb.InsertOptions{
 					DurabilityLevel: getDurability(task.InsertOptions.Durability),
 					PersistTo:       task.InsertOptions.PersistTo,
@@ -218,7 +221,7 @@ func insertDocuments(task *InsertTask, collectionObject *sdk.CollectionObject) {
 					<-routineLimiter
 					return nil
 				} else {
-					task.Result.IncrementFailure(docId, doc, err, false, 0, offset)
+					task.Result.IncrementFailure(initTime, docId, doc, err, false, 0, offset)
 					task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 					<-routineLimiter
 					return err
@@ -285,6 +288,8 @@ func (task *InsertTask) PostTaskExceptionHandling(collectionObject *sdk.Collecti
 					var err error
 					result := &gocb.MutationResult{}
 
+					initTime := time.Now().UTC().Format(time.RFC850)
+
 					for retry = 0; retry <= task.OperationConfig.Exceptions.RetryAttempts; retry++ {
 						result, err = collectionObject.Collection.Insert(docId, doc, &gocb.InsertOptions{
 							DurabilityLevel: getDurability(task.InsertOptions.Durability),
@@ -305,20 +310,31 @@ func (task *InsertTask) PostTaskExceptionHandling(collectionObject *sdk.Collecti
 								Timeout: 5 * time.Second,
 							}); err1 == nil {
 								m[offset] = RetriedResult{
-									Status: true,
-									CAS:    uint64(tempResult.Cas()),
+									Status:   true,
+									CAS:      uint64(tempResult.Cas()),
+									InitTime: initTime,
+									AckTime:  time.Now().UTC().Format(time.RFC850),
 								}
 							} else {
 								m[offset] = RetriedResult{
-									Status: true,
-									CAS:    0,
+									Status:   true,
+									CAS:      0,
+									InitTime: initTime,
+									AckTime:  time.Now().UTC().Format(time.RFC850),
 								}
+							}
+						} else {
+							m[offset] = RetriedResult{
+								InitTime: initTime,
+								AckTime:  time.Now().UTC().Format(time.RFC850),
 							}
 						}
 					} else {
 						m[offset] = RetriedResult{
-							Status: true,
-							CAS:    uint64(result.Cas()),
+							Status:   true,
+							CAS:      uint64(result.Cas()),
+							InitTime: initTime,
+							AckTime:  time.Now().UTC().Format(time.RFC850),
 						}
 					}
 

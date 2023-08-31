@@ -112,7 +112,7 @@ func (task *DeleteTask) Config(req *Request, reRun bool) (int64, error) {
 		}
 
 		task.State.SetupStoringKeys()
-
+		_ = DeleteResultFile(task.ResultSeed)
 		log.Println("retrying :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 	}
 	return task.ResultSeed, nil
@@ -178,8 +178,10 @@ func deleteDocuments(task *DeleteTask, collectionObject *sdk.CollectionObject) {
 			}
 
 			var err error
+			initTime := time.Now().UTC().Format(time.RFC850)
 			for retry := 0; retry < int(math.Max(float64(1), float64(task.OperationConfig.Exceptions.
 				RetryAttempts))); retry++ {
+				initTime = time.Now().UTC().Format(time.RFC850)
 				_, err = collectionObject.Collection.Remove(docId, &gocb.RemoveOptions{
 					Cas:             gocb.Cas(task.RemoveOptions.Cas),
 					PersistTo:       task.RemoveOptions.PersistTo,
@@ -197,7 +199,7 @@ func deleteDocuments(task *DeleteTask, collectionObject *sdk.CollectionObject) {
 					<-routineLimiter
 					return nil
 				} else {
-					task.Result.IncrementFailure(docId, nil, err, false, uint64(0), offset)
+					task.Result.IncrementFailure(initTime, docId, nil, err, false, uint64(0), offset)
 					task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 					<-routineLimiter
 					return err
@@ -260,6 +262,7 @@ func (task *DeleteTask) PostTaskExceptionHandling(collectionObject *sdk.Collecti
 					var err error
 					result := &gocb.MutationResult{}
 
+					initTime := time.Now().UTC().Format(time.RFC850)
 					for retry = 0; retry <= task.OperationConfig.Exceptions.RetryAttempts; retry++ {
 						result, err = collectionObject.Collection.Remove(docId, &gocb.RemoveOptions{
 							Cas:             gocb.Cas(task.RemoveOptions.Cas),
@@ -277,14 +280,23 @@ func (task *DeleteTask) PostTaskExceptionHandling(collectionObject *sdk.Collecti
 					if err != nil {
 						if errors.Is(err, gocb.ErrDocumentNotFound) {
 							m[offset] = RetriedResult{
-								Status: true,
-								CAS:    0,
+								Status:   true,
+								CAS:      0,
+								InitTime: initTime,
+								AckTime:  time.Now().UTC().Format(time.RFC850),
+							}
+						} else {
+							m[offset] = RetriedResult{
+								InitTime: initTime,
+								AckTime:  time.Now().UTC().Format(time.RFC850),
 							}
 						}
 					} else {
 						m[offset] = RetriedResult{
-							Status: true,
-							CAS:    uint64(result.Cas()),
+							Status:   true,
+							CAS:      uint64(result.Cas()),
+							InitTime: initTime,
+							AckTime:  time.Now().UTC().Format(time.RFC850),
 						}
 					}
 

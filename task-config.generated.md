@@ -503,6 +503,7 @@ Description : Validates every document in the cluster's bucket
  * [replaceOption](#replaceoption)
  * [replaceSpecOptions](#replacespecoptions)
  * [retriedError](#retriederror)
+ * [sdkTimings](#sdktimings)
  * [singleOperationConfig](#singleoperationconfig)
  * [singleResult](#singleresult)
  * [singleSubDocOperationConfig](#singlesubdocoperationconfig)
@@ -514,6 +515,7 @@ Description : Validates every document in the cluster's bucket
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
+| `SDKTiming` | `struct` | `json:sdkTimings`  |
 | `DocId` | `string` | `json:key`  |
 | `Status` | `bool` | `json:status`  |
 | `Cas` | `uint64` | `json:cas`  |
@@ -635,10 +637,17 @@ Description : Validates every document in the cluster's bucket
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
+| `SDKTiming` | `struct` | `json:sdkTimings`  |
 | `DocId` | `string` | `json:key`  |
 | `Status` | `bool` | `json:status`  |
 | `Cas` | `uint64` | `json:cas`  |
 | `ErrorString` | `string` | `json:errorString`  |
+#### sdkTimings
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `SendTime` | `string` | `json:sendTime`  |
+| `AckTime` | `string` | `json:ackTime`  |
 #### singleOperationConfig
 
 | Name | Type | JSON Tag |
@@ -650,6 +659,7 @@ Description : Validates every document in the cluster's bucket
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
+| `SDKTiming` | `struct` | `json:sdkTimings`  |
 | `ErrorString` | `string` | `json:errorString`  |
 | `Status` | `bool` | `json:status`  |
 | `Cas` | `uint64` | `json:cas`  |

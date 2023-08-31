@@ -138,25 +138,26 @@ func singleReadSubDocuments(task *SingleSubDocRead, collectionObject *sdk.Collec
 		}))
 	}
 
+	initTime := time.Now().UTC().Format(time.RFC850)
 	result, err := collectionObject.Collection.LookupIn(key, iOps, &gocb.LookupInOptions{
 		Timeout: time.Duration(task.LookupInOptions.Timeout) * time.Second,
 	})
 
 	if err != nil {
-		task.Result.CreateSingleErrorResult(key, err.Error(), false, 0)
+		task.Result.CreateSingleErrorResult(initTime, key, err.Error(), false, 0)
 	} else {
 		flag := true
 		for index := range task.SingleSubDocOperationConfig.Paths {
 			var val interface{}
 			if err := result.ContentAt(uint(index), &val); err != nil {
 				task.Result.Failure++
-				task.Result.CreateSingleErrorResult(key, err.Error(), false, 0)
+				task.Result.CreateSingleErrorResult(initTime, key, err.Error(), false, 0)
 				flag = false
 				break
 			}
 		}
 		if flag {
-			task.Result.CreateSingleErrorResult(key, "", true, uint64(result.Cas()))
+			task.Result.CreateSingleErrorResult(initTime, key, "", true, uint64(result.Cas()))
 		}
 	}
 

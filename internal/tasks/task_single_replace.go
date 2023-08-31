@@ -147,6 +147,7 @@ func singleReplaceDocuments(task *SingleReplaceTask, collectionObject *sdk.Colle
 
 			doc, _ := t.GenerateDocument(&fake, documentMetaData.DocSize)
 
+			initTime := time.Now().UTC().Format(time.RFC850)
 			result, err := collectionObject.Collection.Replace(key, doc, &gocb.ReplaceOptions{
 				Expiry:          time.Duration(task.ReplaceOptions.Expiry) * time.Second,
 				Cas:             gocb.Cas(task.ReplaceOptions.Cas),
@@ -157,12 +158,12 @@ func singleReplaceDocuments(task *SingleReplaceTask, collectionObject *sdk.Colle
 			})
 
 			if err != nil {
-				task.Result.CreateSingleErrorResult(key, err.Error(), false, 0)
+				task.Result.CreateSingleErrorResult(initTime, key, err.Error(), false, 0)
 				<-routineLimiter
 				return err
 			}
 
-			task.Result.CreateSingleErrorResult(key, "", true, uint64(result.Cas()))
+			task.Result.CreateSingleErrorResult(initTime, key, "", true, uint64(result.Cas()))
 			<-routineLimiter
 			return nil
 		})

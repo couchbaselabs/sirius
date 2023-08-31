@@ -68,6 +68,7 @@ func (r *Register) HelperStruct() map[string]any {
 		"lookupInOptions":             &tasks.LookupInOptions{},
 		"replaceSpecOptions":          &tasks.ReplaceSpecOptions{},
 		"singleSubDocOperationConfig": &tasks.SingleSubDocOperationConfig{},
+		"sdkTimings":                  &task_result.SDKTiming{},
 	}
 
 }

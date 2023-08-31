@@ -122,6 +122,8 @@ func validateSingleDocuments(task *SingleValidate, collectionObject *sdk.Collect
 		group.Go(func() error {
 			key := <-dataChannel
 
+			initTime := time.Now().UTC().Format(time.RFC850)
+
 			documentMetaData := task.req.DocumentsMeta.GetDocumentsMetadata(task.CollectionIdentifier(), key, task.SingleOperationConfig.Template,
 				task.SingleOperationConfig.DocSize, false)
 
@@ -131,7 +133,7 @@ func validateSingleDocuments(task *SingleValidate, collectionObject *sdk.Collect
 
 			doc, err := t.GenerateDocument(&fake, documentMetaData.DocSize)
 			if err != nil {
-				task.Result.CreateSingleErrorResult(key, err.Error(), false, 0)
+				task.Result.CreateSingleErrorResult(initTime, key, err.Error(), false, 0)
 				<-routineLimiter
 				return err
 			}
@@ -139,14 +141,14 @@ func validateSingleDocuments(task *SingleValidate, collectionObject *sdk.Collect
 
 			docBytes, err := json.Marshal(&doc)
 			if err != nil {
-				task.Result.CreateSingleErrorResult(key, err.Error(), false, 0)
+				task.Result.CreateSingleErrorResult(initTime, key, err.Error(), false, 0)
 				<-routineLimiter
 				return err
 			}
 
 			var docMap map[string]any
 			if err := json.Unmarshal(docBytes, &docMap); err != nil {
-				task.Result.CreateSingleErrorResult(key, err.Error(), false, 0)
+				task.Result.CreateSingleErrorResult(initTime, key, err.Error(), false, 0)
 				<-routineLimiter
 				return err
 			}
@@ -169,13 +171,13 @@ func validateSingleDocuments(task *SingleValidate, collectionObject *sdk.Collect
 						gocb.GetSpec(path, &gocb.GetSpecOptions{IsXattr: true}),
 					}, nil)
 					if err != nil {
-						task.Result.CreateSingleErrorResult(key, err.Error(), false, 0)
+						task.Result.CreateSingleErrorResult(initTime, key, err.Error(), false, 0)
 						<-routineLimiter
 						return err
 					}
 					var tempResult string
 					if err = result.ContentAt(0, &tempResult); err != nil {
-						task.Result.CreateSingleErrorResult(key, err.Error(), false, 0)
+						task.Result.CreateSingleErrorResult(initTime, key, err.Error(), false, 0)
 						<-routineLimiter
 						return err
 					}
@@ -185,16 +187,17 @@ func validateSingleDocuments(task *SingleValidate, collectionObject *sdk.Collect
 
 			docMap[template.MutatedPath] = documentMetaData.SubDocMutationCount()
 
+			initTime = time.Now().UTC().Format(time.RFC850)
 			result, err := collectionObject.Collection.Get(key, nil)
 			if err != nil {
-				task.Result.CreateSingleErrorResult(key, err.Error(), false, 0)
+				task.Result.CreateSingleErrorResult(initTime, key, err.Error(), false, 0)
 				<-routineLimiter
 				return err
 			}
 
 			var resultFromHostMap map[string]any
 			if err = result.Content(&resultFromHostMap); err != nil {
-				task.Result.CreateSingleErrorResult(key, err.Error(), false, 0)
+				task.Result.CreateSingleErrorResult(initTime, key, err.Error(), false, 0)
 				<-routineLimiter
 				return err
 			}
@@ -204,12 +207,12 @@ func validateSingleDocuments(task *SingleValidate, collectionObject *sdk.Collect
 			}
 
 			if !compareDocumentsIsSame(resultFromHostMap, docMap, subDocumentMap) {
-				task.Result.CreateSingleErrorResult(key, "integrity lost", false, 0)
+				task.Result.CreateSingleErrorResult(initTime, key, "integrity lost", false, 0)
 				<-routineLimiter
 				return err
 			}
 
-			task.Result.CreateSingleErrorResult(key, "", true, uint64(result.Cas()))
+			task.Result.CreateSingleErrorResult(initTime, key, "", true, uint64(result.Cas()))
 			<-routineLimiter
 			return nil
 		})

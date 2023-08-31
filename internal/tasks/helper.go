@@ -213,8 +213,10 @@ type Exceptions struct {
 }
 
 type RetriedResult struct {
-	Status bool   `json:"status,omitempty" doc:"true"`
-	CAS    uint64 `json:"cas,omitempty" doc:"true"`
+	Status   bool   `json:"status" doc:"true"`
+	CAS      uint64 `json:"cas" doc:"true"`
+	InitTime string `json:"initTime" doc:"true"`
+	AckTime  string `json:"ackTime" doc:"true"`
 }
 
 func shiftErrToCompletedOnRetrying(exception string, result *task_result.TaskResult,
@@ -242,9 +244,19 @@ func shiftErrToCompletedOnRetrying(exception string, result *task_result.TaskRes
 								result.RetriedError[exception][len(result.RetriedError[exception])-1].
 									Cas = retryResult.CAS
 
+								result.RetriedError[exception][len(result.RetriedError[exception])-1].
+									SDKTiming.SendTime = retryResult.InitTime
+
+								result.RetriedError[exception][len(result.RetriedError[exception])-1].
+									SDKTiming.AckTime = retryResult.AckTime
+
 							} else {
-								result.BulkError[exception][offsetRetriedIndex].Status = retryResult.Status
-								result.BulkError[exception][offsetRetriedIndex].Cas = retryResult.CAS
+								result.RetriedError[exception][offsetRetriedIndex].Status = retryResult.Status
+								result.RetriedError[exception][offsetRetriedIndex].Cas = retryResult.CAS
+								result.RetriedError[exception][offsetRetriedIndex].SDKTiming.SendTime =
+									retryResult.InitTime
+								result.RetriedError[exception][offsetRetriedIndex].SDKTiming.AckTime =
+									retryResult.AckTime
 							}
 
 							result.BulkError[exception][index] = result.BulkError[exception][len(
@@ -259,6 +271,8 @@ func shiftErrToCompletedOnRetrying(exception string, result *task_result.TaskRes
 				} else {
 					for index := range result.BulkError[exception] {
 						if result.BulkError[exception][index].Offset == offset {
+							result.BulkError[exception][index].SDKTiming.SendTime = retryResult.InitTime
+							result.BulkError[exception][index].SDKTiming.AckTime = retryResult.AckTime
 							result.RetriedError[exception] = append(result.RetriedError[exception],
 								result.BulkError[exception][index])
 							break
