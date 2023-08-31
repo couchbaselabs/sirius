@@ -151,7 +151,7 @@ func (task *InsertTask) Do() error {
 
 	if err1 != nil {
 		task.Result.ErrorOther = err1.Error()
-		task.Result.FailWholeBulkOperation(0, task.OperationConfig.Count,
+		task.Result.FailWholeBulkOperation(task.OperationConfig.Start, task.OperationConfig.End,
 			task.MetaData.DocSize, task.gen, err1, task.State)
 		return task.tearUp()
 	}
