@@ -13,6 +13,7 @@ var (
 	ErrParsingOperatingConfig             = errors.New("unable to parse OperationConfig")
 	ErrMalformedOperationRange            = errors.New("operation start to end range is malformed")
 	ErrParsingInsertOptions               = errors.New("unable to parse InsertOptions")
+	ErrParsingTouchOptions                = errors.New("unable to parse TouchOptions")
 	ErrParsingRemoveOptions               = errors.New("unable to parse RemoveOptions")
 	ErrParsingReplaceOptions              = errors.New("unable to parse ReplaceOptions")
 	ErrParsingSubDocOperatingConfig       = errors.New("unable to parse SubDocOperationConfig")

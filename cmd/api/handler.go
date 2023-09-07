@@ -153,6 +153,43 @@ func (app *Config) upsertTask(w http.ResponseWriter, r *http.Request) {
 	_ = app.writeJSON(w, http.StatusOK, resPayload)
 }
 
+// touchTask is used to update the ttl of documents in bulk.
+func (app *Config) touchTask(w http.ResponseWriter, r *http.Request) {
+	task := &tasks.TouchTask{}
+	if err := app.readJSON(w, r, task); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	log.Print(task, tasks.TouchTask{})
+	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.UpsertOperation, task)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	resultSeed, err := task.Config(req, false)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	if err := app.taskManager.AddTask(task); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+	}
+	respPayload := tasks.TaskResponse{
+		Seed: fmt.Sprintf("%d", resultSeed),
+	}
+	resPayload := jsonResponse{
+		Error:   false,
+		Message: "Successfully started requested doc loading",
+		Data:    respPayload,
+	}
+	_ = app.writeJSON(w, http.StatusOK, resPayload)
+}
+
 // validateTask is validating the cluster's current state.
 func (app *Config) validateTask(w http.ResponseWriter, r *http.Request) {
 	task := &tasks.ValidateTask{}
