@@ -21,6 +21,7 @@ const (
 	DeleteOperation                string = "delete"
 	UpsertOperation                string = "upsert"
 	ReadOperation                  string = "read"
+	TouchOperation                 string = "touch"
 	ValidateOperation              string = "validate"
 	SingleInsertOperation          string = "singleInsert"
 	SingleDeleteOperation          string = "singleDelete"
@@ -161,6 +162,20 @@ type InsertOptions struct {
 func configInsertOptions(i *InsertOptions) error {
 	if i == nil {
 		return task_errors.ErrParsingInsertOptions
+	}
+	if i.Timeout == 0 {
+		i.Timeout = 10
+	}
+	return nil
+}
+
+type TouchOptions struct {
+	Timeout int `json:"timeout,omitempty" doc:"true"`
+}
+
+func configTouchOptions(i *TouchOptions) error {
+	if i == nil {
+		return task_errors.ErrParsingTouchOptions
 	}
 	if i.Timeout == 0 {
 		i.Timeout = 10

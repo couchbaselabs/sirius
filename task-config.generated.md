@@ -7,6 +7,7 @@ configuration that is also available on a per-task basis:
  * [/bulk-create](#bulk-create)
  * [/bulk-delete](#bulk-delete)
  * [/bulk-read](#bulk-read)
+ * [/bulk-touch](#bulk-touch)
  * [/bulk-upsert](#bulk-upsert)
  * [/clear_data](#clear_data)
  * [/result](#result)
@@ -85,6 +86,26 @@ Description : Read Task get documents from bucket and validate them with the exp
 | `Bucket` | `string` | `json:bucket`  |
 | `Scope` | `string` | `json:scope,omitempty`  |
 | `Collection` | `string` | `json:collection,omitempty`  |
+| `OperationConfig` | `ptr` | `json:operationConfig,omitempty`  |
+
+---
+#### /bulk-touch
+
+ REST : POST
+
+Description : Upsert task mutates documents in bulk into a bucket.
+The task will update the fields in a documents ranging from [start,end] inclusive.
+We need to share the fields we want to update in a json document using SQL++ syntax.
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
+| `Scope` | `string` | `json:scope,omitempty`  |
+| `Collection` | `string` | `json:collection,omitempty`  |
+| `TouchOptions` | `ptr` | `json:touchOptions,omitempty`  |
+| `Expiry` | `int64` | `json:expiry`  |
 | `OperationConfig` | `ptr` | `json:operationConfig,omitempty`  |
 
 ---
@@ -509,6 +530,7 @@ Description : Validates every document in the cluster's bucket
  * [singleSubDocOperationConfig](#singlesubdocoperationconfig)
  * [subDocOperationConfig](#subdocoperationconfig)
  * [timeoutsConfig](#timeoutsconfig)
+ * [touchOptions](#touchoptions)
 
 ---
 #### bulkError
@@ -684,6 +706,11 @@ Description : Validates every document in the cluster's bucket
 | `ConnectTimeout` | `int` | `json:connectTimeout,omitempty`  |
 | `KVTimeout` | `int` | `json:KVTimeout,omitempty`  |
 | `KVDurableTimeout` | `int` | `json:KVDurableTimeout,omitempty`  |
+#### touchOptions
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `Timeout` | `int` | `json:timeout,omitempty`  |
 
 ---
 **APIs Response Description**.
