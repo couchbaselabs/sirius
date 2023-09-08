@@ -194,11 +194,14 @@ func singleUpsertSubDocuments(task *SingleSubDocUpsert, collectionObject *sdk.Co
 func (task *SingleSubDocUpsert) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
 }
 
-func (task *SingleSubDocUpsert) GetResultSeed() string {
-	if task.Result == nil {
-		task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+func (task *SingleSubDocUpsert) MatchResultSeed(resultSeed string) bool {
+	if fmt.Sprintf("%d", task.ResultSeed) == resultSeed {
+		if task.Result == nil {
+			task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+		}
+		return true
 	}
-	return fmt.Sprintf("%d", task.ResultSeed)
+	return false
 }
 
 func (task *SingleSubDocUpsert) GetCollectionObject() (*sdk.CollectionObject, error) {

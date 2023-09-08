@@ -48,8 +48,8 @@ func (r *TaskResult) PostTaskExceptionHandling(_ *sdk.CollectionObject) {
 
 }
 
-func (r *TaskResult) GetResultSeed() string {
-	return ""
+func (r *TaskResult) MatchResultSeed(_ string) bool {
+	return false
 }
 
 func (r *TaskResult) GetCollectionObject() (*sdk.CollectionObject, error) {

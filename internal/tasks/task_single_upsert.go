@@ -182,11 +182,14 @@ func (task *SingleUpsertTask) PostTaskExceptionHandling(_ *sdk.CollectionObject)
 	//TODO implement me
 }
 
-func (task *SingleUpsertTask) GetResultSeed() string {
-	if task.Result == nil {
-		task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+func (task *SingleUpsertTask) MatchResultSeed(resultSeed string) bool {
+	if fmt.Sprintf("%d", task.ResultSeed) == resultSeed {
+		if task.Result == nil {
+			task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+		}
+		return true
 	}
-	return fmt.Sprintf("%d", task.ResultSeed)
+	return false
 }
 
 func (task *SingleUpsertTask) GetCollectionObject() (*sdk.CollectionObject, error) {

@@ -179,11 +179,14 @@ func singleInsertDocuments(task *SingleInsertTask, collectionObject *sdk.Collect
 func (task *SingleInsertTask) PostTaskExceptionHandling(_ *sdk.CollectionObject) {
 }
 
-func (task *SingleInsertTask) GetResultSeed() string {
-	if task.Result == nil {
-		task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+func (task *SingleInsertTask) MatchResultSeed(resultSeed string) bool {
+	if fmt.Sprintf("%d", task.ResultSeed) == resultSeed {
+		if task.Result == nil {
+			task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+		}
+		return true
 	}
-	return fmt.Sprintf("%d", task.ResultSeed)
+	return false
 }
 
 func (task *SingleInsertTask) GetCollectionObject() (*sdk.CollectionObject, error) {

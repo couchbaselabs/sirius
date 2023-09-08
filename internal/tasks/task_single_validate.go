@@ -235,11 +235,14 @@ func (task *SingleValidate) CheckIfPending() bool {
 func (task *SingleValidate) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
 }
 
-func (task *SingleValidate) GetResultSeed() string {
-	if task.Result == nil {
-		task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+func (task *SingleValidate) MatchResultSeed(resultSeed string) bool {
+	if fmt.Sprintf("%d", task.ResultSeed) == resultSeed {
+		if task.Result == nil {
+			task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+		}
+		return true
 	}
-	return fmt.Sprintf("%d", task.ResultSeed)
+	return false
 }
 
 func (task *SingleValidate) GetCollectionObject() (*sdk.CollectionObject, error) {
