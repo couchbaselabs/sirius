@@ -179,11 +179,14 @@ func singleReplaceSubDocuments(task *SingleSubDocReplace, collectionObject *sdk.
 func (task *SingleSubDocReplace) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
 }
 
-func (task *SingleSubDocReplace) GetResultSeed() string {
-	if task.Result == nil {
-		task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+func (task *SingleSubDocReplace) MatchResultSeed(resultSeed string) bool {
+	if fmt.Sprintf("%d", task.ResultSeed) == resultSeed {
+		if task.Result == nil {
+			task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+		}
+		return true
 	}
-	return fmt.Sprintf("%d", task.ResultSeed)
+	return false
 }
 
 func (task *SingleSubDocReplace) GetCollectionObject() (*sdk.CollectionObject, error) {

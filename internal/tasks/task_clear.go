@@ -51,8 +51,8 @@ func (task *ClearTask) PostTaskExceptionHandling(_ *sdk.CollectionObject) {
 
 }
 
-func (task *ClearTask) GetResultSeed() string {
-	return ""
+func (task *ClearTask) MatchResultSeed(_ string) bool {
+	return false
 }
 
 func (task *ClearTask) GetCollectionObject() (*sdk.CollectionObject, error) {

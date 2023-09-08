@@ -39,8 +39,7 @@ func (r *RetryExceptions) Config(req *Request, reRun bool) (int64, error) {
 		return 0, fmt.Errorf("request.Task struct is nil")
 	}
 	for i := range r.req.Tasks {
-
-		if r.req.Tasks[i].Task.GetResultSeed() == r.ResultSeed {
+		if r.req.Tasks[i].Task.MatchResultSeed(r.ResultSeed) {
 			r.Task = r.req.Tasks[i].Task
 			break
 		}
@@ -75,8 +74,8 @@ func (r *RetryExceptions) PostTaskExceptionHandling(_ *sdk.CollectionObject) {
 func (r *RetryExceptions) tearUp() error {
 	return r.Task.tearUp()
 }
-func (r *RetryExceptions) GetResultSeed() string {
-	return r.Task.GetResultSeed()
+func (r *RetryExceptions) MatchResultSeed(resultSeed string) bool {
+	return r.Task.MatchResultSeed(resultSeed)
 }
 
 func (r *RetryExceptions) GetCollectionObject() (*sdk.CollectionObject, error) {

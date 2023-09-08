@@ -31,6 +31,7 @@ type ReadTask struct {
 	Result          *task_result.TaskResult            `json:"Result" doc:"false"`
 	gen             *docgenerator.Generator            `json:"-" doc:"false"`
 	req             *Request                           `json:"-" doc:"false"`
+	rerun           bool                               `json:"-" doc:"false"`
 }
 
 func (task *ReadTask) BuildIdentifier() string {
@@ -56,6 +57,7 @@ func (task *ReadTask) tearUp() error {
 	if err := task.Result.SaveResultIntoFile(); err != nil {
 		log.Println("not able to save Result into ", task.ResultSeed, task.Operation)
 	}
+	task.Result = nil
 	task.State.StopStoringState()
 	task.TaskPending = false
 	return task.req.SaveRequestIntoFile()
@@ -75,6 +77,8 @@ func (task *ReadTask) Config(req *Request, reRun bool) (int64, error) {
 		task.TaskPending = false
 		return 0, err
 	}
+
+	task.rerun = reRun
 
 	if !reRun {
 		task.ResultSeed = int64(time.Now().UnixNano())
@@ -274,11 +278,14 @@ func (task *ReadTask) PostTaskExceptionHandling(collectionObject *sdk.Collection
 	task.Result.Success = task.OperationConfig.End - task.OperationConfig.Start - task.Result.Failure
 }
 
-func (task *ReadTask) GetResultSeed() string {
-	if task.Result == nil {
-		task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+func (task *ReadTask) MatchResultSeed(resultSeed string) bool {
+	if fmt.Sprintf("%d", task.ResultSeed) == resultSeed {
+		if task.Result == nil {
+			task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+		}
+		return true
 	}
-	return fmt.Sprintf("%d", task.Result.ResultSeed)
+	return false
 }
 
 func (task *ReadTask) GetCollectionObject() (*sdk.CollectionObject, error) {

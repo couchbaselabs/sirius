@@ -122,6 +122,7 @@ func (task *DeleteTask) tearUp() error {
 	if err := task.Result.SaveResultIntoFile(); err != nil {
 		log.Println("not able to save Result into ", task.ResultSeed, task.Operation)
 	}
+	task.Result = nil
 	task.State.StopStoringState()
 	task.TaskPending = false
 	return task.req.SaveRequestIntoFile()
@@ -316,11 +317,14 @@ func (task *DeleteTask) PostTaskExceptionHandling(collectionObject *sdk.Collecti
 	task.Result.Success = task.OperationConfig.End - task.OperationConfig.Start - task.Result.Failure
 }
 
-func (task *DeleteTask) GetResultSeed() string {
-	if task.Result == nil {
-		task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+func (task *DeleteTask) MatchResultSeed(resultSeed string) bool {
+	if fmt.Sprintf("%d", task.ResultSeed) == resultSeed {
+		if task.Result == nil {
+			task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+		}
+		return true
 	}
-	return fmt.Sprintf("%d", task.ResultSeed)
+	return false
 }
 
 func (task *DeleteTask) GetCollectionObject() (*sdk.CollectionObject, error) {
