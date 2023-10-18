@@ -18,7 +18,6 @@ import (
 
 const ResultPath = "./internal/task_result/task_result_logs"
 
-// TaskResult defines the type of result stored in a response after an operation.
 type SDKTiming struct {
 	SendTime string `json:"sendTime" doc:"true"`
 	AckTime  string `json:"ackTime" doc:"true"`
@@ -45,6 +44,7 @@ type FailedQuery struct {
 	ErrorString string `json:"errorString" doc:"true"`
 }
 
+// TaskResult defines the type of result stored in a response after an operation.
 type TaskResult struct {
 	ResultSeed   int64                            `json:"resultSeed"`
 	Operation    string                           `json:"operation"`

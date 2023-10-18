@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/couchbase/gocb/v2"
+	"github.com/couchbaselabs/sirius/internal/task_errors"
+	"strings"
 	"sync"
 	"time"
 )
@@ -23,6 +25,15 @@ func ConfigConnectionManager() *ConnectionManager {
 	}
 }
 
+func addKVPoolSize(connStr string) string {
+	if !strings.Contains(connStr, "kv_pool_size") {
+		if !strings.Contains(connStr, "?") {
+			return connStr + "?kv_pool_size=32"
+		}
+	}
+	return connStr
+}
+
 // DisconnectAll disconnect all the clusters used in a tasks.Request
 func (cm *ConnectionManager) DisconnectAll() {
 	defer cm.lock.Unlock()
@@ -37,8 +48,30 @@ func (cm *ConnectionManager) DisconnectAll() {
 }
 
 // setClusterObject maps a couchbase Cluster via connection string to *gocb.Cluster
-func (cm *ConnectionManager) setClusterObject(connectionString string, c *ClusterObject) {
-	cm.clusters[connectionString] = c
+func (cm *ConnectionManager) setClusterObject(clusterIdentifier string, c *ClusterObject) {
+	cm.clusters[clusterIdentifier] = c
+}
+
+func getClusterIdentifierHelper(connStr string, x string) string {
+	startIndex := len(x)
+	i := startIndex
+	for i = startIndex; i < len(connStr); i++ {
+		if connStr[i] == '?' {
+			break
+		}
+	}
+	return connStr[startIndex:i]
+}
+
+// getClusterIdentifier get the ip address and build a cluster Identifier
+func getClusterIdentifier(connStr string) (string, error) {
+	if strings.Contains(connStr, "couchbases://") {
+		return getClusterIdentifierHelper(connStr, "couchbases://"), nil
+	} else if strings.Contains(connStr, "couchbase://") {
+		return getClusterIdentifierHelper(connStr, "couchbase://"), nil
+	} else {
+		return "", task_errors.ErrInvalidConnectionString
+	}
 }
 
 // getClusterObject returns ClusterObject if cluster is already setup.
@@ -49,7 +82,14 @@ func (cm *ConnectionManager) getClusterObject(clusterConfig *ClusterConfig) (*Cl
 		return nil, fmt.Errorf("unable to parse clusterConfig | %w", errors.New("clusterConfig is nil"))
 	}
 
-	_, ok := cm.clusters[clusterConfig.ConnectionString]
+	clusterIdentifier, err := getClusterIdentifier(clusterConfig.ConnectionString)
+	if err != nil {
+		return nil, err
+	}
+
+	clusterConfig.ConnectionString = addKVPoolSize(clusterConfig.ConnectionString)
+
+	_, ok := cm.clusters[clusterIdentifier]
 	if !ok {
 		if err := ValidateClusterConfig(clusterConfig); err != nil {
 			return nil, err
@@ -86,10 +126,10 @@ func (cm *ConnectionManager) getClusterObject(clusterConfig *ClusterConfig) (*Cl
 			Cluster: cluster,
 			Buckets: make(map[string]*BucketObject),
 		}
-		cm.setClusterObject(clusterConfig.ConnectionString, c)
+		cm.setClusterObject(clusterIdentifier, c)
 	}
 
-	return cm.clusters[clusterConfig.ConnectionString], nil
+	return cm.clusters[clusterIdentifier], nil
 }
 
 // GetCollection return a *gocb.Collection which represents a single Collection.
