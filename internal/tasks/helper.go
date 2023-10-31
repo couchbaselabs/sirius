@@ -6,12 +6,11 @@ import (
 	"github.com/couchbaselabs/sirius/internal/task_errors"
 	"github.com/couchbaselabs/sirius/internal/task_result"
 	"golang.org/x/exp/slices"
-	"log"
 	"reflect"
 )
 
 const (
-	MaxConcurrentRoutines                 = 45
+	NumberOfBatches                       = 200
 	DefaultIdentifierToken                = "default"
 	MaxQueryRuntime                int    = 86400
 	DefaultQueryRunTime            int    = 100
@@ -446,8 +445,6 @@ func compareDocumentsIsSame(host map[string]any, document1 map[string]any, docum
 			if reflect.DeepEqual(v2, value) == false {
 				return false
 			}
-		} else {
-			log.Println("unknown field", key)
 		}
 	}
 

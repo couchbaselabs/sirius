@@ -5,22 +5,26 @@ import (
 	"fmt"
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/task_errors"
+	"log"
 	"strings"
 	"sync"
 	"time"
 )
 
+const (
+	ClusterConnectionLimit = 5
+)
+
 // ConnectionManager contains different cluster information and connections to them.
 type ConnectionManager struct {
-	clusters map[string]*ClusterObject
+	clusters map[string][]*ClusterObject
 	lock     sync.Mutex
 }
 
 // ConfigConnectionManager returns an instance of ConnectionManager.
 func ConfigConnectionManager() *ConnectionManager {
-
 	return &ConnectionManager{
-		clusters: make(map[string]*ClusterObject),
+		clusters: make(map[string][]*ClusterObject),
 		lock:     sync.Mutex{},
 	}
 }
@@ -28,7 +32,7 @@ func ConfigConnectionManager() *ConnectionManager {
 func addKVPoolSize(connStr string) string {
 	if !strings.Contains(connStr, "kv_pool_size") {
 		if !strings.Contains(connStr, "?") {
-			return connStr + "?kv_pool_size=32"
+			return connStr + "?kv_pool_size=20"
 		}
 	}
 	return connStr
@@ -38,17 +42,19 @@ func addKVPoolSize(connStr string) string {
 func (cm *ConnectionManager) DisconnectAll() {
 	defer cm.lock.Unlock()
 	cm.lock.Lock()
-	for cS, v := range cm.clusters {
-		if v.Cluster != nil {
-			_ = v.Cluster.Close(nil)
-			delete(cm.clusters, cS)
+	for cS, cObj := range cm.clusters {
+		for index, c := range cObj {
+			if err := c.Cluster.Close(nil); err != nil {
+				log.Println(fmt.Sprintf("error in closing connection at %d of %s", index, cS))
+			}
+			c.Cluster = nil
 		}
-		v = nil
+		delete(cm.clusters, cS)
 	}
 }
 
 // setClusterObject maps a couchbase Cluster via connection string to *gocb.Cluster
-func (cm *ConnectionManager) setClusterObject(clusterIdentifier string, c *ClusterObject) {
+func (cm *ConnectionManager) setClusterObject(clusterIdentifier string, c []*ClusterObject) {
 	cm.clusters[clusterIdentifier] = c
 }
 
@@ -76,57 +82,59 @@ func getClusterIdentifier(connStr string) (string, error) {
 
 // getClusterObject returns ClusterObject if cluster is already setup.
 // If not, then set up a ClusterObject using ClusterConfig.
-func (cm *ConnectionManager) getClusterObject(clusterConfig *ClusterConfig) (*ClusterObject, error) {
+func (cm *ConnectionManager) getClusterObject(clusterConfig *ClusterConfig) ([]*ClusterObject,
+	error) {
 
 	if clusterConfig == nil {
-		return nil, fmt.Errorf("unable to parse clusterConfig | %w", errors.New("clusterConfig is nil"))
+		return []*ClusterObject{}, fmt.Errorf("unable to parse clusterConfig | %w", errors.New("clusterConfig is nil"))
 	}
 
 	clusterIdentifier, err := getClusterIdentifier(clusterConfig.ConnectionString)
 	if err != nil {
-		return nil, err
+		return []*ClusterObject{}, err
 	}
 
 	clusterConfig.ConnectionString = addKVPoolSize(clusterConfig.ConnectionString)
 
 	_, ok := cm.clusters[clusterIdentifier]
 	if !ok {
-		if err := ValidateClusterConfig(clusterConfig); err != nil {
-			return nil, err
-		}
-		cluster, err := gocb.Connect(clusterConfig.ConnectionString, gocb.ClusterOptions{
-			Authenticator: gocb.PasswordAuthenticator{
+		var clusterObjectList []*ClusterObject
+		for i := 0; i < ClusterConnectionLimit; i++ {
+			cluster, err := gocb.Connect(clusterConfig.ConnectionString, gocb.ClusterOptions{
+				Authenticator: gocb.PasswordAuthenticator{
+					Username: clusterConfig.Username,
+					Password: clusterConfig.Password,
+				},
 				Username: clusterConfig.Username,
 				Password: clusterConfig.Password,
-			},
-			Username: clusterConfig.Username,
-			Password: clusterConfig.Password,
-			TimeoutsConfig: gocb.TimeoutsConfig{
-				ConnectTimeout:   time.Duration(clusterConfig.TimeoutsConfig.ConnectTimeout) * time.Second,
-				KVTimeout:        time.Duration(clusterConfig.TimeoutsConfig.KVTimeout) * time.Second,
-				KVDurableTimeout: time.Duration(clusterConfig.TimeoutsConfig.KVDurableTimeout) * time.Second,
-			},
-			CircuitBreakerConfig: gocb.CircuitBreakerConfig{
-				Disabled: true,
-			},
-			CompressionConfig: gocb.CompressionConfig{
-				Disabled: clusterConfig.CompressionConfig.Disabled,
-				MinSize:  clusterConfig.CompressionConfig.MinSize,
-				MinRatio: clusterConfig.CompressionConfig.MinRatio,
-			},
-			SecurityConfig: gocb.SecurityConfig{
-				TLSSkipVerify: true,
-			},
-		})
-		if err != nil {
-			return nil, err
+				TimeoutsConfig: gocb.TimeoutsConfig{
+					ConnectTimeout:   time.Duration(clusterConfig.TimeoutsConfig.ConnectTimeout) * time.Second,
+					KVTimeout:        time.Duration(clusterConfig.TimeoutsConfig.KVTimeout) * time.Second,
+					KVDurableTimeout: time.Duration(clusterConfig.TimeoutsConfig.KVDurableTimeout) * time.Second,
+				},
+				CircuitBreakerConfig: gocb.CircuitBreakerConfig{
+					Disabled: true,
+				},
+				CompressionConfig: gocb.CompressionConfig{
+					Disabled: clusterConfig.CompressionConfig.Disabled,
+					MinSize:  clusterConfig.CompressionConfig.MinSize,
+					MinRatio: clusterConfig.CompressionConfig.MinRatio,
+				},
+				SecurityConfig: gocb.SecurityConfig{
+					TLSSkipVerify: true,
+				},
+			})
+			if err != nil {
+				continue
+			}
+
+			clusterObjectList = append(clusterObjectList, &ClusterObject{
+				Cluster: cluster,
+				Buckets: make(map[string]*BucketObject),
+			})
 		}
 
-		c := &ClusterObject{
-			Cluster: cluster,
-			Buckets: make(map[string]*BucketObject),
-		}
-		cm.setClusterObject(clusterIdentifier, c)
+		cm.setClusterObject(clusterIdentifier, clusterObjectList)
 	}
 
 	return cm.clusters[clusterIdentifier], nil
@@ -134,27 +142,36 @@ func (cm *ConnectionManager) getClusterObject(clusterConfig *ClusterConfig) (*Cl
 
 // GetCollection return a *gocb.Collection which represents a single Collection.
 func (cm *ConnectionManager) GetCollection(clusterConfig *ClusterConfig, bucketName, scopeName,
-	collectionName string) (*CollectionObject,
+	collectionName string) ([]*CollectionObject,
 	error) {
 	defer cm.lock.Unlock()
 	cm.lock.Lock()
+	var collectionObjectList []*CollectionObject
 	cObj, err1 := cm.getClusterObject(clusterConfig)
 	if err1 != nil {
 		return nil, err1
 	}
-	bObj, err2 := cObj.getBucketObject(bucketName)
-	if err2 != nil {
-		return nil, err2
+	for i := 0; i < ClusterConnectionLimit; i++ {
+		bObj, err2 := cObj[i].getBucketObject(bucketName)
+		if err2 != nil {
+			continue
+		}
+		sObj, err3 := bObj.getScopeObject(scopeName)
+		if err3 != nil {
+			continue
+		}
+		c, err4 := sObj.getCollection(collectionName)
+		if err4 != nil {
+			continue
+		}
+		collectionObjectList = append(collectionObjectList, c)
 	}
-	sObj, err3 := bObj.getScopeObject(scopeName)
-	if err3 != nil {
-		return nil, err3
+
+	if len(collectionObjectList) == 0 {
+		return []*CollectionObject{}, errors.New("empty list of collectionObject")
 	}
-	c, err4 := sObj.getCollection(collectionName)
-	if err4 != nil {
-		return nil, err4
-	}
-	return c, nil
+	return collectionObjectList, nil
+
 }
 
 // GetScope return a *gocb.Scope which represents  a single scope within a bucket.
@@ -166,7 +183,7 @@ func (cm *ConnectionManager) GetScope(clusterConfig *ClusterConfig, bucketName, 
 	if err1 != nil {
 		return nil, err1
 	}
-	bObj, err2 := cObj.getBucketObject(bucketName)
+	bObj, err2 := cObj[0].getBucketObject(bucketName)
 	if err2 != nil {
 		return nil, err2
 	}
@@ -186,7 +203,7 @@ func (cm *ConnectionManager) GetBucket(clusterConfig *ClusterConfig, bucketName 
 	if err1 != nil {
 		return nil, err1
 	}
-	bObj, err2 := cObj.getBucketObject(bucketName)
+	bObj, err2 := cObj[0].getBucketObject(bucketName)
 	if err2 != nil {
 		return nil, err2
 	}
@@ -202,5 +219,5 @@ func (cm *ConnectionManager) GetCluster(clusterConfig *ClusterConfig) (*gocb.Clu
 	if err1 != nil {
 		return nil, err1
 	}
-	return cObj.Cluster, nil
+	return cObj[0].Cluster, nil
 }

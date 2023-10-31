@@ -13,6 +13,8 @@ import (
 	"golang.org/x/sync/errgroup"
 	"log"
 	"math"
+	"math/rand"
+	"sync"
 	"time"
 )
 
@@ -142,9 +144,8 @@ func (task *ReadTask) Do() error {
 }
 
 // getDocuments reads the documents in the bucket
-func getDocuments(task *ReadTask, collectionObject *sdk.CollectionObject) {
-	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
-	dataChannel := make(chan int64, MaxConcurrentRoutines)
+func getDocuments(task *ReadTask, collectionObjectList []*sdk.CollectionObject) {
+
 	skip := make(map[int64]struct{})
 	for _, offset := range task.State.KeyStates.Completed {
 		skip[offset] = struct{}{}
@@ -153,46 +154,32 @@ func getDocuments(task *ReadTask, collectionObject *sdk.CollectionObject) {
 		skip[offset] = struct{}{}
 	}
 
-	group := errgroup.Group{}
-	for i := task.OperationConfig.Start; i < task.OperationConfig.End; i++ {
-		routineLimiter <- struct{}{}
-		dataChannel <- i
-		group.Go(func() error {
-			offset := <-dataChannel
-			key := task.State.SeedStart + offset
-			docId := task.gen.BuildKey(key)
-			if _, ok := skip[offset]; ok {
-				<-routineLimiter
-				return fmt.Errorf("alreday performed operation on " + docId)
+	wg := sync.WaitGroup{}
+	wg.Add(NumberOfBatches)
+	batchSize := int64((task.OperationConfig.End - task.OperationConfig.Start) / NumberOfBatches)
+	for i := 0; i < NumberOfBatches; i++ {
+		batchIndex := int64(i)
+		go func() {
+			defer wg.Done()
+			for itr := batchIndex * batchSize; itr < (batchIndex+1)*batchSize; itr++ {
+				getDocumentsHelper(task, int64(itr), skip, collectionObjectList[int(itr)%len(
+					collectionObjectList)])
 			}
-
-			initTime := time.Now().UTC().Format(time.RFC850)
-			var err error
-			for retry := 0; retry < int(math.Max(float64(1), float64(task.OperationConfig.Exceptions.
-				RetryAttempts))); retry++ {
-				initTime = time.Now().UTC().Format(time.RFC850)
-				_, err = collectionObject.Collection.Get(docId, nil)
-				if err == nil {
-					break
-				}
-			}
-
-			if err != nil {
-				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
-				task.Result.IncrementFailure(initTime, docId, nil, err, false, 0, offset)
-				<-routineLimiter
-				return err
-			}
-
-			task.State.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
-			<-routineLimiter
-			return nil
-		})
+		}()
 	}
-	_ = group.Wait()
-	close(routineLimiter)
-	close(dataChannel)
-	task.PostTaskExceptionHandling(collectionObject)
+
+	wg.Wait()
+
+	remainingItems := (task.OperationConfig.End - task.OperationConfig.Start) - (batchSize * NumberOfBatches)
+
+	if remainingItems > 0 {
+		for offset := batchSize * int64(NumberOfBatches); offset < task.OperationConfig.End; offset++ {
+			getDocumentsHelper(task, offset, skip, collectionObjectList[int(offset)%len(
+				collectionObjectList)])
+		}
+	}
+
+	task.PostTaskExceptionHandling(collectionObjectList[rand.Intn(sdk.ClusterConnectionLimit)])
 	log.Println("completed :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 }
 
@@ -221,8 +208,8 @@ func (task *ReadTask) PostTaskExceptionHandling(collectionObject *sdk.Collection
 				errorOffsetListMap = append(errorOffsetListMap, m)
 			}
 
-			routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
-			dataChannel := make(chan map[int64]RetriedResult, MaxConcurrentRoutines)
+			routineLimiter := make(chan struct{}, NumberOfBatches)
+			dataChannel := make(chan map[int64]RetriedResult, NumberOfBatches)
 			wg := errgroup.Group{}
 			for _, x := range errorOffsetListMap {
 				dataChannel <- x
@@ -288,11 +275,39 @@ func (task *ReadTask) MatchResultSeed(resultSeed string) bool {
 	return false
 }
 
-func (task *ReadTask) GetCollectionObject() (*sdk.CollectionObject, error) {
+func (task *ReadTask) GetCollectionObject() ([]*sdk.CollectionObject, error) {
 	return task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
 		task.Collection)
 }
 
 func (task *ReadTask) SetException(exceptions Exceptions) {
 	task.OperationConfig.Exceptions = exceptions
+}
+
+func getDocumentsHelper(task *ReadTask, offset int64, skip map[int64]struct{},
+	collectionObject *sdk.CollectionObject) {
+	key := task.State.SeedStart + offset
+	docId := task.gen.BuildKey(key)
+	if _, ok := skip[offset]; ok {
+		return
+	}
+
+	initTime := time.Now().UTC().Format(time.RFC850)
+	var err error
+	for retry := 0; retry < int(math.Max(float64(1), float64(task.OperationConfig.Exceptions.
+		RetryAttempts))); retry++ {
+		initTime = time.Now().UTC().Format(time.RFC850)
+		_, err = collectionObject.Collection.Get(docId, nil)
+		if err == nil {
+			break
+		}
+	}
+
+	if err != nil {
+		task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
+		task.Result.IncrementFailure(initTime, docId, nil, err, false, 0, offset)
+		return
+	}
+
+	task.State.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
 }

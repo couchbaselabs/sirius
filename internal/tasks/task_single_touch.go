@@ -8,6 +8,7 @@ import (
 	"github.com/couchbaselabs/sirius/internal/task_result"
 	"golang.org/x/sync/errgroup"
 	"log"
+	"math/rand"
 	"time"
 )
 
@@ -105,7 +106,7 @@ func (task *SingleTouchTask) Do() error {
 
 	task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
-	collectionObject, err1 := task.GetCollectionObject()
+	collectionObjectList, err1 := task.GetCollectionObject()
 
 	if err1 != nil {
 		task.Result.ErrorOther = err1.Error()
@@ -113,7 +114,7 @@ func (task *SingleTouchTask) Do() error {
 		return task.tearUp()
 	}
 
-	singleTouchDocuments(task, collectionObject)
+	singleTouchDocuments(task, collectionObjectList[rand.Intn(len(collectionObjectList))])
 
 	task.Result.Success = int64(len(task.SingleOperationConfig.Keys)) - task.Result.Failure
 	return task.tearUp()
@@ -123,8 +124,8 @@ func (task *SingleTouchTask) Do() error {
 // collection in a defined batch size at multiple iterations.
 func singleTouchDocuments(task *SingleTouchTask, collectionObject *sdk.CollectionObject) {
 
-	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
-	dataChannel := make(chan string, MaxConcurrentRoutines)
+	routineLimiter := make(chan struct{}, NumberOfBatches)
+	dataChannel := make(chan string, NumberOfBatches)
 
 	group := errgroup.Group{}
 
@@ -176,7 +177,7 @@ func (task *SingleTouchTask) MatchResultSeed(resultSeed string) bool {
 	return false
 }
 
-func (task *SingleTouchTask) GetCollectionObject() (*sdk.CollectionObject, error) {
+func (task *SingleTouchTask) GetCollectionObject() ([]*sdk.CollectionObject, error) {
 	return task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
 		task.Collection)
 }

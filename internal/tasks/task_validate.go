@@ -125,7 +125,7 @@ func (task *ValidateTask) Do() error {
 
 	task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
-	collectionObject, err1 := task.GetCollectionObject()
+	collectionObjectList, err1 := task.GetCollectionObject()
 
 	task.gen = docgenerator.ConfigGenerator(task.MetaData.DocType, task.MetaData.KeyPrefix,
 		task.MetaData.KeySuffix, task.State.SeedStart, task.State.SeedEnd,
@@ -138,7 +138,7 @@ func (task *ValidateTask) Do() error {
 		return task.tearUp()
 	}
 
-	validateDocuments(task, collectionObject)
+	validateDocuments(task, collectionObjectList)
 
 	task.Result.Success = task.State.SeedEnd - task.State.SeedStart - task.Result.Failure
 
@@ -146,9 +146,9 @@ func (task *ValidateTask) Do() error {
 }
 
 // ValidateDocuments return the validity of the collection using TaskState
-func validateDocuments(task *ValidateTask, collectionObject *sdk.CollectionObject) {
-	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
-	dataChannel := make(chan int64, MaxConcurrentRoutines)
+func validateDocuments(task *ValidateTask, collectionObjectList []*sdk.CollectionObject) {
+	routineLimiter := make(chan struct{}, NumberOfBatches)
+	dataChannel := make(chan int64, NumberOfBatches)
 	skip := make(map[int64]struct{})
 	for _, offset := range task.State.KeyStates.Completed {
 		skip[offset] = struct{}{}
@@ -230,7 +230,7 @@ func validateDocuments(task *ValidateTask, collectionObject *sdk.CollectionObjec
 			initTime = time.Now().UTC().Format(time.RFC850)
 			for retry := 0; retry < int(math.Max(float64(1), float64(task.OperationConfig.Exceptions.
 				RetryAttempts))); retry++ {
-				result, err = collectionObject.Collection.Get(docId, nil)
+				result, err = collectionObjectList[int(offset)%len(collectionObjectList)].Collection.Get(docId, nil)
 				if err == nil {
 					break
 				}
@@ -301,7 +301,7 @@ func (task *ValidateTask) MatchResultSeed(resultSeed string) bool {
 	return false
 }
 
-func (task *ValidateTask) GetCollectionObject() (*sdk.CollectionObject, error) {
+func (task *ValidateTask) GetCollectionObject() ([]*sdk.CollectionObject, error) {
 	return task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
 		task.Collection)
 }

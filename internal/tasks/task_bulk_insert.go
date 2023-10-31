@@ -16,6 +16,7 @@ import (
 	"log"
 	"math"
 	"math/rand"
+	"sync"
 	"time"
 )
 
@@ -158,16 +159,14 @@ func (task *InsertTask) Do() error {
 	}
 
 	insertDocuments(task, collectionObject)
+
 	task.Result.Success = task.OperationConfig.End - task.OperationConfig.Start - task.Result.Failure
 
 	return task.tearUp()
 }
 
 // insertDocuments uploads new documents in a bucket.scope.collection in a defined batch size at multiple iterations.
-func insertDocuments(task *InsertTask, collectionObject *sdk.CollectionObject) {
-
-	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
-	dataChannel := make(chan int64, MaxConcurrentRoutines)
+func insertDocuments(task *InsertTask, collectionObjectList []*sdk.CollectionObject) {
 
 	skip := make(map[int64]struct{})
 	for _, offset := range task.State.KeyStates.Completed {
@@ -176,69 +175,33 @@ func insertDocuments(task *InsertTask, collectionObject *sdk.CollectionObject) {
 	for _, offset := range task.State.KeyStates.Err {
 		skip[offset] = struct{}{}
 	}
-	group := errgroup.Group{}
-	for iteration := task.OperationConfig.Start; iteration < task.OperationConfig.End; iteration++ {
 
-		routineLimiter <- struct{}{}
-		dataChannel <- iteration
-
-		group.Go(func() error {
-			offset := <-dataChannel
-			key := offset + task.MetaData.Seed
-			docId := task.gen.BuildKey(key)
-
-			if _, ok := skip[offset]; ok {
-				<-routineLimiter
-				return fmt.Errorf("alreday performed operation on " + docId)
+	wg := sync.WaitGroup{}
+	wg.Add(NumberOfBatches)
+	batchSize := int64((task.OperationConfig.End - task.OperationConfig.Start) / NumberOfBatches)
+	for i := 0; i < NumberOfBatches; i++ {
+		batchIndex := int64(i)
+		go func() {
+			defer wg.Done()
+			for itr := batchIndex * batchSize; itr < (batchIndex+1)*batchSize; itr++ {
+				insertDocumentsHelper(task, int64(itr), skip, collectionObjectList[int(itr)%len(
+					collectionObjectList)])
 			}
-			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
-
-			initTime := time.Now().UTC().Format(time.RFC850)
-			doc, err := task.gen.Template.GenerateDocument(&fake, task.MetaData.DocSize)
-			if err != nil {
-				task.Result.IncrementFailure(initTime, docId, doc, err, false, 0, offset)
-				<-routineLimiter
-				return err
-			}
-
-			for retry := 0; retry < int(math.Max(float64(1), float64(task.OperationConfig.Exceptions.
-				RetryAttempts))); retry++ {
-				initTime = time.Now().UTC().Format(time.RFC850)
-				_, err = collectionObject.Collection.Insert(docId, doc, &gocb.InsertOptions{
-					DurabilityLevel: getDurability(task.InsertOptions.Durability),
-					PersistTo:       task.InsertOptions.PersistTo,
-					ReplicateTo:     task.InsertOptions.ReplicateTo,
-					Timeout:         time.Duration(task.InsertOptions.Timeout) * time.Second,
-					Expiry:          time.Duration(task.InsertOptions.Expiry) * time.Second,
-				})
-				if err == nil {
-					break
-				}
-			}
-
-			if err != nil {
-				if errors.Is(err, gocb.ErrDocumentExists) && task.rerun {
-					task.State.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
-					<-routineLimiter
-					return nil
-				} else {
-					task.Result.IncrementFailure(initTime, docId, doc, err, false, 0, offset)
-					task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
-					<-routineLimiter
-					return err
-				}
-			}
-
-			task.State.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
-			<-routineLimiter
-			return nil
-		})
+		}()
 	}
 
-	_ = group.Wait()
-	close(routineLimiter)
-	close(dataChannel)
-	task.PostTaskExceptionHandling(collectionObject)
+	wg.Wait()
+
+	remainingItems := (task.OperationConfig.End - task.OperationConfig.Start) - (batchSize * NumberOfBatches)
+
+	if remainingItems > 0 {
+		for offset := batchSize * int64(NumberOfBatches); offset < task.OperationConfig.End; offset++ {
+			insertDocumentsHelper(task, offset, skip, collectionObjectList[int(offset)%len(
+				collectionObjectList)])
+		}
+	}
+
+	task.PostTaskExceptionHandling(collectionObjectList[rand.Intn(sdk.ClusterConnectionLimit)])
 	log.Println("completed :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 }
 
@@ -267,8 +230,8 @@ func (task *InsertTask) PostTaskExceptionHandling(collectionObject *sdk.Collecti
 				errorOffsetListMap = append(errorOffsetListMap, m)
 			}
 
-			routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
-			dataChannel := make(chan map[int64]RetriedResult, MaxConcurrentRoutines)
+			routineLimiter := make(chan struct{}, NumberOfBatches)
+			dataChannel := make(chan map[int64]RetriedResult, NumberOfBatches)
 			wg := errgroup.Group{}
 			for _, x := range errorOffsetListMap {
 				dataChannel <- x
@@ -365,11 +328,57 @@ func (task *InsertTask) MatchResultSeed(resultSeed string) bool {
 	return false
 }
 
-func (task *InsertTask) GetCollectionObject() (*sdk.CollectionObject, error) {
+func (task *InsertTask) GetCollectionObject() ([]*sdk.CollectionObject, error) {
 	return task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
 		task.Collection)
 }
 
 func (task *InsertTask) SetException(exceptions Exceptions) {
 	task.OperationConfig.Exceptions = exceptions
+}
+
+func insertDocumentsHelper(task *InsertTask, offset int64, skip map[int64]struct{},
+	collectionObject *sdk.CollectionObject) {
+	key := offset + task.MetaData.Seed
+	docId := task.gen.BuildKey(key)
+
+	if _, ok := skip[offset]; ok {
+		return
+	}
+	fake := faker.NewWithSeed(rand.NewSource(int64(key)))
+
+	initTime := time.Now().UTC().Format(time.RFC850)
+	doc, err := task.gen.Template.GenerateDocument(&fake, task.MetaData.DocSize)
+	if err != nil {
+		task.Result.IncrementFailure(initTime, docId, doc, err, false, 0, offset)
+		return
+	}
+
+	for retry := 0; retry < int(math.Max(float64(1), float64(task.OperationConfig.Exceptions.
+		RetryAttempts))); retry++ {
+		initTime = time.Now().UTC().Format(time.RFC850)
+		_, err = collectionObject.Collection.Insert(docId, doc, &gocb.InsertOptions{
+			DurabilityLevel: getDurability(task.InsertOptions.Durability),
+			PersistTo:       task.InsertOptions.PersistTo,
+			ReplicateTo:     task.InsertOptions.ReplicateTo,
+			Timeout:         time.Duration(task.InsertOptions.Timeout) * time.Second,
+			Expiry:          time.Duration(task.InsertOptions.Expiry) * time.Second,
+		})
+		if err == nil {
+			break
+		}
+	}
+
+	if err != nil {
+		if errors.Is(err, gocb.ErrDocumentExists) && task.rerun {
+			task.State.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
+			return
+		} else {
+			task.Result.IncrementFailure(initTime, docId, doc, err, false, 0, offset)
+			task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
+			return
+		}
+	}
+
+	task.State.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
 }

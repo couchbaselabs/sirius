@@ -113,7 +113,7 @@ func (task *SingleSubDocUpsert) Do() error {
 
 	task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
-	collectionObject, err1 := task.GetCollectionObject()
+	collectionObjectList, err1 := task.GetCollectionObject()
 
 	if err1 != nil {
 		task.Result.ErrorOther = err1.Error()
@@ -121,7 +121,7 @@ func (task *SingleSubDocUpsert) Do() error {
 		return task.tearUp()
 	}
 
-	singleUpsertSubDocuments(task, collectionObject)
+	singleUpsertSubDocuments(task, collectionObjectList[rand.Intn(len(collectionObjectList))])
 
 	task.Result.Success = int64(1) - task.Result.Failure
 	return task.tearUp()
@@ -204,7 +204,7 @@ func (task *SingleSubDocUpsert) MatchResultSeed(resultSeed string) bool {
 	return false
 }
 
-func (task *SingleSubDocUpsert) GetCollectionObject() (*sdk.CollectionObject, error) {
+func (task *SingleSubDocUpsert) GetCollectionObject() ([]*sdk.CollectionObject, error) {
 	return task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
 		task.Collection)
 }

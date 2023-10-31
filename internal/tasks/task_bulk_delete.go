@@ -14,6 +14,8 @@ import (
 	"golang.org/x/sync/errgroup"
 	"log"
 	"math"
+	"math/rand"
+	"sync"
 	"time"
 )
 
@@ -132,7 +134,7 @@ func (task *DeleteTask) Do() error {
 
 	task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
-	collectionObject, err1 := task.GetCollectionObject()
+	collectionObjectList, err1 := task.GetCollectionObject()
 
 	task.gen = docgenerator.ConfigGenerator(task.MetaData.DocType, task.MetaData.KeyPrefix,
 		task.MetaData.KeySuffix, task.State.SeedStart, task.State.SeedEnd,
@@ -145,14 +147,14 @@ func (task *DeleteTask) Do() error {
 		return task.tearUp()
 	}
 
-	deleteDocuments(task, collectionObject)
+	deleteDocuments(task, collectionObjectList)
 	task.Result.Success = task.OperationConfig.End - task.OperationConfig.Start - task.Result.Failure
 
 	return task.tearUp()
 }
 
 // deleteDocuments delete the document stored on a host from start to end.
-func deleteDocuments(task *DeleteTask, collectionObject *sdk.CollectionObject) {
+func deleteDocuments(task *DeleteTask, collectionObjectList []*sdk.CollectionObject) {
 	skip := make(map[int64]struct{})
 	for _, offset := range task.State.KeyStates.Completed {
 		skip[offset] = struct{}{}
@@ -161,61 +163,32 @@ func deleteDocuments(task *DeleteTask, collectionObject *sdk.CollectionObject) {
 		skip[offset] = struct{}{}
 	}
 
-	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
-	dataChannel := make(chan int64, MaxConcurrentRoutines)
-	group := errgroup.Group{}
-
-	for i := task.OperationConfig.Start; i < task.OperationConfig.End; i++ {
-		routineLimiter <- struct{}{}
-		dataChannel <- i
-
-		group.Go(func() error {
-			offset := <-dataChannel
-			key := task.State.SeedStart + offset
-			docId := task.gen.BuildKey(key)
-			if _, ok := skip[offset]; ok {
-				<-routineLimiter
-				return fmt.Errorf("alreday performed operation on " + docId)
+	wg := sync.WaitGroup{}
+	wg.Add(NumberOfBatches)
+	batchSize := int64((task.OperationConfig.End - task.OperationConfig.Start) / NumberOfBatches)
+	for i := 0; i < NumberOfBatches; i++ {
+		batchIndex := int64(i)
+		go func() {
+			defer wg.Done()
+			for itr := batchIndex * batchSize; itr < (batchIndex+1)*batchSize; itr++ {
+				deleteDocumentsHelper(task, int64(itr), skip, collectionObjectList[int(itr)%len(
+					collectionObjectList)])
 			}
-
-			var err error
-			initTime := time.Now().UTC().Format(time.RFC850)
-			for retry := 0; retry < int(math.Max(float64(1), float64(task.OperationConfig.Exceptions.
-				RetryAttempts))); retry++ {
-				initTime = time.Now().UTC().Format(time.RFC850)
-				_, err = collectionObject.Collection.Remove(docId, &gocb.RemoveOptions{
-					Cas:             gocb.Cas(task.RemoveOptions.Cas),
-					PersistTo:       task.RemoveOptions.PersistTo,
-					ReplicateTo:     task.RemoveOptions.ReplicateTo,
-					DurabilityLevel: getDurability(task.RemoveOptions.Durability),
-					Timeout:         time.Duration(task.RemoveOptions.Timeout) * time.Second,
-				})
-				if err == nil {
-					break
-				}
-			}
-			if err != nil {
-				if errors.Is(err, gocb.ErrDocumentNotFound) && task.rerun {
-					task.State.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
-					<-routineLimiter
-					return nil
-				} else {
-					task.Result.IncrementFailure(initTime, docId, nil, err, false, uint64(0), offset)
-					task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
-					<-routineLimiter
-					return err
-				}
-			}
-
-			task.State.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
-			<-routineLimiter
-			return nil
-		})
+		}()
 	}
-	_ = group.Wait()
-	close(routineLimiter)
-	close(dataChannel)
-	task.PostTaskExceptionHandling(collectionObject)
+
+	wg.Wait()
+
+	remainingItems := (task.OperationConfig.End - task.OperationConfig.Start) - (batchSize * NumberOfBatches)
+
+	if remainingItems > 0 {
+		for offset := batchSize * int64(NumberOfBatches); offset < task.OperationConfig.End; offset++ {
+			deleteDocumentsHelper(task, offset, skip, collectionObjectList[int(offset)%len(
+				collectionObjectList)])
+		}
+	}
+
+	task.PostTaskExceptionHandling(collectionObjectList[rand.Intn(sdk.ClusterConnectionLimit)])
 	log.Println("completed :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 }
 
@@ -244,8 +217,8 @@ func (task *DeleteTask) PostTaskExceptionHandling(collectionObject *sdk.Collecti
 				errorOffsetListMap = append(errorOffsetListMap, m)
 			}
 
-			routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
-			dataChannel := make(chan map[int64]RetriedResult, MaxConcurrentRoutines)
+			routineLimiter := make(chan struct{}, NumberOfBatches)
+			dataChannel := make(chan map[int64]RetriedResult, NumberOfBatches)
 			wg := errgroup.Group{}
 			for _, x := range errorOffsetListMap {
 				dataChannel <- x
@@ -327,11 +300,49 @@ func (task *DeleteTask) MatchResultSeed(resultSeed string) bool {
 	return false
 }
 
-func (task *DeleteTask) GetCollectionObject() (*sdk.CollectionObject, error) {
+func (task *DeleteTask) GetCollectionObject() ([]*sdk.CollectionObject, error) {
 	return task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
 		task.Collection)
 }
 
 func (task *DeleteTask) SetException(exceptions Exceptions) {
 	task.OperationConfig.Exceptions = exceptions
+}
+
+func deleteDocumentsHelper(task *DeleteTask, offset int64, skip map[int64]struct{},
+	collectionObject *sdk.CollectionObject) {
+	key := task.State.SeedStart + offset
+	docId := task.gen.BuildKey(key)
+	if _, ok := skip[offset]; ok {
+		return
+	}
+
+	var err error
+	initTime := time.Now().UTC().Format(time.RFC850)
+	for retry := 0; retry < int(math.Max(float64(1), float64(task.OperationConfig.Exceptions.
+		RetryAttempts))); retry++ {
+		initTime = time.Now().UTC().Format(time.RFC850)
+		_, err = collectionObject.Collection.Remove(docId, &gocb.RemoveOptions{
+			Cas:             gocb.Cas(task.RemoveOptions.Cas),
+			PersistTo:       task.RemoveOptions.PersistTo,
+			ReplicateTo:     task.RemoveOptions.ReplicateTo,
+			DurabilityLevel: getDurability(task.RemoveOptions.Durability),
+			Timeout:         time.Duration(task.RemoveOptions.Timeout) * time.Second,
+		})
+		if err == nil {
+			break
+		}
+	}
+	if err != nil {
+		if errors.Is(err, gocb.ErrDocumentNotFound) && task.rerun {
+			task.State.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
+			return
+		} else {
+			task.Result.IncrementFailure(initTime, docId, nil, err, false, uint64(0), offset)
+			task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
+			return
+		}
+	}
+
+	task.State.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
 }

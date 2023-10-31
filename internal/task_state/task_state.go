@@ -14,7 +14,7 @@ import (
 const (
 	COMPLETED         = 1
 	ERR               = 0
-	StateChannelLimit = 100000
+	StateChannelLimit = 500000
 	TASKSTATELOGS     = "./internal/task_state/task_state_logs"
 )
 

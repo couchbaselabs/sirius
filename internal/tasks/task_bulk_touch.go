@@ -13,6 +13,8 @@ import (
 	"golang.org/x/sync/errgroup"
 	"log"
 	"math"
+	"math/rand"
+	"sync"
 	"time"
 )
 
@@ -154,9 +156,7 @@ func (task *TouchTask) Do() error {
 	return task.tearUp()
 }
 
-func touchDocuments(task *TouchTask, collectionObject *sdk.CollectionObject) {
-	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
-	dataChannel := make(chan int64, MaxConcurrentRoutines)
+func touchDocuments(task *TouchTask, collectionObjectList []*sdk.CollectionObject) {
 
 	skip := make(map[int64]struct{})
 	for _, offset := range task.State.KeyStates.Completed {
@@ -166,53 +166,32 @@ func touchDocuments(task *TouchTask, collectionObject *sdk.CollectionObject) {
 		skip[offset] = struct{}{}
 	}
 
-	group := errgroup.Group{}
-	for i := task.OperationConfig.Start; i < task.OperationConfig.End; i++ {
-		routineLimiter <- struct{}{}
-		dataChannel <- i
-
-		group.Go(func() error {
-			var err error
-			offset := <-dataChannel
-			key := task.State.SeedStart + offset
-			docId := task.gen.BuildKey(key)
-			if _, ok := skip[offset]; ok {
-				<-routineLimiter
-				return fmt.Errorf("alreday performed operation on " + docId)
+	wg := sync.WaitGroup{}
+	wg.Add(NumberOfBatches)
+	batchSize := int64((task.OperationConfig.End - task.OperationConfig.Start) / NumberOfBatches)
+	for i := 0; i < NumberOfBatches; i++ {
+		batchIndex := int64(i)
+		go func() {
+			defer wg.Done()
+			for itr := batchIndex * batchSize; itr < (batchIndex+1)*batchSize; itr++ {
+				touchDocumentsHelper(task, int64(itr), skip, collectionObjectList[int(itr)%len(
+					collectionObjectList)])
 			}
-
-			initTime := time.Now().UTC().Format(time.RFC850)
-
-			for retry := 0; retry < int(math.Max(float64(1), float64(task.OperationConfig.Exceptions.
-				RetryAttempts))); retry++ {
-				initTime = time.Now().UTC().Format(time.RFC850)
-				_, err = collectionObject.Collection.Touch(docId, time.Duration(task.Expiry)*time.Second,
-					&gocb.TouchOptions{
-						Timeout: time.Duration(task.TouchOptions.Timeout) * time.Second,
-					})
-
-				if err == nil {
-					break
-				}
-			}
-
-			if err != nil {
-				task.Result.IncrementFailure(initTime, docId, nil, err, false, 0, offset)
-				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
-				<-routineLimiter
-				return err
-			}
-
-			task.State.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
-
-			<-routineLimiter
-			return nil
-		})
+		}()
 	}
-	_ = group.Wait()
-	close(routineLimiter)
-	close(dataChannel)
-	task.PostTaskExceptionHandling(collectionObject)
+
+	wg.Wait()
+
+	remainingItems := (task.OperationConfig.End - task.OperationConfig.Start) - (batchSize * NumberOfBatches)
+
+	if remainingItems > 0 {
+		for offset := batchSize * int64(NumberOfBatches); offset < task.OperationConfig.End; offset++ {
+			touchDocumentsHelper(task, offset, skip, collectionObjectList[int(offset)%len(
+				collectionObjectList)])
+		}
+	}
+
+	task.PostTaskExceptionHandling(collectionObjectList[rand.Intn(sdk.ClusterConnectionLimit)])
 	log.Println("completed :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 }
 
@@ -241,8 +220,8 @@ func (task *TouchTask) PostTaskExceptionHandling(collectionObject *sdk.Collectio
 				errorOffsetListMap = append(errorOffsetListMap, m)
 			}
 
-			routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
-			dataChannel := make(chan map[int64]RetriedResult, MaxConcurrentRoutines)
+			routineLimiter := make(chan struct{}, NumberOfBatches)
+			dataChannel := make(chan map[int64]RetriedResult, NumberOfBatches)
 			wg := errgroup.Group{}
 			for _, x := range errorOffsetListMap {
 				dataChannel <- x
@@ -310,11 +289,43 @@ func (task *TouchTask) MatchResultSeed(resultSeed string) bool {
 	return false
 }
 
-func (task *TouchTask) GetCollectionObject() (*sdk.CollectionObject, error) {
+func (task *TouchTask) GetCollectionObject() ([]*sdk.CollectionObject, error) {
 	return task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
 		task.Collection)
 }
 
 func (task *TouchTask) SetException(exceptions Exceptions) {
 	task.OperationConfig.Exceptions = exceptions
+}
+
+func touchDocumentsHelper(task *TouchTask, offset int64, skip map[int64]struct{},
+	collectionObject *sdk.CollectionObject) {
+	key := task.State.SeedStart + offset
+	docId := task.gen.BuildKey(key)
+	if _, ok := skip[offset]; ok {
+		return
+	}
+
+	initTime := time.Now().UTC().Format(time.RFC850)
+
+	var err error
+	for retry := 0; retry < int(math.Max(float64(1), float64(task.OperationConfig.Exceptions.
+		RetryAttempts))); retry++ {
+		initTime = time.Now().UTC().Format(time.RFC850)
+		_, err = collectionObject.Collection.Touch(docId, time.Duration(task.Expiry)*time.Second,
+			&gocb.TouchOptions{
+				Timeout: time.Duration(task.TouchOptions.Timeout) * time.Second,
+			})
+
+		if err == nil {
+			break
+		}
+	}
+
+	if err != nil {
+		task.Result.IncrementFailure(initTime, docId, nil, err, false, 0, offset)
+		task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
+	}
+
+	task.State.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
 }

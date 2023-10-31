@@ -1,9 +1,12 @@
 package tasks
 
 import (
+	"errors"
 	"fmt"
 	"github.com/couchbaselabs/sirius/internal/sdk"
 	"github.com/couchbaselabs/sirius/internal/task_errors"
+	"log"
+	"math/rand"
 )
 
 type RetryExceptions struct {
@@ -22,9 +25,13 @@ func (r *RetryExceptions) Describe() string {
 }
 
 func (r *RetryExceptions) Do() error {
-	c, _ := r.Task.GetCollectionObject()
 	r.Task.SetException(r.Exceptions)
-	r.Task.PostTaskExceptionHandling(c)
+	collectionObjectList, err := r.GetCollectionObject()
+	if err != nil {
+		log.Println("Unable to fetch collection for" + r.IdentifierToken + " " + r.ResultSeed)
+		return errors.New("Unable to fetch collection for" + r.IdentifierToken + " " + r.ResultSeed)
+	}
+	r.Task.PostTaskExceptionHandling(collectionObjectList[rand.Intn(len(collectionObjectList))])
 	r.Task.tearUp()
 	return nil
 }
@@ -78,7 +85,7 @@ func (r *RetryExceptions) MatchResultSeed(resultSeed string) bool {
 	return r.Task.MatchResultSeed(resultSeed)
 }
 
-func (r *RetryExceptions) GetCollectionObject() (*sdk.CollectionObject, error) {
+func (r *RetryExceptions) GetCollectionObject() ([]*sdk.CollectionObject, error) {
 	return r.Task.GetCollectionObject()
 }
 

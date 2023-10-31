@@ -109,7 +109,7 @@ func (task *SingleInsertTask) Do() error {
 
 	task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
-	collectionObject, err1 := task.GetCollectionObject()
+	collectionObjectList, err1 := task.GetCollectionObject()
 
 	if err1 != nil {
 		task.Result.ErrorOther = err1.Error()
@@ -117,7 +117,7 @@ func (task *SingleInsertTask) Do() error {
 		return task.tearUp()
 	}
 
-	singleInsertDocuments(task, collectionObject)
+	singleInsertDocuments(task, collectionObjectList[rand.Intn(len(collectionObjectList))])
 
 	task.Result.Success = int64(len(task.SingleOperationConfig.Keys)) - task.Result.Failure
 	return task.tearUp()
@@ -126,8 +126,8 @@ func (task *SingleInsertTask) Do() error {
 // singleInsertDocuments uploads new documents in a bucket.scope.collection in a defined batch size at multiple iterations.
 func singleInsertDocuments(task *SingleInsertTask, collectionObject *sdk.CollectionObject) {
 
-	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
-	dataChannel := make(chan string, MaxConcurrentRoutines)
+	routineLimiter := make(chan struct{}, NumberOfBatches)
+	dataChannel := make(chan string, NumberOfBatches)
 
 	group := errgroup.Group{}
 
@@ -189,7 +189,7 @@ func (task *SingleInsertTask) MatchResultSeed(resultSeed string) bool {
 	return false
 }
 
-func (task *SingleInsertTask) GetCollectionObject() (*sdk.CollectionObject, error) {
+func (task *SingleInsertTask) GetCollectionObject() ([]*sdk.CollectionObject, error) {
 	return task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
 		task.Collection)
 }

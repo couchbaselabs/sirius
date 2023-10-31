@@ -130,7 +130,7 @@ func (task *SubDocRead) Do() error {
 
 	task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
-	collectionObject, err1 := task.GetCollectionObject()
+	collectionObjectList, err1 := task.GetCollectionObject()
 
 	task.gen = docgenerator.ConfigGenerator(task.MetaData.DocType, task.MetaData.KeyPrefix,
 		task.MetaData.KeySuffix, task.State.SeedStart, task.State.SeedEnd,
@@ -143,17 +143,17 @@ func (task *SubDocRead) Do() error {
 		return task.tearUp()
 	}
 
-	readSubDocuments(task, collectionObject)
+	readSubDocuments(task, collectionObjectList)
 	task.Result.Success = (task.SubDocOperationConfig.End - task.SubDocOperationConfig.Start) - task.Result.Failure
 
 	return task.tearUp()
 }
 
 // insertDocuments uploads new documents in a bucket.scope.collection in a defined batch size at multiple iterations.
-func readSubDocuments(task *SubDocRead, collectionObject *sdk.CollectionObject) {
+func readSubDocuments(task *SubDocRead, collectionObjectList []*sdk.CollectionObject) {
 
-	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
-	dataChannel := make(chan int64, MaxConcurrentRoutines)
+	routineLimiter := make(chan struct{}, NumberOfBatches)
+	dataChannel := make(chan int64, NumberOfBatches)
 
 	skip := make(map[int64]struct{})
 	for _, offset := range task.State.KeyStates.Completed {
@@ -196,9 +196,10 @@ func readSubDocuments(task *SubDocRead, collectionObject *sdk.CollectionObject) 
 				}
 
 				initTime = time.Now().UTC().Format(time.RFC850)
-				result, err = collectionObject.Collection.LookupIn(docId, iOps, &gocb.LookupInOptions{
-					Timeout: time.Duration(task.LookupInOptions.Timeout) * time.Second,
-				})
+				result, err = collectionObjectList[int(offset)%len(collectionObjectList)].Collection.LookupIn(docId, iOps,
+					&gocb.LookupInOptions{
+						Timeout: time.Duration(task.LookupInOptions.Timeout) * time.Second,
+					})
 
 				if err == nil {
 					break
@@ -230,7 +231,7 @@ func readSubDocuments(task *SubDocRead, collectionObject *sdk.CollectionObject) 
 	_ = group.Wait()
 	close(routineLimiter)
 	close(dataChannel)
-	task.PostTaskExceptionHandling(collectionObject)
+	task.PostTaskExceptionHandling(collectionObjectList[rand.Intn(len(collectionObjectList))])
 	log.Println("completed :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 }
 
@@ -259,8 +260,8 @@ func (task *SubDocRead) PostTaskExceptionHandling(collectionObject *sdk.Collecti
 				errorOffsetListMap = append(errorOffsetListMap, m)
 			}
 
-			routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
-			dataChannel := make(chan map[int64]RetriedResult, MaxConcurrentRoutines)
+			routineLimiter := make(chan struct{}, NumberOfBatches)
+			dataChannel := make(chan map[int64]RetriedResult, NumberOfBatches)
 			wg := errgroup.Group{}
 			for _, x := range errorOffsetListMap {
 				dataChannel <- x
@@ -350,7 +351,7 @@ func (task *SubDocRead) MatchResultSeed(resultSeed string) bool {
 	return false
 }
 
-func (task *SubDocRead) GetCollectionObject() (*sdk.CollectionObject, error) {
+func (task *SubDocRead) GetCollectionObject() ([]*sdk.CollectionObject, error) {
 	return task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
 		task.Collection)
 }

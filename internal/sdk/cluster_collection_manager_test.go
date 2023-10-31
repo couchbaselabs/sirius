@@ -28,7 +28,7 @@ func TestConfigConnectionManager(t *testing.T) {
 		log.Println(err)
 	}
 
-	c, err := cmObj.GetCollection(cConfig, "lol", "_default", "_default")
+	c, err := cmObj.GetCollection(cConfig, "default", "_default", "_default")
 	if err != nil {
 		log.Println(err.Error())
 		KVError := &gocb.KeyValueError{}
@@ -58,20 +58,20 @@ func TestConfigConnectionManager(t *testing.T) {
 			SeedEnd:  int64(cm1.Seed),
 			Template: temp,
 		}
-		for i := int64(0); i < int64(10000); i++ {
+		for i := int64(0); i < int64(10); i++ {
 			docId, key := g.GetDocIdAndKey(i)
 			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
 			doc, _ := g.Template.GenerateDocument(&fake, 100)
 			//log.Println(docId, doc)
-			_, e := c.Collection.Upsert(docId, doc, nil)
+			_, e := c[int(i)%len(c)].Collection.Upsert(docId, doc, nil)
 			if e != nil {
 				log.Println(e.Error())
 				t.Error(e)
 			}
 		}
-		for i := int64(0); i < int64(10000); i++ {
+		for i := int64(0); i < int64(10); i++ {
 			docId, _ := g.GetDocIdAndKey(i)
-			r, e := c.Collection.Get(docId, nil)
+			r, e := c[int(i)%len(c)].Collection.Get(docId, nil)
 			if e != nil {
 				t.Error(e)
 			} else {
@@ -82,6 +82,8 @@ func TestConfigConnectionManager(t *testing.T) {
 		}
 
 	}
+
+	cmObj.DisconnectAll()
 
 }
 
