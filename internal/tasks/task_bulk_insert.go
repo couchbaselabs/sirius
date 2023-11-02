@@ -16,7 +16,6 @@ import (
 	"log"
 	"math"
 	"math/rand"
-	"sync"
 	"time"
 )
 
@@ -176,21 +175,24 @@ func insertDocuments(task *InsertTask, collectionObjectList []*sdk.CollectionObj
 		skip[offset] = struct{}{}
 	}
 
-	wg := sync.WaitGroup{}
-	wg.Add(NumberOfBatches)
+	routineLimiter := make(chan struct{}, MaxRoutines)
+	wg := errgroup.Group{}
+
 	batchSize := int64((task.OperationConfig.End - task.OperationConfig.Start) / NumberOfBatches)
 	for i := 0; i < NumberOfBatches; i++ {
 		batchIndex := int64(i)
-		go func() {
-			defer wg.Done()
+		routineLimiter <- struct{}{}
+
+		wg.Go(func() error {
 			for itr := batchIndex * batchSize; itr < (batchIndex+1)*batchSize; itr++ {
 				insertDocumentsHelper(task, int64(itr), skip, collectionObjectList[int(itr)%len(
 					collectionObjectList)])
 			}
-		}()
+			<-routineLimiter
+			return nil
+		})
 	}
-
-	wg.Wait()
+	_ = wg.Wait()
 
 	remainingItems := (task.OperationConfig.End - task.OperationConfig.Start) - (batchSize * NumberOfBatches)
 

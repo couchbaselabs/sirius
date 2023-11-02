@@ -10,7 +10,8 @@ import (
 )
 
 const (
-	NumberOfBatches                       = 200
+	MaxRoutines                           = 32
+	NumberOfBatches                       = 500
 	DefaultIdentifierToken                = "default"
 	MaxQueryRuntime                int    = 86400
 	DefaultQueryRunTime            int    = 100

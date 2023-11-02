@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	ClusterConnectionLimit = 5
+	ClusterConnectionLimit = 20
 )
 
 // ConnectionManager contains different cluster information and connections to them.
