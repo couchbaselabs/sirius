@@ -1,7 +1,6 @@
 package tasks
 
 import (
-	"errors"
 	"fmt"
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
@@ -11,21 +10,22 @@ import (
 	"github.com/couchbaselabs/sirius/internal/task_result"
 	"github.com/couchbaselabs/sirius/internal/task_state"
 	"github.com/couchbaselabs/sirius/internal/template"
-	"github.com/jaswdr/faker"
 	"golang.org/x/sync/errgroup"
 	"log"
 	"math"
 	"math/rand"
+	"sync"
 	"time"
 )
 
-type InsertTask struct {
+type TouchTask struct {
 	IdentifierToken string                             `json:"identifierToken" doc:"true"`
 	ClusterConfig   *sdk.ClusterConfig                 `json:"clusterConfig" doc:"true"`
 	Bucket          string                             `json:"bucket" doc:"true"`
 	Scope           string                             `json:"scope,omitempty" doc:"true"`
 	Collection      string                             `json:"collection,omitempty" doc:"true"`
-	InsertOptions   *InsertOptions                     `json:"insertOptions,omitempty" doc:"true"`
+	TouchOptions    *TouchOptions                      `json:"touchOptions,omitempty" doc:"true"`
+	Expiry          int64                              `json:"expiry" doc:"true"`
 	OperationConfig *OperationConfig                   `json:"operationConfig,omitempty" doc:"true"`
 	Operation       string                             `json:"operation" doc:"false"`
 	ResultSeed      int64                              `json:"resultSeed" doc:"false"`
@@ -38,31 +38,28 @@ type InsertTask struct {
 	rerun           bool                               `json:"-" doc:"false"`
 }
 
-func (task *InsertTask) Describe() string {
-	return " Insert task uploads documents in bulk into a bucket.\n" +
-		"The durability while inserting a document can be set using following values in the 'durability' JSON tag :-\n" +
-		"1. MAJORITY\n" +
-		"2. MAJORITY_AND_PERSIST_TO_ACTIVE\n" +
-		"3. PERSIST_TO_MAJORITY\n"
-}
-
-func (task *InsertTask) BuildIdentifier() string {
+func (task *TouchTask) BuildIdentifier() string {
 	if task.IdentifierToken == "" {
 		task.IdentifierToken = DefaultIdentifierToken
 	}
 	return task.IdentifierToken
 }
 
-func (task *InsertTask) CollectionIdentifier() string {
+func (task *TouchTask) CollectionIdentifier() string {
 	return task.IdentifierToken + task.ClusterConfig.ConnectionString + task.Bucket + task.Scope + task.Collection
 }
 
-func (task *InsertTask) CheckIfPending() bool {
+func (task *TouchTask) Describe() string {
+	return `Upsert task mutates documents in bulk into a bucket.
+The task will update the fields in a documents ranging from [start,end] inclusive.
+We need to share the fields we want to update in a json document using SQL++ syntax.`
+}
+
+func (task *TouchTask) CheckIfPending() bool {
 	return task.TaskPending
 }
 
-// Config configures  the insert task
-func (task *InsertTask) Config(req *Request, reRun bool) (int64, error) {
+func (task *TouchTask) Config(req *Request, reRun bool) (int64, error) {
 	task.TaskPending = true
 	task.req = req
 
@@ -81,7 +78,7 @@ func (task *InsertTask) Config(req *Request, reRun bool) (int64, error) {
 
 	if !reRun {
 		task.ResultSeed = int64(time.Now().UnixNano())
-		task.Operation = InsertOperation
+		task.Operation = TouchOperation
 
 		if task.Bucket == "" {
 			task.Bucket = DefaultBucket
@@ -93,7 +90,7 @@ func (task *InsertTask) Config(req *Request, reRun bool) (int64, error) {
 			task.Collection = DefaultCollection
 		}
 
-		if err := configInsertOptions(task.InsertOptions); err != nil {
+		if err := configTouchOptions(task.TouchOptions); err != nil {
 			task.TaskPending = false
 			return 0, err
 		}
@@ -118,6 +115,7 @@ func (task *InsertTask) Config(req *Request, reRun bool) (int64, error) {
 		if task.State == nil {
 			return task.ResultSeed, task_errors.ErrTaskStateIsNil
 		}
+
 		task.State.SetupStoringKeys()
 		_ = DeleteResultFile(task.ResultSeed)
 		log.Println("retrying :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
@@ -125,12 +123,7 @@ func (task *InsertTask) Config(req *Request, reRun bool) (int64, error) {
 	return task.ResultSeed, nil
 }
 
-func (task *InsertTask) tearUp() error {
-	//Use this case to store task's state on disk when required
-	//if err := task.State.SaveTaskSateOnDisk(); err != nil {
-	//	log.Println("Error in storing TASK State on DISK")
-	//}
-
+func (task *TouchTask) tearUp() error {
 	if err := task.Result.SaveResultIntoFile(); err != nil {
 		log.Println("not able to save Result into ", task.ResultSeed, task.Operation)
 	}
@@ -140,7 +133,7 @@ func (task *InsertTask) tearUp() error {
 	return task.req.SaveRequestIntoFile()
 }
 
-func (task *InsertTask) Do() error {
+func (task *TouchTask) Do() error {
 
 	task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
@@ -157,15 +150,13 @@ func (task *InsertTask) Do() error {
 		return task.tearUp()
 	}
 
-	insertDocuments(task, collectionObject)
-
+	touchDocuments(task, collectionObject)
 	task.Result.Success = task.OperationConfig.End - task.OperationConfig.Start - task.Result.Failure
 
 	return task.tearUp()
 }
 
-// insertDocuments uploads new documents in a bucket.scope.collection in a defined batch size at multiple iterations.
-func insertDocuments(task *InsertTask, collectionObjectList []*sdk.CollectionObject) {
+func touchDocuments(task *TouchTask, collectionObjectList []*sdk.CollectionObject) {
 
 	skip := make(map[int64]struct{})
 	for _, offset := range task.State.KeyStates.Completed {
@@ -175,30 +166,27 @@ func insertDocuments(task *InsertTask, collectionObjectList []*sdk.CollectionObj
 		skip[offset] = struct{}{}
 	}
 
-	routineLimiter := make(chan struct{}, MaxRoutines)
-	wg := errgroup.Group{}
-
+	wg := sync.WaitGroup{}
+	wg.Add(NumberOfBatches)
 	batchSize := int64((task.OperationConfig.End - task.OperationConfig.Start) / NumberOfBatches)
 	for i := 0; i < NumberOfBatches; i++ {
 		batchIndex := int64(i)
-		routineLimiter <- struct{}{}
-
-		wg.Go(func() error {
+		go func() {
+			defer wg.Done()
 			for itr := batchIndex * batchSize; itr < (batchIndex+1)*batchSize; itr++ {
-				insertDocumentsHelper(task, int64(itr), skip, collectionObjectList[int(itr)%len(
+				touchDocumentsHelper(task, int64(itr), skip, collectionObjectList[int(itr)%len(
 					collectionObjectList)])
 			}
-			<-routineLimiter
-			return nil
-		})
+		}()
 	}
-	_ = wg.Wait()
+
+	wg.Wait()
 
 	remainingItems := (task.OperationConfig.End - task.OperationConfig.Start) - (batchSize * NumberOfBatches)
 
 	if remainingItems > 0 {
 		for offset := batchSize * int64(NumberOfBatches); offset < task.OperationConfig.End; offset++ {
-			insertDocumentsHelper(task, offset, skip, collectionObjectList[int(offset)%len(
+			touchDocumentsHelper(task, offset, skip, collectionObjectList[int(offset)%len(
 				collectionObjectList)])
 		}
 	}
@@ -207,7 +195,7 @@ func insertDocuments(task *InsertTask, collectionObjectList []*sdk.CollectionObj
 	log.Println("completed :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 }
 
-func (task *InsertTask) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
+func (task *TouchTask) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
 	task.State.StopStoringState()
 
 	// Get all the errorOffset
@@ -244,61 +232,32 @@ func (task *InsertTask) PostTaskExceptionHandling(collectionObject *sdk.Collecti
 					for k, _ := range m {
 						offset = k
 					}
-					key := offset + task.MetaData.Seed
+					key := task.State.SeedStart + offset
 					docId := task.gen.BuildKey(key)
 
-					fake := faker.NewWithSeed(rand.NewSource(int64(key)))
-					doc, _ := task.gen.Template.GenerateDocument(&fake, task.MetaData.DocSize)
-
-					retry := 0
-					var err error
 					result := &gocb.MutationResult{}
-
+					var err error
 					initTime := time.Now().UTC().Format(time.RFC850)
-
-					for retry = 0; retry <= task.OperationConfig.Exceptions.RetryAttempts; retry++ {
-						result, err = collectionObject.Collection.Insert(docId, doc, &gocb.InsertOptions{
-							DurabilityLevel: getDurability(task.InsertOptions.Durability),
-							PersistTo:       task.InsertOptions.PersistTo,
-							ReplicateTo:     task.InsertOptions.ReplicateTo,
-							Timeout:         time.Duration(task.InsertOptions.Timeout) * time.Second,
-							Expiry:          time.Duration(task.InsertOptions.Expiry) * time.Second,
-						})
+					for retry := 0; retry <= task.OperationConfig.Exceptions.RetryAttempts; retry++ {
+						_, err := collectionObject.Collection.Touch(docId, time.Duration(task.Expiry)*time.Second,
+							&gocb.TouchOptions{
+								Timeout: time.Duration(task.TouchOptions.Timeout) * time.Second,
+							})
 
 						if err == nil {
 							break
 						}
 					}
 
-					if err != nil {
-						if errors.Is(err, gocb.ErrDocumentExists) {
-							if tempResult, err1 := collectionObject.Collection.Get(docId, &gocb.GetOptions{
-								Timeout: 5 * time.Second,
-							}); err1 == nil {
-								m[offset] = RetriedResult{
-									Status:   true,
-									CAS:      uint64(tempResult.Cas()),
-									InitTime: initTime,
-									AckTime:  time.Now().UTC().Format(time.RFC850),
-								}
-							} else {
-								m[offset] = RetriedResult{
-									Status:   true,
-									CAS:      0,
-									InitTime: initTime,
-									AckTime:  time.Now().UTC().Format(time.RFC850),
-								}
-							}
-						} else {
-							m[offset] = RetriedResult{
-								InitTime: initTime,
-								AckTime:  time.Now().UTC().Format(time.RFC850),
-							}
-						}
-					} else {
+					if err == nil {
 						m[offset] = RetriedResult{
 							Status:   true,
 							CAS:      uint64(result.Cas()),
+							InitTime: initTime,
+							AckTime:  time.Now().UTC().Format(time.RFC850),
+						}
+					} else {
+						m[offset] = RetriedResult{
 							InitTime: initTime,
 							AckTime:  time.Now().UTC().Format(time.RFC850),
 						}
@@ -320,7 +279,7 @@ func (task *InsertTask) PostTaskExceptionHandling(collectionObject *sdk.Collecti
 	task.Result.Success = task.OperationConfig.End - task.OperationConfig.Start - task.Result.Failure
 }
 
-func (task *InsertTask) MatchResultSeed(resultSeed string) bool {
+func (task *TouchTask) MatchResultSeed(resultSeed string) bool {
 	if fmt.Sprintf("%d", task.ResultSeed) == resultSeed {
 		if task.Result == nil {
 			task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
@@ -330,56 +289,42 @@ func (task *InsertTask) MatchResultSeed(resultSeed string) bool {
 	return false
 }
 
-func (task *InsertTask) GetCollectionObject() ([]*sdk.CollectionObject, error) {
+func (task *TouchTask) GetCollectionObject() ([]*sdk.CollectionObject, error) {
 	return task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
 		task.Collection)
 }
 
-func (task *InsertTask) SetException(exceptions Exceptions) {
+func (task *TouchTask) SetException(exceptions Exceptions) {
 	task.OperationConfig.Exceptions = exceptions
 }
 
-func insertDocumentsHelper(task *InsertTask, offset int64, skip map[int64]struct{},
+func touchDocumentsHelper(task *TouchTask, offset int64, skip map[int64]struct{},
 	collectionObject *sdk.CollectionObject) {
-	key := offset + task.MetaData.Seed
+	key := task.State.SeedStart + offset
 	docId := task.gen.BuildKey(key)
-
 	if _, ok := skip[offset]; ok {
 		return
 	}
-	fake := faker.NewWithSeed(rand.NewSource(int64(key)))
 
 	initTime := time.Now().UTC().Format(time.RFC850)
-	doc, err := task.gen.Template.GenerateDocument(&fake, task.MetaData.DocSize)
-	if err != nil {
-		task.Result.IncrementFailure(initTime, docId, doc, err, false, 0, offset)
-		return
-	}
 
+	var err error
 	for retry := 0; retry < int(math.Max(float64(1), float64(task.OperationConfig.Exceptions.
 		RetryAttempts))); retry++ {
 		initTime = time.Now().UTC().Format(time.RFC850)
-		_, err = collectionObject.Collection.Insert(docId, doc, &gocb.InsertOptions{
-			DurabilityLevel: getDurability(task.InsertOptions.Durability),
-			PersistTo:       task.InsertOptions.PersistTo,
-			ReplicateTo:     task.InsertOptions.ReplicateTo,
-			Timeout:         time.Duration(task.InsertOptions.Timeout) * time.Second,
-			Expiry:          time.Duration(task.InsertOptions.Expiry) * time.Second,
-		})
+		_, err = collectionObject.Collection.Touch(docId, time.Duration(task.Expiry)*time.Second,
+			&gocb.TouchOptions{
+				Timeout: time.Duration(task.TouchOptions.Timeout) * time.Second,
+			})
+
 		if err == nil {
 			break
 		}
 	}
 
 	if err != nil {
-		if errors.Is(err, gocb.ErrDocumentExists) && task.rerun {
-			task.State.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
-			return
-		} else {
-			task.Result.IncrementFailure(initTime, docId, doc, err, false, 0, offset)
-			task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
-			return
-		}
+		task.Result.IncrementFailure(initTime, docId, nil, err, false, 0, offset)
+		task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 	}
 
 	task.State.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}

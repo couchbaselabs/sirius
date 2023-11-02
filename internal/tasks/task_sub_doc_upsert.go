@@ -35,6 +35,7 @@ type SubDocUpsert struct {
 	Result                *task_result.TaskResult            `json:"-" doc:"false"`
 	gen                   *docgenerator.Generator            `json:"-" doc:"false"`
 	req                   *Request                           `json:"-" doc:"false"`
+	rerun                 bool                               `json:"-" doc:"false"`
 }
 
 func (task *SubDocUpsert) Describe() string {
@@ -71,6 +72,8 @@ func (task *SubDocUpsert) Config(req *Request, reRun bool) (int64, error) {
 		task.TaskPending = false
 		return 0, err
 	}
+
+	task.rerun = reRun
 
 	if !reRun {
 		task.ResultSeed = int64(time.Now().UnixNano())
@@ -130,6 +133,7 @@ func (task *SubDocUpsert) tearUp() error {
 	if err := task.Result.SaveResultIntoFile(); err != nil {
 		log.Println("not able to save Result into ", task.ResultSeed, task.Operation)
 	}
+	task.Result = nil
 	task.State.StopStoringState()
 	task.TaskPending = false
 	return task.req.SaveRequestIntoFile()
@@ -139,7 +143,7 @@ func (task *SubDocUpsert) Do() error {
 
 	task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
-	collectionObject, err1 := task.GetCollectionObject()
+	collectionObjectList, err1 := task.GetCollectionObject()
 
 	task.gen = docgenerator.ConfigGenerator(task.MetaData.DocType, task.MetaData.KeyPrefix,
 		task.MetaData.KeySuffix, task.State.SeedStart, task.State.SeedEnd,
@@ -152,17 +156,17 @@ func (task *SubDocUpsert) Do() error {
 		return task.tearUp()
 	}
 
-	upsertSubDocuments(task, collectionObject)
+	upsertSubDocuments(task, collectionObjectList)
 	task.Result.Success = (task.SubDocOperationConfig.End - task.SubDocOperationConfig.Start) - task.Result.Failure
 
 	return task.tearUp()
 }
 
 // insertDocuments uploads new documents in a bucket.scope.collection in a defined batch size at multiple iterations.
-func upsertSubDocuments(task *SubDocUpsert, collectionObject *sdk.CollectionObject) {
+func upsertSubDocuments(task *SubDocUpsert, collectionObjectList []*sdk.CollectionObject) {
 
-	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
-	dataChannel := make(chan int64, MaxConcurrentRoutines)
+	routineLimiter := make(chan struct{}, NumberOfBatches)
+	dataChannel := make(chan int64, NumberOfBatches)
 
 	skip := make(map[int64]struct{})
 	for _, offset := range task.State.KeyStates.Completed {
@@ -214,7 +218,7 @@ func upsertSubDocuments(task *SubDocUpsert, collectionObject *sdk.CollectionObje
 				}
 
 				initTime = time.Now().UTC().Format(time.RFC850)
-				_, err = collectionObject.Collection.MutateIn(docId, iOps, &gocb.MutateInOptions{
+				_, err = collectionObjectList[int(offset)%len(collectionObjectList)].Collection.MutateIn(docId, iOps, &gocb.MutateInOptions{
 					Expiry:          time.Duration(task.MutateInOptions.Expiry) * time.Second,
 					PersistTo:       task.MutateInOptions.PersistTo,
 					ReplicateTo:     task.MutateInOptions.ReplicateTo,
@@ -245,7 +249,7 @@ func upsertSubDocuments(task *SubDocUpsert, collectionObject *sdk.CollectionObje
 	_ = group.Wait()
 	close(routineLimiter)
 	close(dataChannel)
-	task.PostTaskExceptionHandling(collectionObject)
+	task.PostTaskExceptionHandling(collectionObjectList[rand.Intn(len(collectionObjectList))])
 	log.Println("completed :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 }
 
@@ -274,8 +278,8 @@ func (task *SubDocUpsert) PostTaskExceptionHandling(collectionObject *sdk.Collec
 				errorOffsetListMap = append(errorOffsetListMap, m)
 			}
 
-			routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
-			dataChannel := make(chan map[int64]RetriedResult, MaxConcurrentRoutines)
+			routineLimiter := make(chan struct{}, NumberOfBatches)
+			dataChannel := make(chan map[int64]RetriedResult, NumberOfBatches)
 			wg := errgroup.Group{}
 			for _, x := range errorOffsetListMap {
 				dataChannel <- x
@@ -358,14 +362,17 @@ func (task *SubDocUpsert) PostTaskExceptionHandling(collectionObject *sdk.Collec
 
 }
 
-func (task *SubDocUpsert) GetResultSeed() string {
-	if task.Result == nil {
-		task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+func (task *SubDocUpsert) MatchResultSeed(resultSeed string) bool {
+	if fmt.Sprintf("%d", task.ResultSeed) == resultSeed {
+		if task.Result == nil {
+			task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+		}
+		return true
 	}
-	return fmt.Sprintf("%d", task.ResultSeed)
+	return false
 }
 
-func (task *SubDocUpsert) GetCollectionObject() (*sdk.CollectionObject, error) {
+func (task *SubDocUpsert) GetCollectionObject() ([]*sdk.CollectionObject, error) {
 	return task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
 		task.Collection)
 }

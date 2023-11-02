@@ -8,6 +8,7 @@ import (
 	"github.com/couchbaselabs/sirius/internal/server_requests"
 	"github.com/couchbaselabs/sirius/internal/tasks-manager"
 	"github.com/pkg/profile"
+	_ "io"
 	"log"
 	"net/http"
 	_ "net/http/pprof" // Register the pprof handlers

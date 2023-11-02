@@ -10,8 +10,8 @@ type Task interface {
 	CollectionIdentifier() string
 	CheckIfPending() bool
 	PostTaskExceptionHandling(collectionObject *sdk.CollectionObject)
-	GetResultSeed() string
-	GetCollectionObject() (*sdk.CollectionObject, error)
+	MatchResultSeed(resultSeed string) bool
+	GetCollectionObject() ([]*sdk.CollectionObject, error)
 	SetException(exceptions Exceptions)
 	tearUp() error
 }

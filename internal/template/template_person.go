@@ -5,25 +5,66 @@ import (
 	"fmt"
 	"github.com/jaswdr/faker"
 	"reflect"
+	"strings"
 )
 
 var maritalChoices = []string{"Single", "Married", "Divorcee"}
 var bodyColor = []string{"Dark", "Fair", "Brown", "Grey"}
 var hobbyChoices = []string{"Video Gaming", "Football", "Basketball", "Cricket",
 	"Hockey", "Running", "Walking", "Guitar", "Flute", "Piano", "Chess", "Puzzle", "Skating", "Travelling"}
-var HairType = []string{"straight", "wavy", "curly", "Coily"}
+var hairType = []string{"straight", "wavy", "curly", "Coily"}
 var HairColor = []string{"Red", "Green", "Yellow", "Grey", "Brown", "Black"}
-var HairLength = []string{"Long", "Short", "Medium"}
-var HairThickness = []string{"Thick", "Thin", "Medium"}
-var BodyType = []string{"Ectomorph", "endomorph", "Mesomorph", "triangle", "Inverted triangle",
+var hairLength = []string{"Long", "Short", "Medium"}
+var hairThickness = []string{"Thick", "Thin", "Medium"}
+var bodyType = []string{"Ectomorph", "endomorph", "Mesomorph", "triangle", "Inverted triangle",
 	"Rectangle", "Hourglass", "apple"}
 
+var state = []string{"Andhra Pradesh",
+	"Arunachal Pradesh",
+	"Assam",
+	"Bihar",
+	"Chhattisgarh",
+	"Goa",
+	"Gujarat",
+	"Haryana",
+	"Himachal Pradesh",
+	"Jammu and Kashmir",
+	"Jharkhand",
+	"Karnataka",
+	"Kerala",
+	"Madhya Pradesh",
+	"Maharashtra",
+	"Manipur",
+	"Meghalaya",
+	"Mizoram",
+	"Nagaland",
+	"Odisha",
+	"Punjab",
+	"Rajasthan",
+	"Sikkim",
+	"Tamil Nadu",
+	"Telangana",
+	"Tripura",
+	"Uttarakhand",
+	"Uttar Pradesh",
+	"West Bengal",
+	"Andaman and Nicobar Islands",
+	"Chandigarh",
+	"Dadra and Nagar Haveli",
+	"Daman and Diu",
+	"Delhi",
+	"Lakshadweep",
+	"Puducherry",
+}
+
+var city = []string{"Lake Penelop", "New Charlene", "Prosaccobury", "West Jasenmouth", "East Taya", "Wardborough",
+	"Baumbachfort", "New Elzaport", "Theresiaton"}
+
+var gender = []string{"male", "female"}
+
 type Address struct {
-	Street  string `json:"street,omitempty"`
-	City    string `json:"city,omitempty"`
-	State   string `json:"state,omitempty"`
-	Zipcode string `json:"zipcode,omitempty"`
-	Country string `json:"country,omitempty"`
+	City  string `json:"city,omitempty"`
+	State string `json:"state,omitempty"`
 }
 
 type Hair struct {
@@ -43,7 +84,6 @@ type Attribute struct {
 
 type Person struct {
 	FirstName     string    `json:"firstName,omitempty"`
-	Lastname      string    `json:"lastName,omitempty"`
 	Age           float64   `json:"age,omitempty"`
 	Email         string    `json:"email,omitempty"`
 	Address       Address   `json:"address,omitempty"`
@@ -58,30 +98,26 @@ type Person struct {
 func (p *Person) GenerateDocument(fake *faker.Faker, documentSize int) (interface{}, error) {
 	person := &Person{
 		FirstName:     fake.Person().FirstName(),
-		Lastname:      fake.Person().LastName(),
 		Age:           fake.Float64(2, 0, 100),
 		Email:         fake.Internet().CompanyEmail(),
-		Gender:        fake.Gender().Name(),
+		Gender:        gender[fake.IntBetween(1, len(gender)-1)],
 		MaritalStatus: maritalChoices[fake.IntBetween(1, len(maritalChoices)-1)],
 		Hobbies:       hobbyChoices[:fake.IntBetween(1, len(hobbyChoices)-1)],
 		Address: Address{
-			State:   fake.Address().State(),
-			City:    fake.Address().City(),
-			Street:  fake.Address().StreetName(),
-			Zipcode: fake.Address().PostCode(),
-			Country: fake.Address().Country(),
+			State: state[fake.IntBetween(1, len(state)-1)],
+			City:  city[fake.IntBetween(1, len(city)-1)],
 		},
 		Attributes: Attribute{
 			Weight: fake.Float64(2, 0, 100),
 			Height: fake.Float64(2, 0, 100),
 			Colour: bodyColor[fake.IntBetween(1, len(bodyColor)-1)],
 			Hair: Hair{
-				Type:      HairType[fake.IntBetween(1, len(HairType)-1)],
-				Colour:    HairColor[fake.IntBetween(1, len(HairType)-1)],
-				Length:    HairLength[fake.IntBetween(1, len(HairLength)-1)],
-				Thickness: HairThickness[fake.IntBetween(1, len(HairThickness)-1)],
+				Type:      hairType[fake.IntBetween(1, len(hairType)-1)],
+				Colour:    HairColor[fake.IntBetween(1, len(hairType)-1)],
+				Length:    hairLength[fake.IntBetween(1, len(hairLength)-1)],
+				Thickness: hairThickness[fake.IntBetween(1, len(hairThickness)-1)],
 			},
-			BodyType: BodyType[fake.IntBetween(1, len(BodyType)-1)],
+			BodyType: bodyType[fake.IntBetween(1, len(bodyType)-1)],
 		},
 		Mutated: MutatedPathDefaultValue,
 	}
@@ -91,7 +127,7 @@ func (p *Person) GenerateDocument(fake *faker.Faker, documentSize int) (interfac
 	}
 
 	if (len(personDocument)) < int(documentSize) {
-		person.Padding = fake.RandomStringWithLength(int(documentSize) - (len(personDocument)))
+		person.Padding = strings.Repeat("a", int(documentSize)-(len(personDocument)))
 	}
 	return person, nil
 }
@@ -110,9 +146,6 @@ func (p *Person) UpdateDocument(fieldsToChange []string, lastUpdatedDocument int
 	if _, ok := checkFields["firstName"]; ok || (len(checkFields) == 0) {
 		person.FirstName = fake.Person().FirstName()
 	}
-	if _, ok := checkFields["lastName"]; ok || (len(checkFields) == 0) {
-		person.Lastname = fake.Person().LastName()
-	}
 	if _, ok := checkFields["age"]; ok || (len(checkFields) == 0) {
 		person.Age = fake.Float64(2, 0, 100)
 	}
@@ -120,22 +153,13 @@ func (p *Person) UpdateDocument(fieldsToChange []string, lastUpdatedDocument int
 		person.Email = fake.Internet().CompanyEmail()
 	}
 	if _, ok := checkFields["address.state"]; ok || (len(checkFields) == 0) {
-		person.Address.State = fake.Address().State()
+		person.Address.State = state[fake.IntBetween(1, len(state)-1)]
 	}
 	if _, ok := checkFields["address.city"]; ok || (len(checkFields) == 0) {
-		person.Address.City = fake.Address().City()
-	}
-	if _, ok := checkFields["address.street"]; ok || (len(checkFields) == 0) {
-		person.Address.Street = fake.Address().StreetName()
-	}
-	if _, ok := checkFields["address.zipcode"]; ok || (len(checkFields) == 0) {
-		person.Address.Zipcode = fake.Address().PostCode()
-	}
-	if _, ok := checkFields["address.country"]; ok || (len(checkFields) == 0) {
-		person.Address.Country = fake.Address().Country()
+		person.Address.City = city[fake.IntBetween(1, len(city)-1)]
 	}
 	if _, ok := checkFields["gender"]; ok || (len(checkFields) == 0) {
-		person.Gender = fake.Gender().Name()
+		person.Gender = gender[fake.IntBetween(1, len(gender)-1)]
 	}
 	if _, ok := checkFields["maritalStatus"]; ok || (len(checkFields) == 0) {
 		person.MaritalStatus = maritalChoices[fake.IntBetween(1, len(maritalChoices)-1)]
@@ -153,19 +177,19 @@ func (p *Person) UpdateDocument(fieldsToChange []string, lastUpdatedDocument int
 		person.Attributes.Colour = bodyColor[fake.IntBetween(1, len(bodyColor)-1)]
 	}
 	if _, ok := checkFields["attributes.hair.type"]; ok || (len(checkFields) == 0) {
-		person.Attributes.Hair.Type = HairType[fake.IntBetween(1, len(HairType)-1)]
+		person.Attributes.Hair.Type = hairType[fake.IntBetween(1, len(hairType)-1)]
 	}
 	if _, ok := checkFields["attributes.hair.colour"]; ok || (len(checkFields) == 0) {
-		person.Attributes.Hair.Colour = HairColor[fake.IntBetween(1, len(HairType)-1)]
+		person.Attributes.Hair.Colour = HairColor[fake.IntBetween(1, len(hairType)-1)]
 	}
 	if _, ok := checkFields["attributes.hair.length"]; ok || (len(checkFields) == 0) {
-		person.Attributes.Hair.Length = HairLength[fake.IntBetween(1, len(HairLength)-1)]
+		person.Attributes.Hair.Length = hairLength[fake.IntBetween(1, len(hairLength)-1)]
 	}
 	if _, ok := checkFields["attributes.hair.thickness"]; ok || (len(checkFields) == 0) {
-		person.Attributes.Hair.Thickness = HairThickness[fake.IntBetween(1, len(HairThickness)-1)]
+		person.Attributes.Hair.Thickness = hairThickness[fake.IntBetween(1, len(hairThickness)-1)]
 	}
 	if _, ok := checkFields["attributes.bodyType"]; ok || (len(checkFields) == 0) {
-		person.Attributes.BodyType = BodyType[fake.IntBetween(1, len(BodyType)-1)]
+		person.Attributes.BodyType = bodyType[fake.IntBetween(1, len(bodyType)-1)]
 	}
 	return person, nil
 }

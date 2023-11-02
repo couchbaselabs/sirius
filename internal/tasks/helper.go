@@ -6,12 +6,12 @@ import (
 	"github.com/couchbaselabs/sirius/internal/task_errors"
 	"github.com/couchbaselabs/sirius/internal/task_result"
 	"golang.org/x/exp/slices"
-	"log"
 	"reflect"
 )
 
 const (
-	MaxConcurrentRoutines                 = 45
+	MaxRoutines                           = 32
+	NumberOfBatches                       = 500
 	DefaultIdentifierToken                = "default"
 	MaxQueryRuntime                int    = 86400
 	DefaultQueryRunTime            int    = 100
@@ -21,6 +21,7 @@ const (
 	DeleteOperation                string = "delete"
 	UpsertOperation                string = "upsert"
 	ReadOperation                  string = "read"
+	TouchOperation                 string = "touch"
 	ValidateOperation              string = "validate"
 	SingleInsertOperation          string = "singleInsert"
 	SingleDeleteOperation          string = "singleDelete"
@@ -161,6 +162,20 @@ type InsertOptions struct {
 func configInsertOptions(i *InsertOptions) error {
 	if i == nil {
 		return task_errors.ErrParsingInsertOptions
+	}
+	if i.Timeout == 0 {
+		i.Timeout = 10
+	}
+	return nil
+}
+
+type TouchOptions struct {
+	Timeout int `json:"timeout,omitempty" doc:"true"`
+}
+
+func configTouchOptions(i *TouchOptions) error {
+	if i == nil {
+		return task_errors.ErrParsingTouchOptions
 	}
 	if i.Timeout == 0 {
 		i.Timeout = 10
@@ -431,8 +446,6 @@ func compareDocumentsIsSame(host map[string]any, document1 map[string]any, docum
 			if reflect.DeepEqual(v2, value) == false {
 				return false
 			}
-		} else {
-			log.Println("unknown field", key)
 		}
 	}
 

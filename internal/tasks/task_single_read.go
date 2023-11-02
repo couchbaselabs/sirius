@@ -7,6 +7,7 @@ import (
 	"github.com/couchbaselabs/sirius/internal/task_result"
 	"golang.org/x/sync/errgroup"
 	"log"
+	"math/rand"
 	"time"
 )
 
@@ -98,7 +99,7 @@ func (task *SingleReadTask) Do() error {
 
 	task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
-	collectionObject, err1 := task.GetCollectionObject()
+	collectionObjectList, err1 := task.GetCollectionObject()
 
 	if err1 != nil {
 		task.Result.ErrorOther = err1.Error()
@@ -106,7 +107,7 @@ func (task *SingleReadTask) Do() error {
 		return task.tearUp()
 	}
 
-	singleReadDocuments(task, collectionObject)
+	singleReadDocuments(task, collectionObjectList[rand.Intn(len(collectionObjectList))])
 
 	task.Result.Success = int64(len(task.SingleOperationConfig.Keys)) - task.Result.Failure
 	return task.tearUp()
@@ -115,8 +116,8 @@ func (task *SingleReadTask) Do() error {
 // singleDeleteDocuments uploads new documents in a bucket.scope.collection in a defined batch size at multiple iterations.
 func singleReadDocuments(task *SingleReadTask, collectionObject *sdk.CollectionObject) {
 
-	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
-	dataChannel := make(chan string, MaxConcurrentRoutines)
+	routineLimiter := make(chan struct{}, NumberOfBatches)
+	dataChannel := make(chan string, NumberOfBatches)
 
 	group := errgroup.Group{}
 
@@ -152,14 +153,17 @@ func singleReadDocuments(task *SingleReadTask, collectionObject *sdk.CollectionO
 func (task *SingleReadTask) PostTaskExceptionHandling(_ *sdk.CollectionObject) {
 }
 
-func (task *SingleReadTask) GetResultSeed() string {
-	if task.Result == nil {
-		task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+func (task *SingleReadTask) MatchResultSeed(resultSeed string) bool {
+	if fmt.Sprintf("%d", task.ResultSeed) == resultSeed {
+		if task.Result == nil {
+			task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+		}
+		return true
 	}
-	return fmt.Sprintf("%d", task.ResultSeed)
+	return false
 }
 
-func (task *SingleReadTask) GetCollectionObject() (*sdk.CollectionObject, error) {
+func (task *SingleReadTask) GetCollectionObject() ([]*sdk.CollectionObject, error) {
 	return task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
 		task.Collection)
 }

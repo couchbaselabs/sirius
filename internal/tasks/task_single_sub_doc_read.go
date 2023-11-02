@@ -7,6 +7,7 @@ import (
 	"github.com/couchbaselabs/sirius/internal/task_errors"
 	"github.com/couchbaselabs/sirius/internal/task_result"
 	"log"
+	"math/rand"
 	"time"
 )
 
@@ -109,7 +110,7 @@ func (task *SingleSubDocRead) Do() error {
 
 	task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
-	collectionObject, err1 := task.GetCollectionObject()
+	collectionObjectList, err1 := task.GetCollectionObject()
 
 	if err1 != nil {
 		task.Result.ErrorOther = err1.Error()
@@ -117,7 +118,7 @@ func (task *SingleSubDocRead) Do() error {
 		return task.tearUp()
 	}
 
-	singleReadSubDocuments(task, collectionObject)
+	singleReadSubDocuments(task, collectionObjectList[rand.Intn(len(collectionObjectList))])
 	task.Result.Success = int64(1) - task.Result.Failure
 	return task.tearUp()
 }
@@ -168,14 +169,17 @@ func singleReadSubDocuments(task *SingleSubDocRead, collectionObject *sdk.Collec
 func (task *SingleSubDocRead) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
 }
 
-func (task *SingleSubDocRead) GetResultSeed() string {
-	if task.Result == nil {
-		task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+func (task *SingleSubDocRead) MatchResultSeed(resultSeed string) bool {
+	if fmt.Sprintf("%d", task.ResultSeed) == resultSeed {
+		if task.Result == nil {
+			task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+		}
+		return true
 	}
-	return fmt.Sprintf("%d", task.ResultSeed)
+	return false
 }
 
-func (task *SingleSubDocRead) GetCollectionObject() (*sdk.CollectionObject, error) {
+func (task *SingleSubDocRead) GetCollectionObject() ([]*sdk.CollectionObject, error) {
 	return task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
 		task.Collection)
 }

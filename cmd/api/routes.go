@@ -1,8 +1,12 @@
 package main
 
 import (
+	"github.com/couchbaselabs/sirius/internal/tasks"
 	"github.com/go-chi/chi/v5"
+	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -30,6 +34,7 @@ func (app *Config) routes() http.Handler {
 	mux.Post("/bulk-create", app.insertTask)
 	mux.Post("/bulk-delete", app.deleteTask)
 	mux.Post("/bulk-upsert", app.upsertTask)
+	mux.Post("/bulk-touch", app.touchTask)
 	mux.Post("/validate", app.validateTask)
 	mux.Post("/clear_data", app.clearRequestFromServer)
 	mux.Post("/bulk-read", app.readTask)
@@ -54,4 +59,12 @@ func (app *Config) routes() http.Handler {
 	mux.Post("/single-doc-validate", app.SingleDocValidate)
 
 	return mux
+}
+
+func getFileName() string {
+	cw, err := os.Getwd()
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
+	return filepath.Join(cw, tasks.RequestPath, "sirius_logs")
 }

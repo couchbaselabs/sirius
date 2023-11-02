@@ -10,6 +10,7 @@ import (
 	"github.com/couchbaselabs/sirius/internal/template"
 	"golang.org/x/sync/errgroup"
 	"log"
+	"math/rand"
 	"time"
 )
 
@@ -116,7 +117,10 @@ func (task *QueryTask) Do() error {
 		return task.tearUp()
 	}
 
-	c, err := task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope, task.Collection)
+	cLsit, err := task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope, task.Collection)
+	// Picking out collection's connection out of random connections.
+	c := cLsit[rand.Intn(len(cLsit))]
+
 	if err != nil {
 		task.Result.ErrorOther = err1.Error()
 		if err := task.Result.SaveResultIntoFile(); err != nil {
@@ -224,7 +228,7 @@ func buildIndexViaN1QL(task *QueryTask, cluster *gocb.Cluster, scope *gocb.Scope
 
 // runN1qlQuery runs query over a duration of time
 func runN1qlQuery(task *QueryTask, cluster *gocb.Cluster, scope *gocb.Scope, collection *gocb.Collection) {
-	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
+	routineLimiter := make(chan struct{}, NumberOfBatches)
 	group := errgroup.Group{}
 	queries, err := task.gen.Template.GenerateQueries(task.Bucket, scope.Name(), collection.Name())
 	if err != nil {
@@ -258,14 +262,17 @@ func (task *QueryTask) PostTaskExceptionHandling(_ *sdk.CollectionObject) {
 	//TODO implement me
 }
 
-func (task *QueryTask) GetResultSeed() string {
-	if task.Result == nil {
-		task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+func (task *QueryTask) MatchResultSeed(resultSeed string) bool {
+	if fmt.Sprintf("%d", task.ResultSeed) == resultSeed {
+		if task.Result == nil {
+			task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+		}
+		return true
 	}
-	return fmt.Sprintf("%d", task.ResultSeed)
+	return false
 }
 
-func (task *QueryTask) GetCollectionObject() (*sdk.CollectionObject, error) {
+func (task *QueryTask) GetCollectionObject() ([]*sdk.CollectionObject, error) {
 	return task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
 		task.Collection)
 }

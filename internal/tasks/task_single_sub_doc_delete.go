@@ -8,6 +8,7 @@ import (
 	"github.com/couchbaselabs/sirius/internal/task_result"
 	"github.com/couchbaselabs/sirius/internal/template"
 	"log"
+	"math/rand"
 	"time"
 )
 
@@ -111,7 +112,7 @@ func (task *SingleSubDocDelete) Do() error {
 
 	task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
-	collectionObject, err1 := task.GetCollectionObject()
+	collectionObjectList, err1 := task.GetCollectionObject()
 
 	if err1 != nil {
 		task.Result.ErrorOther = err1.Error()
@@ -119,7 +120,7 @@ func (task *SingleSubDocDelete) Do() error {
 		return task.tearUp()
 	}
 
-	singleDeleteSubDocuments(task, collectionObject)
+	singleDeleteSubDocuments(task, collectionObjectList[rand.Intn(len(collectionObjectList))])
 
 	task.Result.Success = 1 - task.Result.Failure
 	return task.tearUp()
@@ -179,14 +180,17 @@ func singleDeleteSubDocuments(task *SingleSubDocDelete, collectionObject *sdk.Co
 func (task *SingleSubDocDelete) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
 }
 
-func (task *SingleSubDocDelete) GetResultSeed() string {
-	if task.Result == nil {
-		task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+func (task *SingleSubDocDelete) MatchResultSeed(resultSeed string) bool {
+	if fmt.Sprintf("%d", task.ResultSeed) == resultSeed {
+		if task.Result == nil {
+			task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+		}
+		return true
 	}
-	return fmt.Sprintf("%d", task.ResultSeed)
+	return false
 }
 
-func (task *SingleSubDocDelete) GetCollectionObject() (*sdk.CollectionObject, error) {
+func (task *SingleSubDocDelete) GetCollectionObject() ([]*sdk.CollectionObject, error) {
 	return task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
 		task.Collection)
 }

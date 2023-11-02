@@ -18,7 +18,6 @@ import (
 
 const ResultPath = "./internal/task_result/task_result_logs"
 
-// TaskResult defines the type of result stored in a response after an operation.
 type SDKTiming struct {
 	SendTime string `json:"sendTime" doc:"true"`
 	AckTime  string `json:"ackTime" doc:"true"`
@@ -30,7 +29,7 @@ type FailedDocument struct {
 	Status      bool      `json:"status"  doc:"true"`
 	Cas         uint64    `json:"cas"  doc:"true"`
 	ErrorString string    `json:"errorString"  doc:"true"`
-	Offset      int64     `json:"-" doc:"false"`
+	Offset      int64     `json:"Offset" doc:"false"`
 }
 
 type SingleOperationResult struct {
@@ -45,6 +44,7 @@ type FailedQuery struct {
 	ErrorString string `json:"errorString" doc:"true"`
 }
 
+// TaskResult defines the type of result stored in a response after an operation.
 type TaskResult struct {
 	ResultSeed   int64                            `json:"resultSeed"`
 	Operation    string                           `json:"operation"`
@@ -60,14 +60,18 @@ type TaskResult struct {
 
 // ConfigTaskResult returns a new instance of TaskResult
 func ConfigTaskResult(operation string, resultSeed int64) *TaskResult {
-	return &TaskResult{
-		ResultSeed:   resultSeed,
-		Operation:    operation,
-		BulkError:    make(map[string][]FailedDocument),
-		RetriedError: make(map[string][]FailedDocument),
-		QueryError:   make(map[string][]FailedQuery),
-		SingleResult: make(map[string]SingleOperationResult),
-		lock:         sync.Mutex{},
+	if r, err := ReadResultFromFile(fmt.Sprintf("%d", resultSeed), false); err == nil {
+		return r
+	} else {
+		return &TaskResult{
+			ResultSeed:   resultSeed,
+			Operation:    operation,
+			BulkError:    make(map[string][]FailedDocument),
+			RetriedError: make(map[string][]FailedDocument),
+			QueryError:   make(map[string][]FailedQuery),
+			SingleResult: make(map[string]SingleOperationResult),
+			lock:         sync.Mutex{},
+		}
 	}
 }
 

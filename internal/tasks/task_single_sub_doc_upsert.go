@@ -113,7 +113,7 @@ func (task *SingleSubDocUpsert) Do() error {
 
 	task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 
-	collectionObject, err1 := task.GetCollectionObject()
+	collectionObjectList, err1 := task.GetCollectionObject()
 
 	if err1 != nil {
 		task.Result.ErrorOther = err1.Error()
@@ -121,7 +121,7 @@ func (task *SingleSubDocUpsert) Do() error {
 		return task.tearUp()
 	}
 
-	singleUpsertSubDocuments(task, collectionObject)
+	singleUpsertSubDocuments(task, collectionObjectList[rand.Intn(len(collectionObjectList))])
 
 	task.Result.Success = int64(1) - task.Result.Failure
 	return task.tearUp()
@@ -194,14 +194,17 @@ func singleUpsertSubDocuments(task *SingleSubDocUpsert, collectionObject *sdk.Co
 func (task *SingleSubDocUpsert) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
 }
 
-func (task *SingleSubDocUpsert) GetResultSeed() string {
-	if task.Result == nil {
-		task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+func (task *SingleSubDocUpsert) MatchResultSeed(resultSeed string) bool {
+	if fmt.Sprintf("%d", task.ResultSeed) == resultSeed {
+		if task.Result == nil {
+			task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
+		}
+		return true
 	}
-	return fmt.Sprintf("%d", task.ResultSeed)
+	return false
 }
 
-func (task *SingleSubDocUpsert) GetCollectionObject() (*sdk.CollectionObject, error) {
+func (task *SingleSubDocUpsert) GetCollectionObject() ([]*sdk.CollectionObject, error) {
 	return task.req.connectionManager.GetCollection(task.ClusterConfig, task.Bucket, task.Scope,
 		task.Collection)
 }

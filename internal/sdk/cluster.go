@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-const WaitUnityReadyTime = 10
+const WaitUnityReadyTime = 5
 
 type TimeoutsConfig struct {
 	ConnectTimeout   int `json:"connectTimeout,omitempty" doc:"true"`
@@ -29,6 +29,7 @@ type ClusterConfig struct {
 	ConnectionString  string            `json:"connectionString" doc:"true"`
 	CompressionConfig CompressionConfig `json:"compressionConfig,omitempty" doc:"true"`
 	TimeoutsConfig    TimeoutsConfig    `json:"timeoutsConfig,omitempty" doc:"true"`
+	connectionLimit   float64
 }
 
 func ValidateClusterConfig(c *ClusterConfig) error {
