@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	ClusterConnectionLimit = 20
+	ClusterConnectionLimit = 1
 )
 
 // ConnectionManager contains different cluster information and connections to them.
@@ -32,7 +32,7 @@ func ConfigConnectionManager() *ConnectionManager {
 func addKVPoolSize(connStr string) string {
 	if !strings.Contains(connStr, "kv_pool_size") {
 		if !strings.Contains(connStr, "?") {
-			return connStr + "?kv_pool_size=20"
+			return connStr + "?kv_pool_size=250"
 		}
 	}
 	return connStr
@@ -122,6 +122,9 @@ func (cm *ConnectionManager) getClusterObject(clusterConfig *ClusterConfig) ([]*
 				},
 				SecurityConfig: gocb.SecurityConfig{
 					TLSSkipVerify: true,
+				},
+				InternalConfig: gocb.InternalConfig{
+					ConnectionBufferSize: 1048576,
 				},
 			})
 			if err != nil {
