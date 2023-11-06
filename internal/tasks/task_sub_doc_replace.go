@@ -159,7 +159,8 @@ func (task *SubDocReplace) Do() error {
 	return task.tearUp()
 }
 
-// insertDocuments uploads new documents in a bucket.scope.collection in a defined batch size at multiple iterations.
+// replaceSubDocuments replace subdocuments in a bucket.scope.
+// collection in a defined batch size at multiple iterations.
 func replaceSubDocuments(task *SubDocReplace, collectionObjectList []*sdk.CollectionObject) {
 
 	routineLimiter := make(chan struct{}, NumberOfBatches)

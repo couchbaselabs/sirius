@@ -127,7 +127,8 @@ func (task *SingleSubDocUpsert) Do() error {
 	return task.tearUp()
 }
 
-// singleInsertSubDocuments uploads new documents in a bucket.scope.collection in a defined batch size at multiple iterations.
+// singleUpsertSubDocuments upserts already documents in a bucket.scope.
+// collection in a defined batch size at multiple iterations.
 func singleUpsertSubDocuments(task *SingleSubDocUpsert, collectionObject *sdk.CollectionObject) {
 
 	var iOps []gocb.MutateInSpec

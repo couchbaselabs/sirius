@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	ClusterConnectionLimit = 20
+	ClusterConnectionLimit = 1
 )
 
 // ConnectionManager contains different cluster information and connections to them.
@@ -32,7 +32,7 @@ func ConfigConnectionManager() *ConnectionManager {
 func addKVPoolSize(connStr string) string {
 	if !strings.Contains(connStr, "kv_pool_size") {
 		if !strings.Contains(connStr, "?") {
-			return connStr + "?kv_pool_size=20"
+			return connStr + "?kv_pool_size=25"
 		}
 	}
 	return connStr
@@ -151,17 +151,23 @@ func (cm *ConnectionManager) GetCollection(clusterConfig *ClusterConfig, bucketN
 	if err1 != nil {
 		return nil, err1
 	}
-	for i := 0; i < ClusterConnectionLimit; i++ {
+	if len(cObj) == 0 {
+		return nil, errors.New("Unable to connect to cluster")
+	}
+	for i := 0; i < len(cObj); i++ {
 		bObj, err2 := cObj[i].getBucketObject(bucketName)
 		if err2 != nil {
+			log.Println("unable to get bucket for" + clusterConfig.ConnectionString)
 			continue
 		}
 		sObj, err3 := bObj.getScopeObject(scopeName)
 		if err3 != nil {
+			log.Println("unable to get scope for" + clusterConfig.ConnectionString)
 			continue
 		}
 		c, err4 := sObj.getCollection(collectionName)
 		if err4 != nil {
+			log.Println("unable to get collection for" + clusterConfig.ConnectionString)
 			continue
 		}
 		collectionObjectList = append(collectionObjectList, c)

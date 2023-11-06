@@ -126,7 +126,8 @@ func (task *SingleSubDocDelete) Do() error {
 	return task.tearUp()
 }
 
-// singleInsertSubDocuments uploads new documents in a bucket.scope.collection in a defined batch size at multiple iterations.
+// singleDeleteSubDocuments delets sub-documents in a bucket.scope.
+// collection in a defined batch size at multiple iterations.
 func singleDeleteSubDocuments(task *SingleSubDocDelete, collectionObject *sdk.CollectionObject) {
 
 	var iOps []gocb.MutateInSpec
