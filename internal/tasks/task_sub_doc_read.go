@@ -149,7 +149,7 @@ func (task *SubDocRead) Do() error {
 	return task.tearUp()
 }
 
-// insertDocuments uploads new documents in a bucket.scope.collection in a defined batch size at multiple iterations.
+// readSubDocuments uploads new documents in a bucket.scope.collection in a defined batch size at multiple iterations.
 func readSubDocuments(task *SubDocRead, collectionObjectList []*sdk.CollectionObject) {
 
 	routineLimiter := make(chan struct{}, NumberOfBatches)

@@ -159,7 +159,7 @@ func (task *SubDocDelete) Do() error {
 	return task.tearUp()
 }
 
-// insertDocuments uploads new documents in a bucket.scope.collection in a defined batch size at multiple iterations.
+// deleteSubDocuments deletes  sub documents in a bucket.scope.collection in a defined batch size at multiple iterations
 func deleteSubDocuments(task *SubDocDelete, collectionObjectList []*sdk.CollectionObject) {
 
 	routineLimiter := make(chan struct{}, NumberOfBatches)

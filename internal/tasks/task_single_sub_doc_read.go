@@ -123,7 +123,8 @@ func (task *SingleSubDocRead) Do() error {
 	return task.tearUp()
 }
 
-// singleInsertSubDocuments uploads new documents in a bucket.scope.collection in a defined batch size at multiple iterations.
+// singleReadSubDocuments reads a subdocuments in a bucket.scope.
+// collection in a defined batch size at multiple iterations.
 func singleReadSubDocuments(task *SingleSubDocRead, collectionObject *sdk.CollectionObject) {
 	var iOps []gocb.LookupInSpec
 	key := task.SingleSubDocOperationConfig.Key

@@ -185,8 +185,8 @@ func insertDocuments(task *InsertTask, collectionObjectList []*sdk.CollectionObj
 
 		wg.Go(func() error {
 			for itr := batchIndex * batchSize; itr < (batchIndex+1)*batchSize; itr++ {
-				insertDocumentsHelper(task, int64(itr), skip, collectionObjectList[int(itr)%len(
-					collectionObjectList)])
+				insertDocumentsHelper(task, int64(itr)+task.OperationConfig.Start, skip,
+					collectionObjectList[int(itr)%len(collectionObjectList)])
 			}
 			<-routineLimiter
 			return nil
@@ -197,9 +197,8 @@ func insertDocuments(task *InsertTask, collectionObjectList []*sdk.CollectionObj
 	remainingItems := (task.OperationConfig.End - task.OperationConfig.Start) - (batchSize * NumberOfBatches)
 
 	if remainingItems > 0 {
-		for offset := batchSize * int64(NumberOfBatches); offset < task.OperationConfig.End; offset++ {
-			insertDocumentsHelper(task, offset, skip, collectionObjectList[int(offset)%len(
-				collectionObjectList)])
+		for offset := batchSize*int64(NumberOfBatches) + task.OperationConfig.Start; offset < task.OperationConfig.End; offset++ {
+			insertDocumentsHelper(task, offset, skip, collectionObjectList[int(offset)%len(collectionObjectList)])
 		}
 	}
 

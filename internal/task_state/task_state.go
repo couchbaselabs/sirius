@@ -14,7 +14,7 @@ import (
 const (
 	COMPLETED         = 1
 	ERR               = 0
-	StateChannelLimit = 500000
+	StateChannelLimit = 10000
 	TASKSTATELOGS     = "./internal/task_state/task_state_logs"
 )
 
@@ -120,7 +120,7 @@ func (t *TaskState) StoreState() {
 	go func() {
 		var completed []int64
 		var err []int64
-		d := time.NewTicker(30 * time.Second)
+		d := time.NewTicker(5 * time.Second)
 		defer d.Stop()
 		if t.ctx.Err() != nil {
 			log.Print("Ctx closed for StoreState()")
