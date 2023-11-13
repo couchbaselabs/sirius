@@ -117,6 +117,9 @@ func (cm *ConnectionManager) getClusterObject(clusterConfig *ClusterConfig) (*Cl
 			SecurityConfig: gocb.SecurityConfig{
 				TLSSkipVerify: true,
 			},
+			InternalConfig: gocb.InternalConfig{
+				ConnectionBufferSize: 1048576,
+			},
 		})
 		if err != nil {
 			return nil, err
