@@ -22,7 +22,11 @@ func (r *RetryExceptions) Describe() string {
 }
 
 func (r *RetryExceptions) Do() error {
-	c, _ := r.Task.GetCollectionObject()
+	c, e := r.Task.GetCollectionObject()
+	if e != nil {
+		r.Task.tearUp()
+		return nil
+	}
 	r.Task.SetException(r.Exceptions)
 	r.Task.PostTaskExceptionHandling(c)
 	r.Task.tearUp()

@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	MaxConcurrentRoutines                 = 45
+	MaxConcurrentRoutines                 = 128
 	DefaultIdentifierToken                = "default"
 	MaxQueryRuntime                int    = 86400
 	DefaultQueryRunTime            int    = 100
