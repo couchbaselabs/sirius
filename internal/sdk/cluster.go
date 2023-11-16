@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-const WaitUnityReadyTime = 10
+const WaitUnityReadyTime = 300
 
 type TimeoutsConfig struct {
 	ConnectTimeout   int `json:"connectTimeout,omitempty" doc:"true"`
