@@ -1,6 +1,7 @@
 package task_result
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
@@ -16,7 +17,10 @@ import (
 	"time"
 )
 
-const ResultPath = "./internal/task_result/task_result_logs"
+const (
+	ResultPath         = "./internal/task_result/task_result_logs"
+	ResultChannelLimit = 10000
+)
 
 type SDKTiming struct {
 	SendTime string `json:"sendTime" doc:"true"`
@@ -44,55 +48,77 @@ type FailedQuery struct {
 	ErrorString string `json:"errorString" doc:"true"`
 }
 
+type ResultHelper struct {
+	initTime string
+	docId    string
+	err      error
+	status   bool
+	cas      uint64
+	offset   int64
+}
+
 // TaskResult defines the type of result stored in a response after an operation.
 type TaskResult struct {
-	ResultSeed   int64                            `json:"resultSeed"`
-	Operation    string                           `json:"operation"`
-	ErrorOther   string                           `json:"otherErrors"`
-	Success      int64                            `json:"success"`
-	Failure      int64                            `json:"failure"`
-	BulkError    map[string][]FailedDocument      `json:"bulkErrors"`
-	RetriedError map[string][]FailedDocument      `json:"retriedError"`
-	QueryError   map[string][]FailedQuery         `json:"queryErrors"`
-	SingleResult map[string]SingleOperationResult `json:"singleResult"`
-	lock         sync.Mutex                       `json:"-"`
+	ResultSeed    int64                            `json:"resultSeed"`
+	Operation     string                           `json:"operation"`
+	ErrorOther    string                           `json:"otherErrors"`
+	Success       int64                            `json:"success"`
+	Failure       int64                            `json:"failure"`
+	BulkError     map[string][]FailedDocument      `json:"bulkErrors"`
+	RetriedError  map[string][]FailedDocument      `json:"retriedError"`
+	QueryError    map[string][]FailedQuery         `json:"queryErrors"`
+	SingleResult  map[string]SingleOperationResult `json:"singleResult"`
+	ResultChannel chan ResultHelper                `json:"-"`
+	lock          sync.Mutex                       `json:"-"`
+	ctx           context.Context                  `json:"-"`
+	cancel        context.CancelFunc               `json:"-"`
 }
 
 // ConfigTaskResult returns a new instance of TaskResult
 func ConfigTaskResult(operation string, resultSeed int64) *TaskResult {
-	if r, err := ReadResultFromFile(fmt.Sprintf("%d", resultSeed), false); err == nil {
-		return r
+	ctx, cancel := context.WithCancel(context.Background())
+	taskResult := &TaskResult{}
+
+	if result, err := ReadResultFromFile(fmt.Sprintf("%d", resultSeed), false); err == nil {
+		taskResult = result
+		taskResult.ResultChannel = make(chan ResultHelper, ResultChannelLimit)
+		taskResult.ctx = ctx
+		taskResult.cancel = cancel
+		taskResult.lock = sync.Mutex{}
 	} else {
-		return &TaskResult{
-			ResultSeed:   resultSeed,
-			Operation:    operation,
-			BulkError:    make(map[string][]FailedDocument),
-			RetriedError: make(map[string][]FailedDocument),
-			QueryError:   make(map[string][]FailedQuery),
-			SingleResult: make(map[string]SingleOperationResult),
-			lock:         sync.Mutex{},
+		taskResult = &TaskResult{
+			ResultSeed:    resultSeed,
+			Operation:     operation,
+			BulkError:     make(map[string][]FailedDocument),
+			RetriedError:  make(map[string][]FailedDocument),
+			QueryError:    make(map[string][]FailedQuery),
+			SingleResult:  make(map[string]SingleOperationResult),
+			ResultChannel: make(chan ResultHelper, ResultChannelLimit),
+			lock:          sync.Mutex{},
+			ctx:           ctx,
+			cancel:        cancel,
 		}
 	}
+
+	defer func() {
+		taskResult.StoreResult()
+	}()
+
+	return taskResult
 }
 
 // IncrementFailure saves the failure count of doc loading operation.
 func (t *TaskResult) IncrementFailure(initTime, docId string, _ interface{}, err error, status bool, cas uint64,
 	offset int64) {
-	t.lock.Lock()
-	t.Failure++
-	v, errorString := sdk.CheckSDKException(err)
-	t.BulkError[v] = append(t.BulkError[v], FailedDocument{
-		SDKTiming: SDKTiming{
-			SendTime: initTime,
-			AckTime:  time.Now().UTC().Format(time.RFC850),
-		},
-		DocId:       docId,
-		Status:      status,
-		Cas:         cas,
-		ErrorString: errorString,
-		Offset:      offset,
-	})
-	t.lock.Unlock()
+
+	t.ResultChannel <- ResultHelper{
+		initTime: initTime,
+		docId:    docId,
+		err:      err,
+		status:   status,
+		cas:      cas,
+		offset:   offset,
+	}
 }
 
 // IncrementQueryFailure saves the failure count of query running operation.
@@ -213,4 +239,61 @@ func (t *TaskResult) FailWholeSingleOperation(docIds []string, err error) {
 		})
 	}
 	_ = wg.Wait()
+}
+
+func (t *TaskResult) StoreResult() {
+	go func() {
+		var resultList []ResultHelper
+		d := time.NewTicker(10 * time.Second)
+		defer d.Stop()
+		if t.ctx.Err() != nil {
+			log.Print("Ctx closed for StoreResult()")
+			return
+		}
+		for {
+			select {
+			case <-t.ctx.Done():
+				{
+					t.StoreResultList(resultList)
+					resultList = resultList[:0]
+					return
+				}
+			case s := <-t.ResultChannel:
+				{
+					resultList = append(resultList, s)
+				}
+			case <-d.C:
+				{
+					t.StoreResultList(resultList)
+					resultList = resultList[:0]
+				}
+			}
+		}
+	}()
+}
+
+func (t *TaskResult) StoreResultList(resultList []ResultHelper) {
+	defer t.lock.Unlock()
+	t.lock.Lock()
+	for _, x := range resultList {
+		t.Failure++
+		v, errorString := sdk.CheckSDKException(x.err)
+		t.BulkError[v] = append(t.BulkError[v], FailedDocument{
+			SDKTiming: SDKTiming{
+				SendTime: x.initTime,
+				AckTime:  time.Now().UTC().Format(time.RFC850),
+			},
+			DocId:       x.docId,
+			Status:      x.status,
+			Cas:         x.cas,
+			ErrorString: errorString,
+			Offset:      x.offset,
+		})
+	}
+}
+
+func (t *TaskResult) StopStoringResult() {
+	time.Sleep(1 * time.Second)
+	t.cancel()
+	time.Sleep(1 * time.Second)
 }
