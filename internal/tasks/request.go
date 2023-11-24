@@ -1,6 +1,7 @@
 package tasks
 
 import (
+	"context"
 	"encoding/gob"
 	"fmt"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
@@ -28,17 +29,42 @@ type Request struct {
 	DocumentsMeta     *task_meta_data.DocumentsMetaData `json:"documentMeta" doc:"false"`
 	connectionManager *sdk.ConnectionManager            `json:"-" doc:"false"`
 	lock              sync.Mutex                        `json:"-" doc:"false"`
+	ctx               context.Context                   `json:"-"`
+	cancel            context.CancelFunc                `json:"-"`
 }
 
 // NewRequest return  an instance of Request
 func NewRequest(identifier string) *Request {
+	ctx, cancel := context.WithCancel(context.Background())
 	return &Request{
 		Identifier:        identifier,
 		MetaData:          task_meta_data.NewMetaData(),
 		DocumentsMeta:     task_meta_data.NewDocumentsMetaData(),
 		connectionManager: sdk.ConfigConnectionManager(),
 		lock:              sync.Mutex{},
+		ctx:               ctx,
+		cancel:            cancel,
 	}
+}
+
+// Cancel cancels the context of request
+func (r *Request) Cancel() {
+	r.cancel()
+}
+
+// ContextClosed return true if request's context channel is closed else return false
+func (r *Request) ContextClosed() bool {
+	if r.ctx.Err() != nil {
+		return true
+	}
+	return false
+}
+
+// InitializeContext is used to generate new contextWithCancel for request upon restart of sirius.
+func (r *Request) InitializeContext() {
+	ctx, cancel := context.WithCancel(context.Background())
+	r.ctx = ctx
+	r.cancel = cancel
 }
 
 // ReconnectionManager setups again sdk.ConnectionManager

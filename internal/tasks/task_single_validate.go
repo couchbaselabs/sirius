@@ -111,12 +111,24 @@ func (task *SingleValidate) Do() error {
 
 // validateSingleDocuments validates the document integrity as per meta-data stored in Sirius
 func validateSingleDocuments(task *SingleValidate, collectionObject *sdk.CollectionObject) {
+
+	if task.req.ContextClosed() {
+		return
+	}
+
 	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
 	dataChannel := make(chan string, MaxConcurrentRoutines)
 
 	group := errgroup.Group{}
 
 	for _, data := range task.SingleOperationConfig.Keys {
+
+		if task.req.ContextClosed() {
+			close(routineLimiter)
+			close(dataChannel)
+			return
+		}
+
 		routineLimiter <- struct{}{}
 		dataChannel <- data
 

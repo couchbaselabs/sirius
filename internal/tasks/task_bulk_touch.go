@@ -156,6 +156,11 @@ func (task *TouchTask) Do() error {
 }
 
 func touchDocuments(task *TouchTask, collectionObject *sdk.CollectionObject) {
+
+	if task.req.ContextClosed() {
+		return
+	}
+
 	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
 	dataChannel := make(chan int64, MaxConcurrentRoutines)
 
@@ -169,6 +174,13 @@ func touchDocuments(task *TouchTask, collectionObject *sdk.CollectionObject) {
 
 	group := errgroup.Group{}
 	for i := task.OperationConfig.Start; i < task.OperationConfig.End; i++ {
+
+		if task.req.ContextClosed() {
+			close(routineLimiter)
+			close(dataChannel)
+			return
+		}
+
 		routineLimiter <- struct{}{}
 		dataChannel <- i
 
@@ -218,6 +230,11 @@ func touchDocuments(task *TouchTask, collectionObject *sdk.CollectionObject) {
 }
 
 func (task *TouchTask) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
+
+	if task.OperationConfig.Exceptions.RetryAttempts <= 0 {
+		return
+	}
+
 	task.State.StopStoringState()
 
 	// Get all the errorOffset
@@ -299,6 +316,7 @@ func (task *TouchTask) PostTaskExceptionHandling(collectionObject *sdk.Collectio
 	task.State.MakeErrorKeyFromMap(errorOffsetMaps)
 	task.Result.Failure = int64(len(task.State.KeyStates.Err))
 	task.Result.Success = task.OperationConfig.End - task.OperationConfig.Start - task.Result.Failure
+	log.Println("completed retrying:- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 }
 
 func (task *TouchTask) MatchResultSeed(resultSeed string) bool {

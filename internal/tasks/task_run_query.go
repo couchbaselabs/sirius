@@ -225,6 +225,11 @@ func buildIndexViaN1QL(task *QueryTask, cluster *gocb.Cluster, scope *gocb.Scope
 
 // runN1qlQuery runs query over a duration of time
 func runN1qlQuery(task *QueryTask, cluster *gocb.Cluster, scope *gocb.Scope, collection *gocb.Collection) {
+
+	if task.req.ContextClosed() {
+		return
+	}
+
 	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
 	group := errgroup.Group{}
 	queries, err := task.gen.Template.GenerateQueries(task.Bucket, scope.Name(), collection.Name())

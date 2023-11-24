@@ -154,6 +154,11 @@ func (task *DeleteTask) Do() error {
 
 // deleteDocuments delete the document stored on a host from start to end.
 func deleteDocuments(task *DeleteTask, collectionObject *sdk.CollectionObject) {
+
+	if task.req.ContextClosed() {
+		return
+	}
+
 	skip := make(map[int64]struct{})
 	for _, offset := range task.State.KeyStates.Completed {
 		skip[offset] = struct{}{}
@@ -169,6 +174,12 @@ func deleteDocuments(task *DeleteTask, collectionObject *sdk.CollectionObject) {
 	for i := task.OperationConfig.Start; i < task.OperationConfig.End; i++ {
 		routineLimiter <- struct{}{}
 		dataChannel <- i
+
+		if task.req.ContextClosed() {
+			close(routineLimiter)
+			close(dataChannel)
+			return
+		}
 
 		group.Go(func() error {
 			offset := <-dataChannel
@@ -221,6 +232,11 @@ func deleteDocuments(task *DeleteTask, collectionObject *sdk.CollectionObject) {
 }
 
 func (task *DeleteTask) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
+
+	if task.OperationConfig.Exceptions.RetryAttempts <= 0 {
+		return
+	}
+
 	task.State.StopStoringState()
 
 	// Get all the errorOffset
@@ -316,6 +332,8 @@ func (task *DeleteTask) PostTaskExceptionHandling(collectionObject *sdk.Collecti
 	task.State.MakeErrorKeyFromMap(errorOffsetMaps)
 	task.Result.Failure = int64(len(task.State.KeyStates.Err))
 	task.Result.Success = task.OperationConfig.End - task.OperationConfig.Start - task.Result.Failure
+	log.Println("completed retrying:- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
+
 }
 
 func (task *DeleteTask) MatchResultSeed(resultSeed string) bool {

@@ -125,6 +125,11 @@ func (task *SingleSubDocRead) Do() error {
 
 // singleInsertSubDocuments uploads new documents in a bucket.scope.collection in a defined batch size at multiple iterations.
 func singleReadSubDocuments(task *SingleSubDocRead, collectionObject *sdk.CollectionObject) {
+
+	if task.req.ContextClosed() {
+		return
+	}
+
 	var iOps []gocb.LookupInSpec
 	key := task.SingleSubDocOperationConfig.Key
 	documentMetaData := task.req.DocumentsMeta.GetDocumentsMetadata(task.CollectionIdentifier(), key, "", 0, false)

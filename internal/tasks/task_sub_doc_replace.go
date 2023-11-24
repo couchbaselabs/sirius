@@ -163,6 +163,10 @@ func (task *SubDocReplace) Do() error {
 // insertDocuments uploads new documents in a bucket.scope.collection in a defined batch size at multiple iterations.
 func replaceSubDocuments(task *SubDocReplace, collectionObject *sdk.CollectionObject) {
 
+	if task.req.ContextClosed() {
+		return
+	}
+
 	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
 	dataChannel := make(chan int64, MaxConcurrentRoutines)
 
@@ -175,6 +179,12 @@ func replaceSubDocuments(task *SubDocReplace, collectionObject *sdk.CollectionOb
 	}
 	group := errgroup.Group{}
 	for iteration := task.SubDocOperationConfig.Start; iteration < task.SubDocOperationConfig.End; iteration++ {
+
+		if task.req.ContextClosed() {
+			close(routineLimiter)
+			close(dataChannel)
+			return
+		}
 
 		routineLimiter <- struct{}{}
 		dataChannel <- iteration
@@ -251,6 +261,11 @@ func replaceSubDocuments(task *SubDocReplace, collectionObject *sdk.CollectionOb
 }
 
 func (task *SubDocReplace) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
+
+	if task.SubDocOperationConfig.Exceptions.RetryAttempts <= 0 {
+		return
+	}
+
 	task.State.StopStoringState()
 
 	// Get all the errorOffset
@@ -354,6 +369,7 @@ func (task *SubDocReplace) PostTaskExceptionHandling(collectionObject *sdk.Colle
 	task.State.MakeCompleteKeyFromMap(completedOffsetMaps)
 	task.State.MakeErrorKeyFromMap(errorOffsetMaps)
 	task.Result.Failure = int64(len(task.State.KeyStates.Err))
+	log.Println("completed retrying:- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 
 }
 

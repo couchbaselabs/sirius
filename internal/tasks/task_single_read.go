@@ -115,12 +115,23 @@ func (task *SingleReadTask) Do() error {
 // singleDeleteDocuments uploads new documents in a bucket.scope.collection in a defined batch size at multiple iterations.
 func singleReadDocuments(task *SingleReadTask, collectionObject *sdk.CollectionObject) {
 
+	if task.req.ContextClosed() {
+		return
+	}
+
 	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
 	dataChannel := make(chan string, MaxConcurrentRoutines)
 
 	group := errgroup.Group{}
 
 	for _, data := range task.SingleOperationConfig.Keys {
+
+		if task.req.ContextClosed() {
+			close(routineLimiter)
+			close(dataChannel)
+			return
+		}
+
 		routineLimiter <- struct{}{}
 		dataChannel <- data
 

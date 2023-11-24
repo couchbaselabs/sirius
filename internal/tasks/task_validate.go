@@ -148,6 +148,11 @@ func (task *ValidateTask) Do() error {
 
 // ValidateDocuments return the validity of the collection using TaskState
 func validateDocuments(task *ValidateTask, collectionObject *sdk.CollectionObject) {
+
+	if task.req.ContextClosed() {
+		return
+	}
+
 	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
 	dataChannel := make(chan int64, MaxConcurrentRoutines)
 	skip := make(map[int64]struct{})
@@ -171,6 +176,13 @@ func validateDocuments(task *ValidateTask, collectionObject *sdk.CollectionObjec
 
 	group := errgroup.Group{}
 	for offset := int64(0); offset < (task.MetaData.SeedEnd - task.MetaData.Seed); offset++ {
+
+		if task.req.ContextClosed() {
+			close(routineLimiter)
+			close(dataChannel)
+			return
+		}
+
 		routineLimiter <- struct{}{}
 		dataChannel <- offset
 		group.Go(func() error {
@@ -289,7 +301,12 @@ func validateDocuments(task *ValidateTask, collectionObject *sdk.CollectionObjec
 }
 
 func (task *ValidateTask) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
-	task.Do()
+	if task.OperationConfig.Exceptions.RetryAttempts <= 0 {
+		return
+	}
+
+	_ = task.Do()
+	log.Println("completed retrying:- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 }
 
 func (task *ValidateTask) MatchResultSeed(resultSeed string) bool {

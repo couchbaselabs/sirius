@@ -128,6 +128,11 @@ func (task *SingleSubDocReplace) Do() error {
 
 // singleReplaceSubDocuments uploads new documents in a bucket.scope.collection in a defined batch size at multiple iterations.
 func singleReplaceSubDocuments(task *SingleSubDocReplace, collectionObject *sdk.CollectionObject) {
+
+	if task.req.ContextClosed() {
+		return
+	}
+
 	var iOps []gocb.MutateInSpec
 	key := task.SingleSubDocOperationConfig.Key
 	documentMetaData := task.req.DocumentsMeta.GetDocumentsMetadata(task.CollectionIdentifier(), key, "", 0, false)

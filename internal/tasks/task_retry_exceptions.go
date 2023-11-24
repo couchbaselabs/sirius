@@ -1,6 +1,7 @@
 package tasks
 
 import (
+	"errors"
 	"fmt"
 	"github.com/couchbaselabs/sirius/internal/sdk"
 	"github.com/couchbaselabs/sirius/internal/task_errors"
@@ -22,6 +23,10 @@ func (r *RetryExceptions) Describe() string {
 }
 
 func (r *RetryExceptions) Do() error {
+	if r.req.ContextClosed() {
+		return errors.New("req is cleared")
+	}
+
 	c, e := r.Task.GetCollectionObject()
 	if e != nil {
 		r.Task.tearUp()

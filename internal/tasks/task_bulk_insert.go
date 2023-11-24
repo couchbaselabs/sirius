@@ -167,6 +167,10 @@ func (task *InsertTask) Do() error {
 // insertDocuments uploads new documents in a bucket.scope.collection in a defined batch size at multiple iterations.
 func insertDocuments(task *InsertTask, collectionObject *sdk.CollectionObject) {
 
+	if task.req.ContextClosed() {
+		return
+	}
+
 	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
 	dataChannel := make(chan int64, MaxConcurrentRoutines)
 
@@ -179,6 +183,12 @@ func insertDocuments(task *InsertTask, collectionObject *sdk.CollectionObject) {
 	}
 	group := errgroup.Group{}
 	for iteration := task.OperationConfig.Start; iteration < task.OperationConfig.End; iteration++ {
+
+		if task.req.ContextClosed() {
+			close(routineLimiter)
+			close(dataChannel)
+			return
+		}
 
 		routineLimiter <- struct{}{}
 		dataChannel <- iteration
@@ -245,6 +255,10 @@ func insertDocuments(task *InsertTask, collectionObject *sdk.CollectionObject) {
 
 func (task *InsertTask) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
 	task.State.StopStoringState()
+
+	if task.OperationConfig.Exceptions.RetryAttempts <= 0 {
+		return
+	}
 
 	// Get all the errorOffset
 	errorOffsetMaps := task.State.ReturnErrOffset()
@@ -354,6 +368,7 @@ func (task *InsertTask) PostTaskExceptionHandling(collectionObject *sdk.Collecti
 	task.State.MakeErrorKeyFromMap(errorOffsetMaps)
 	task.Result.Failure = int64(len(task.State.KeyStates.Err))
 	task.Result.Success = task.OperationConfig.End - task.OperationConfig.Start - task.Result.Failure
+	log.Println("completed retrying:- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 }
 
 func (task *InsertTask) MatchResultSeed(resultSeed string) bool {

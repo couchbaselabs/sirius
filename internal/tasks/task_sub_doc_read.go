@@ -153,6 +153,10 @@ func (task *SubDocRead) Do() error {
 // insertDocuments uploads new documents in a bucket.scope.collection in a defined batch size at multiple iterations.
 func readSubDocuments(task *SubDocRead, collectionObject *sdk.CollectionObject) {
 
+	if task.req.ContextClosed() {
+		return
+	}
+
 	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
 	dataChannel := make(chan int64, MaxConcurrentRoutines)
 
@@ -165,6 +169,12 @@ func readSubDocuments(task *SubDocRead, collectionObject *sdk.CollectionObject) 
 	}
 	group := errgroup.Group{}
 	for iteration := task.SubDocOperationConfig.Start; iteration < task.SubDocOperationConfig.End; iteration++ {
+
+		if task.req.ContextClosed() {
+			close(routineLimiter)
+			close(dataChannel)
+			return
+		}
 
 		routineLimiter <- struct{}{}
 		dataChannel <- iteration
@@ -236,6 +246,11 @@ func readSubDocuments(task *SubDocRead, collectionObject *sdk.CollectionObject) 
 }
 
 func (task *SubDocRead) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
+
+	if task.SubDocOperationConfig.Exceptions.RetryAttempts <= 0 {
+		return
+	}
+
 	task.State.StopStoringState()
 
 	// Get all the errorOffset
@@ -338,6 +353,7 @@ func (task *SubDocRead) PostTaskExceptionHandling(collectionObject *sdk.Collecti
 	task.State.MakeCompleteKeyFromMap(completedOffsetMaps)
 	task.State.MakeErrorKeyFromMap(errorOffsetMaps)
 	task.Result.Failure = int64(len(task.State.KeyStates.Err))
+	log.Println("completed retrying:- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 
 }
 
