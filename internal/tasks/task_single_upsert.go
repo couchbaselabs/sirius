@@ -96,10 +96,10 @@ func (task *SingleUpsertTask) Config(req *Request, reRun bool) (int64, error) {
 }
 
 func (task *SingleUpsertTask) tearUp() error {
+	task.Result.StopStoringResult()
 	if err := task.Result.SaveResultIntoFile(); err != nil {
 		log.Println("not able to save Result into ", task.ResultSeed)
 	}
-	task.Result.StopStoringResult()
 	task.Result = nil
 	task.TaskPending = false
 	return task.req.SaveRequestIntoFile()

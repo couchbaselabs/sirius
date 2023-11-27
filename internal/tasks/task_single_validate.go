@@ -34,10 +34,10 @@ func (task *SingleValidate) Describe() string {
 }
 
 func (task *SingleValidate) tearUp() error {
+	task.Result.StopStoringResult()
 	if err := task.Result.SaveResultIntoFile(); err != nil {
 		log.Println("not able to save Result into ", task.ResultSeed)
 	}
-	task.Result.StopStoringResult()
 	task.Result = nil
 	task.TaskPending = false
 	return task.req.SaveRequestIntoFile()

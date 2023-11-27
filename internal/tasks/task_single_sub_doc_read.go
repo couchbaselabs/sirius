@@ -167,7 +167,6 @@ func singleReadSubDocuments(task *SingleSubDocRead, collectionObject *sdk.Collec
 		}
 	}
 
-	task.PostTaskExceptionHandling(collectionObject)
 	log.Println("completed :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 }
 

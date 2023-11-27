@@ -180,7 +180,9 @@ func (t *TaskState) StoreError(err []int64) {
 // StopStoringState will terminate the thread which is receiving offset
 // on dataChannel.
 func (t *TaskState) StopStoringState() {
-	time.Sleep(1 * time.Second)
+	if t.ctx.Err() != nil {
+		return
+	}
 	t.cancel()
 	time.Sleep(1 * time.Second)
 }

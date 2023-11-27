@@ -54,10 +54,10 @@ func (task *ReadTask) CheckIfPending() bool {
 }
 
 func (task *ReadTask) tearUp() error {
+	task.Result.StopStoringResult()
 	if err := task.Result.SaveResultIntoFile(); err != nil {
 		log.Println("not able to save Result into ", task.ResultSeed, task.Operation)
 	}
-	task.Result.StopStoringResult()
 	task.Result = nil
 	task.State.StopStoringState()
 	task.TaskPending = false
@@ -210,11 +210,11 @@ func getDocuments(task *ReadTask, collectionObject *sdk.CollectionObject) {
 }
 
 func (task *ReadTask) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
+	task.Result.StopStoringResult()
+	task.State.StopStoringState()
 	if task.OperationConfig.Exceptions.RetryAttempts <= 0 {
 		return
 	}
-
-	task.State.StopStoringState()
 
 	// Get all the errorOffset
 	errorOffsetMaps := task.State.ReturnErrOffset()

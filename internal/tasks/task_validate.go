@@ -297,16 +297,14 @@ func validateDocuments(task *ValidateTask, collectionObject *sdk.CollectionObjec
 	_ = group.Wait()
 	close(routineLimiter)
 	close(dataChannel)
+	task.PostTaskExceptionHandling(collectionObject)
 	log.Println("completed :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
+
 }
 
 func (task *ValidateTask) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
-	if task.OperationConfig.Exceptions.RetryAttempts <= 0 {
-		return
-	}
-
-	_ = task.Do()
-	log.Println("completed retrying:- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
+	task.Result.StopStoringResult()
+	task.State.StopStoringState()
 }
 
 func (task *ValidateTask) MatchResultSeed(resultSeed string) bool {
