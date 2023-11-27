@@ -119,10 +119,10 @@ func (task *DeleteTask) Config(req *Request, reRun bool) (int64, error) {
 }
 
 func (task *DeleteTask) tearUp() error {
+	task.Result.StopStoringResult()
 	if err := task.Result.SaveResultIntoFile(); err != nil {
 		log.Println("not able to save Result into ", task.ResultSeed, task.Operation)
 	}
-	task.Result.StopStoringResult()
 	task.Result = nil
 	task.State.StopStoringState()
 	task.TaskPending = false
@@ -172,8 +172,6 @@ func deleteDocuments(task *DeleteTask, collectionObject *sdk.CollectionObject) {
 	group := errgroup.Group{}
 
 	for i := task.OperationConfig.Start; i < task.OperationConfig.End; i++ {
-		routineLimiter <- struct{}{}
-		dataChannel <- i
 
 		if task.req.ContextClosed() {
 			close(routineLimiter)
@@ -181,6 +179,8 @@ func deleteDocuments(task *DeleteTask, collectionObject *sdk.CollectionObject) {
 			return
 		}
 
+		routineLimiter <- struct{}{}
+		dataChannel <- i
 		group.Go(func() error {
 			offset := <-dataChannel
 			key := task.State.SeedStart + offset
@@ -232,12 +232,11 @@ func deleteDocuments(task *DeleteTask, collectionObject *sdk.CollectionObject) {
 }
 
 func (task *DeleteTask) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
-
+	task.Result.StopStoringResult()
+	task.State.StopStoringState()
 	if task.OperationConfig.Exceptions.RetryAttempts <= 0 {
 		return
 	}
-
-	task.State.StopStoringState()
 
 	// Get all the errorOffset
 	errorOffsetMaps := task.State.ReturnErrOffset()

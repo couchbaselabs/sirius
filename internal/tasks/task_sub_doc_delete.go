@@ -127,10 +127,10 @@ func (task *SubDocDelete) tearUp() error {
 	//if err := task.State.SaveTaskSateOnDisk(); err != nil {
 	//	log.Println("Error in storing TASK State on DISK")
 	//}
+	task.Result.StopStoringResult()
 	if err := task.Result.SaveResultIntoFile(); err != nil {
 		log.Println("not able to save Result into ", task.ResultSeed, task.Operation)
 	}
-	task.Result.StopStoringResult()
 	task.Result = nil
 	task.State.StopStoringState()
 	task.TaskPending = false
@@ -188,7 +188,6 @@ func deleteSubDocuments(task *SubDocDelete, collectionObject *sdk.CollectionObje
 
 		routineLimiter <- struct{}{}
 		dataChannel <- iteration
-
 		group.Go(func() error {
 			offset := <-dataChannel
 			key := offset + task.MetaData.Seed
@@ -258,12 +257,11 @@ func deleteSubDocuments(task *SubDocDelete, collectionObject *sdk.CollectionObje
 }
 
 func (task *SubDocDelete) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
-
+	task.Result.StopStoringResult()
+	task.State.StopStoringState()
 	if task.SubDocOperationConfig.Exceptions.RetryAttempts <= 0 {
 		return
 	}
-
-	task.State.StopStoringState()
 
 	// Get all the errorOffset
 	errorOffsetMaps := task.State.ReturnErrOffset()

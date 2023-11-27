@@ -93,10 +93,10 @@ func (task *QueryTask) Config(req *Request, reRun bool) (int64, error) {
 }
 
 func (task *QueryTask) tearUp() error {
+	task.Result.StopStoringResult()
 	if err := task.Result.SaveResultIntoFile(); err != nil {
 		log.Println("not able to save Result into ", task.ResultSeed)
 	}
-	task.Result.StopStoringResult()
 	task.TaskPending = false
 	return task.req.SaveRequestIntoFile()
 }
@@ -140,9 +140,6 @@ func (task *QueryTask) Do() error {
 
 	runN1qlQuery(task, cluster, s, c.Collection)
 
-	if err := task.Result.SaveResultIntoFile(); err != nil {
-		log.Println("not able to save Result into ", task.ResultSeed)
-	}
 	return task.tearUp()
 }
 
@@ -261,7 +258,7 @@ func runN1qlQuery(task *QueryTask, cluster *gocb.Cluster, scope *gocb.Scope, col
 }
 
 func (task *QueryTask) PostTaskExceptionHandling(_ *sdk.CollectionObject) {
-	//TODO implement me
+	task.Result.StopStoringResult()
 }
 
 func (task *QueryTask) MatchResultSeed(resultSeed string) bool {

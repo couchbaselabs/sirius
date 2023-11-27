@@ -130,11 +130,10 @@ func (task *InsertTask) tearUp() error {
 	//if err := task.State.SaveTaskSateOnDisk(); err != nil {
 	//	log.Println("Error in storing TASK State on DISK")
 	//}
-
+	task.Result.StopStoringResult()
 	if err := task.Result.SaveResultIntoFile(); err != nil {
 		log.Println("not able to save Result into ", task.ResultSeed, task.Operation)
 	}
-	task.Result.StopStoringResult()
 	task.Result = nil
 	task.State.StopStoringState()
 	task.TaskPending = false
@@ -192,7 +191,6 @@ func insertDocuments(task *InsertTask, collectionObject *sdk.CollectionObject) {
 
 		routineLimiter <- struct{}{}
 		dataChannel <- iteration
-
 		group.Go(func() error {
 			offset := <-dataChannel
 			key := offset + task.MetaData.Seed
@@ -254,6 +252,7 @@ func insertDocuments(task *InsertTask, collectionObject *sdk.CollectionObject) {
 }
 
 func (task *InsertTask) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
+	task.Result.StopStoringResult()
 	task.State.StopStoringState()
 
 	if task.OperationConfig.Exceptions.RetryAttempts <= 0 {

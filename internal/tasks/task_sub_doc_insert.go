@@ -127,6 +127,7 @@ func (task *SubDocInsert) Config(req *Request, reRun bool) (int64, error) {
 }
 
 func (task *SubDocInsert) tearUp() error {
+	task.Result.StopStoringResult()
 	//Use this case to store task's state on disk when required
 	//if err := task.State.SaveTaskSateOnDisk(); err != nil {
 	//	log.Println("Error in storing TASK State on DISK")
@@ -134,7 +135,6 @@ func (task *SubDocInsert) tearUp() error {
 	if err := task.Result.SaveResultIntoFile(); err != nil {
 		log.Println("not able to save Result into ", task.ResultSeed, task.Operation)
 	}
-	task.Result.StopStoringResult()
 	task.Result = nil
 	task.State.StopStoringState()
 	task.TaskPending = false
@@ -192,7 +192,6 @@ func insertSubDocuments(task *SubDocInsert, collectionObject *sdk.CollectionObje
 
 		routineLimiter <- struct{}{}
 		dataChannel <- iteration
-
 		group.Go(func() error {
 			offset := <-dataChannel
 			key := offset + task.MetaData.Seed
@@ -267,12 +266,11 @@ func insertSubDocuments(task *SubDocInsert, collectionObject *sdk.CollectionObje
 }
 
 func (task *SubDocInsert) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
-
+	task.Result.StopStoringResult()
+	task.State.StopStoringState()
 	if task.SubDocOperationConfig.Exceptions.RetryAttempts <= 0 {
 		return
 	}
-
-	task.State.StopStoringState()
 
 	// Get all the errorOffset
 	errorOffsetMaps := task.State.ReturnErrOffset()
