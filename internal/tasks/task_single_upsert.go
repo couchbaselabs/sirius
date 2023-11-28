@@ -96,10 +96,10 @@ func (task *SingleUpsertTask) Config(req *Request, reRun bool) (int64, error) {
 }
 
 func (task *SingleUpsertTask) tearUp() error {
+	task.Result.StopStoringResult()
 	if err := task.Result.SaveResultIntoFile(); err != nil {
 		log.Println("not able to save Result into ", task.ResultSeed)
 	}
-	task.Result.StopStoringResult()
 	task.Result = nil
 	task.TaskPending = false
 	return task.req.SaveRequestIntoFile()
@@ -126,12 +126,23 @@ func (task *SingleUpsertTask) Do() error {
 // singleUpsertDocuments uploads new documents in a bucket.scope.collection in a defined batch size at multiple iterations.
 func singleUpsertDocuments(task *SingleUpsertTask, collectionObject *sdk.CollectionObject) {
 
+	if task.req.ContextClosed() {
+		return
+	}
+
 	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
 	dataChannel := make(chan string, MaxConcurrentRoutines)
 
 	group := errgroup.Group{}
 
 	for _, data := range task.SingleOperationConfig.Keys {
+
+		if task.req.ContextClosed() {
+			close(routineLimiter)
+			close(dataChannel)
+			return
+		}
+
 		routineLimiter <- struct{}{}
 		dataChannel <- data
 

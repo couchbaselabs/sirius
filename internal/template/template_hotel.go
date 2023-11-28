@@ -182,11 +182,8 @@ func (h *Hotel) GenerateIndexesForSdk() (map[string][]string, error) {
 
 func (h *Hotel) GenerateSubPathAndValue(fake *faker.Faker) map[string]any {
 	return map[string]interface{}{
-		"fullName":                fake.Person().FirstName() + " " + fake.Person().LastName(),
-		"sex":                     fake.Person().Gender(),
-		"contact.Phone":           fake.Person().Contact().Phone,
-		"contact.email":           fake.Person().Contact().Email,
-		"attributes.fashionColor": fake.Color().ColorName(),
-		"address.buildingNumber":  fake.Address().BuildingNumber(),
+		"fullName": fake.Person().FirstName() + " " + fake.Person().LastName(),
+		"sex":      fake.Person().Gender(),
+		"contact":  fake.Person().Contact().Phone,
 	}
 }

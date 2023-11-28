@@ -99,10 +99,10 @@ func (task *SingleSubDocReplace) Config(req *Request, reRun bool) (int64, error)
 }
 
 func (task *SingleSubDocReplace) tearUp() error {
+	task.Result.StopStoringResult()
 	if err := task.Result.SaveResultIntoFile(); err != nil {
 		log.Println("not able to save Result into ", task.ResultSeed, task.Operation)
 	}
-	task.Result.StopStoringResult()
 	task.Result = nil
 	task.TaskPending = false
 	return task.req.SaveRequestIntoFile()
@@ -128,6 +128,11 @@ func (task *SingleSubDocReplace) Do() error {
 
 // singleReplaceSubDocuments uploads new documents in a bucket.scope.collection in a defined batch size at multiple iterations.
 func singleReplaceSubDocuments(task *SingleSubDocReplace, collectionObject *sdk.CollectionObject) {
+
+	if task.req.ContextClosed() {
+		return
+	}
+
 	var iOps []gocb.MutateInSpec
 	key := task.SingleSubDocOperationConfig.Key
 	documentMetaData := task.req.DocumentsMeta.GetDocumentsMetadata(task.CollectionIdentifier(), key, "", 0, false)

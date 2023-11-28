@@ -123,10 +123,10 @@ func (task *UpsertTask) Config(req *Request, reRun bool) (int64, error) {
 }
 
 func (task *UpsertTask) tearUp() error {
+	task.Result.StopStoringResult()
 	if err := task.Result.SaveResultIntoFile(); err != nil {
 		log.Println("not able to save Result into ", task.ResultSeed, task.Operation)
 	}
-	task.Result.StopStoringResult()
 	task.Result = nil
 	task.State.StopStoringState()
 	task.TaskPending = false
@@ -157,6 +157,11 @@ func (task *UpsertTask) Do() error {
 }
 
 func upsertDocuments(task *UpsertTask, collectionObject *sdk.CollectionObject) {
+
+	if task.req.ContextClosed() {
+		return
+	}
+
 	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
 	dataChannel := make(chan int64, MaxConcurrentRoutines)
 
@@ -170,9 +175,15 @@ func upsertDocuments(task *UpsertTask, collectionObject *sdk.CollectionObject) {
 
 	group := errgroup.Group{}
 	for i := task.OperationConfig.Start; i < task.OperationConfig.End; i++ {
+
+		if task.req.ContextClosed() {
+			close(routineLimiter)
+			close(dataChannel)
+			return
+		}
+
 		routineLimiter <- struct{}{}
 		dataChannel <- i
-
 		group.Go(func() error {
 			var err error
 			offset := <-dataChannel
@@ -236,7 +247,11 @@ func upsertDocuments(task *UpsertTask, collectionObject *sdk.CollectionObject) {
 }
 
 func (task *UpsertTask) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
+	task.Result.StopStoringResult()
 	task.State.StopStoringState()
+	if task.OperationConfig.Exceptions.RetryAttempts <= 0 {
+		return
+	}
 
 	// Get all the errorOffset
 	errorOffsetMaps := task.State.ReturnErrOffset()
@@ -337,6 +352,7 @@ func (task *UpsertTask) PostTaskExceptionHandling(collectionObject *sdk.Collecti
 	task.State.MakeErrorKeyFromMap(errorOffsetMaps)
 	task.Result.Failure = int64(len(task.State.KeyStates.Err))
 	task.Result.Success = task.OperationConfig.End - task.OperationConfig.Start - task.Result.Failure
+	log.Println("completed retrying:- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 }
 
 func (task *UpsertTask) MatchResultSeed(resultSeed string) bool {

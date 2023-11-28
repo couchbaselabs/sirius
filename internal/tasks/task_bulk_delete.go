@@ -119,10 +119,10 @@ func (task *DeleteTask) Config(req *Request, reRun bool) (int64, error) {
 }
 
 func (task *DeleteTask) tearUp() error {
+	task.Result.StopStoringResult()
 	if err := task.Result.SaveResultIntoFile(); err != nil {
 		log.Println("not able to save Result into ", task.ResultSeed, task.Operation)
 	}
-	task.Result.StopStoringResult()
 	task.Result = nil
 	task.State.StopStoringState()
 	task.TaskPending = false
@@ -154,6 +154,11 @@ func (task *DeleteTask) Do() error {
 
 // deleteDocuments delete the document stored on a host from start to end.
 func deleteDocuments(task *DeleteTask, collectionObject *sdk.CollectionObject) {
+
+	if task.req.ContextClosed() {
+		return
+	}
+
 	skip := make(map[int64]struct{})
 	for _, offset := range task.State.KeyStates.Completed {
 		skip[offset] = struct{}{}
@@ -167,9 +172,15 @@ func deleteDocuments(task *DeleteTask, collectionObject *sdk.CollectionObject) {
 	group := errgroup.Group{}
 
 	for i := task.OperationConfig.Start; i < task.OperationConfig.End; i++ {
+
+		if task.req.ContextClosed() {
+			close(routineLimiter)
+			close(dataChannel)
+			return
+		}
+
 		routineLimiter <- struct{}{}
 		dataChannel <- i
-
 		group.Go(func() error {
 			offset := <-dataChannel
 			key := task.State.SeedStart + offset
@@ -221,7 +232,11 @@ func deleteDocuments(task *DeleteTask, collectionObject *sdk.CollectionObject) {
 }
 
 func (task *DeleteTask) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
+	task.Result.StopStoringResult()
 	task.State.StopStoringState()
+	if task.OperationConfig.Exceptions.RetryAttempts <= 0 {
+		return
+	}
 
 	// Get all the errorOffset
 	errorOffsetMaps := task.State.ReturnErrOffset()
@@ -316,6 +331,8 @@ func (task *DeleteTask) PostTaskExceptionHandling(collectionObject *sdk.Collecti
 	task.State.MakeErrorKeyFromMap(errorOffsetMaps)
 	task.Result.Failure = int64(len(task.State.KeyStates.Err))
 	task.Result.Success = task.OperationConfig.End - task.OperationConfig.Start - task.Result.Failure
+	log.Println("completed retrying:- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
+
 }
 
 func (task *DeleteTask) MatchResultSeed(resultSeed string) bool {

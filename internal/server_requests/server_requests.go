@@ -31,6 +31,7 @@ func NewServerRequests() *ServerRequests {
 		for identifier, _ := range sr.Identifiers {
 			r, err := tasks.ReadRequestFromFile(identifier)
 			if r != nil && err == nil {
+				r.InitializeContext()
 				_ = sr.add(identifier, r, false)
 				for i := range r.Tasks {
 					t := r.Tasks[i]
@@ -212,6 +213,7 @@ func (sr *ServerRequests) ClearIdentifierAndRequest(identifier string) error {
 		r, _ := sr.RequestLookup.Load(identifier)
 		req, ok := r.(*tasks.Request)
 		if ok && req != nil {
+			req.Cancel()
 			req.DisconnectConnectionManager()
 			req.ClearAllTask()
 		}

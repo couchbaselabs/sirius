@@ -293,6 +293,9 @@ func (t *TaskResult) StoreResultList(resultList []ResultHelper) {
 }
 
 func (t *TaskResult) StopStoringResult() {
+	if t.ctx.Err() != nil {
+		return
+	}
 	time.Sleep(1 * time.Second)
 	t.cancel()
 	time.Sleep(1 * time.Second)

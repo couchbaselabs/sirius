@@ -93,10 +93,10 @@ func (task *QueryTask) Config(req *Request, reRun bool) (int64, error) {
 }
 
 func (task *QueryTask) tearUp() error {
+	task.Result.StopStoringResult()
 	if err := task.Result.SaveResultIntoFile(); err != nil {
 		log.Println("not able to save Result into ", task.ResultSeed)
 	}
-	task.Result.StopStoringResult()
 	task.TaskPending = false
 	return task.req.SaveRequestIntoFile()
 }
@@ -140,9 +140,6 @@ func (task *QueryTask) Do() error {
 
 	runN1qlQuery(task, cluster, s, c.Collection)
 
-	if err := task.Result.SaveResultIntoFile(); err != nil {
-		log.Println("not able to save Result into ", task.ResultSeed)
-	}
 	return task.tearUp()
 }
 
@@ -225,6 +222,11 @@ func buildIndexViaN1QL(task *QueryTask, cluster *gocb.Cluster, scope *gocb.Scope
 
 // runN1qlQuery runs query over a duration of time
 func runN1qlQuery(task *QueryTask, cluster *gocb.Cluster, scope *gocb.Scope, collection *gocb.Collection) {
+
+	if task.req.ContextClosed() {
+		return
+	}
+
 	routineLimiter := make(chan struct{}, MaxConcurrentRoutines)
 	group := errgroup.Group{}
 	queries, err := task.gen.Template.GenerateQueries(task.Bucket, scope.Name(), collection.Name())
@@ -256,7 +258,7 @@ func runN1qlQuery(task *QueryTask, cluster *gocb.Cluster, scope *gocb.Scope, col
 }
 
 func (task *QueryTask) PostTaskExceptionHandling(_ *sdk.CollectionObject) {
-	//TODO implement me
+	task.Result.StopStoringResult()
 }
 
 func (task *QueryTask) MatchResultSeed(resultSeed string) bool {
