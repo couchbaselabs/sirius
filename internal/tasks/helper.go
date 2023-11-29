@@ -6,7 +6,6 @@ import (
 	"github.com/couchbaselabs/sirius/internal/task_errors"
 	"github.com/couchbaselabs/sirius/internal/task_result"
 	"golang.org/x/exp/slices"
-	"log"
 	"reflect"
 )
 
@@ -129,7 +128,7 @@ func configureOperationConfig(o *OperationConfig) error {
 		o.DocType = docgenerator.JsonDocument
 	}
 
-	if o.KeySize <= 0 || o.KeySize > docgenerator.DefaultKeySize {
+	if o.KeySize > docgenerator.DefaultKeySize {
 		o.KeySize = docgenerator.DefaultKeySize
 	}
 	if o.Count <= 0 {
@@ -447,7 +446,8 @@ func compareDocumentsIsSame(host map[string]any, document1 map[string]any, docum
 				return false
 			}
 		} else {
-			log.Println("unknown field", key)
+			// TODO  fix_the_validation_of_missing_Keys
+			continue
 		}
 	}
 

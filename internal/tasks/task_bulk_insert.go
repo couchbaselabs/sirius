@@ -147,7 +147,7 @@ func (task *InsertTask) Do() error {
 	collectionObject, err1 := task.GetCollectionObject()
 
 	task.gen = docgenerator.ConfigGenerator(task.MetaData.DocType, task.MetaData.KeyPrefix,
-		task.MetaData.KeySuffix, task.State.SeedStart, task.State.SeedEnd,
+		task.MetaData.KeySuffix, task.MetaData.KeySize, task.State.SeedStart, task.State.SeedEnd,
 		template.InitialiseTemplate(task.MetaData.TemplateName))
 
 	if err1 != nil {
@@ -333,7 +333,6 @@ func (task *InsertTask) PostTaskExceptionHandling(collectionObject *sdk.Collecti
 							} else {
 								m[offset] = RetriedResult{
 									Status:   true,
-									CAS:      0,
 									InitTime: initTime,
 									AckTime:  time.Now().UTC().Format(time.RFC850),
 								}

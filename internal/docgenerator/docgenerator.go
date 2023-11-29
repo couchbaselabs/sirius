@@ -3,6 +3,7 @@ package docgenerator
 import (
 	"fmt"
 	"github.com/couchbaselabs/sirius/internal/template"
+	"strings"
 )
 
 type DocumentType string
@@ -12,12 +13,13 @@ const (
 	BinaryDocument string = "binary"
 )
 
+const DefaultDocSize int = 128
 const DefaultKeySize int = 250
-const DefaultDocSize int = 1024
 
 // Generator helps to generate random document for inserting and updating random
 // as per the doc loading task requirement.
 type Generator struct {
+	KeySize   int               `json:"keySize"`
 	DocType   string            `json:"docType"`
 	KeyPrefix string            `json:"keyPrefix"`
 	KeySuffix string            `json:"keySuffix"`
@@ -26,8 +28,11 @@ type Generator struct {
 	Template  template.Template `json:"template"`
 }
 
-func ConfigGenerator(doctype, keyPrefix, keySuffix string, seed, seedEnd int64, template template.Template) *Generator {
+func ConfigGenerator(doctype, keyPrefix, keySuffix string, keySize int, seed, seedEnd int64,
+	template template.Template) *Generator {
+
 	return &Generator{
+		KeySize:   keySize,
 		DocType:   doctype,
 		KeyPrefix: keyPrefix,
 		KeySuffix: keySuffix,
@@ -55,5 +60,9 @@ func (g *Generator) GetDocIdAndKey(iteration int64) (string, int64) {
 
 // BuildKey returns the formatted key with unique identifier.
 func (g *Generator) BuildKey(key int64) string {
-	return fmt.Sprintf("%s%d%s", g.KeyPrefix, key, g.KeySuffix)
+	tempKey := fmt.Sprintf("%s%d%s", g.KeyPrefix, key, g.KeySuffix)
+	if g.KeySize >= 0 && len(tempKey) < g.KeySize {
+		tempKey += strings.Repeat("a", g.KeySize-len(tempKey))
+	}
+	return tempKey
 }
