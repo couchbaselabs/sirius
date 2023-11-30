@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-const WaitUnityReadyTime = 300
+const WaitUnityReadyTime = 30
 const WaitUntilReadyTimeRetries = 5
 
 type TimeoutsConfig struct {
