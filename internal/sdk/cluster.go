@@ -9,6 +9,7 @@ import (
 )
 
 const WaitUnityReadyTime = 300
+const WaitUntilReadyTimeRetries = 5
 
 type TimeoutsConfig struct {
 	ConnectTimeout   int `json:"connectTimeout,omitempty" doc:"true"`
@@ -59,9 +60,17 @@ func (c *ClusterObject) getBucketObject(bucketName string) (*BucketObject, error
 
 	if !ok {
 		bucket := c.Cluster.Bucket(bucketName)
-		if err := bucket.WaitUntilReady(WaitUnityReadyTime*time.Second, nil); err != nil {
-			log.Println(err.Error())
-			//return nil, err
+		var waitUntilReadyError error
+		for i := 0; i < WaitUntilReadyTimeRetries; i++ {
+			if waitUntilReadyError = bucket.WaitUntilReady(WaitUnityReadyTime*time.Second,
+				nil); waitUntilReadyError == nil {
+				break
+			}
+			log.Println("retrying bucket WaitUntilReady")
+		}
+
+		if waitUntilReadyError != nil {
+			return nil, waitUntilReadyError
 		}
 
 		b := &BucketObject{
