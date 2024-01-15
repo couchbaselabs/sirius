@@ -419,7 +419,7 @@ func configMutateInOptions(m *MutateInOptions) error {
 }
 
 func getStoreSemantic(storeSemantic int) gocb.StoreSemantics {
-	if storeSemantic > 3 {
+	if storeSemantic >= 3 {
 		return gocb.StoreSemanticsUpsert
 	}
 	return gocb.StoreSemantics(storeSemantic)
