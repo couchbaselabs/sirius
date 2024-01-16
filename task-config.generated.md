@@ -31,6 +31,7 @@ configuration that is also available on a per-task basis:
  * [/sub-doc-bulk-replace](#sub-doc-bulk-replace)
  * [/sub-doc-bulk-upsert](#sub-doc-bulk-upsert)
  * [/validate](#validate)
+ * [/warmup-bucket](#warmup-bucket)
 
 ---
 #### /bulk-create
@@ -504,6 +505,19 @@ Description : Validates every document in the cluster's bucket
 | `Scope` | `string` | `json:scope,omitempty`  |
 | `Collection` | `string` | `json:collection,omitempty`  |
 | `OperationConfig` | `ptr` | `json:operationConfig,omitempty`  |
+
+---
+#### /warmup-bucket
+
+ REST : POST
+
+Description : This API aids in warming up a Couchbase bucket or establishing connections to KV services.
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ClusterConfig` | `ptr` | `json:clusterConfig`  |
+| `Bucket` | `string` | `json:bucket`  |
 
 ---
 **Description of JSON tags used in routes**.

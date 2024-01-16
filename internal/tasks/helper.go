@@ -44,6 +44,7 @@ const (
 	SingleSubDocReadOperation      string = "singleSubDocRead"
 	SingleSubDocIncrementOperation string = "singleSubDocReadIncrement"
 	SingleDocValidateOperation     string = "SingleDocValidate"
+	BucketWarmUpOperation          string = "BucketWarmUp"
 )
 
 const (
