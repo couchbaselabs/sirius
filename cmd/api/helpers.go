@@ -104,6 +104,7 @@ func registerInterfaces() {
 	gob.Register(&tasks.SingleSubDocDelete{})
 	gob.Register(&tasks.SingleSubDocRead{})
 	gob.Register(&tasks.SingleValidate{})
+	gob.Register(&tasks.BucketWarmUpTask{})
 
 	r := generate.Register{}
 	for _, i := range r.HelperStruct() {
