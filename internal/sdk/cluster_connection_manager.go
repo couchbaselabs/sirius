@@ -63,8 +63,8 @@ func getClusterIdentifierHelper(connStr string, x string) string {
 	return connStr[startIndex:i]
 }
 
-// getClusterIdentifier get the ip address and build a cluster Identifier
-func getClusterIdentifier(connStr string) (string, error) {
+// GetClusterIdentifier get the ip address and build a cluster Identifier
+func GetClusterIdentifier(connStr string) (string, error) {
 	if strings.Contains(connStr, "couchbases://") {
 		return getClusterIdentifierHelper(connStr, "couchbases://"), nil
 	} else if strings.Contains(connStr, "couchbase://") {
@@ -82,7 +82,7 @@ func (cm *ConnectionManager) getClusterObject(clusterConfig *ClusterConfig) (*Cl
 		return nil, fmt.Errorf("unable to parse clusterConfig | %w", errors.New("clusterConfig is nil"))
 	}
 
-	clusterIdentifier, err := getClusterIdentifier(clusterConfig.ConnectionString)
+	clusterIdentifier, err := GetClusterIdentifier(clusterConfig.ConnectionString)
 	if err != nil {
 		return nil, err
 	}

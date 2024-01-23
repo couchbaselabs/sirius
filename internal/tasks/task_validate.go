@@ -17,6 +17,7 @@ import (
 	"log"
 	"math"
 	"math/rand"
+	"strings"
 	"time"
 )
 
@@ -26,7 +27,6 @@ type ValidateTask struct {
 	Bucket          string                             `json:"bucket" doc:"true"`
 	Scope           string                             `json:"scope,omitempty" doc:"true"`
 	Collection      string                             `json:"collection,omitempty" doc:"true"`
-	OperationConfig *OperationConfig                   `json:"operationConfig,omitempty" doc:"true"`
 	Operation       string                             `json:"operation" doc:"false"`
 	ResultSeed      int64                              `json:"resultSeed" doc:"false"`
 	TaskPending     bool                               `json:"taskPending" doc:"false"`
@@ -46,7 +46,9 @@ func (task *ValidateTask) BuildIdentifier() string {
 }
 
 func (task *ValidateTask) CollectionIdentifier() string {
-	return task.IdentifierToken + task.ClusterConfig.ConnectionString + task.Bucket + task.Scope + task.Collection
+	clusterIdentifier, _ := sdk.GetClusterIdentifier(task.ClusterConfig.ConnectionString)
+	return strings.Join([]string{task.IdentifierToken, clusterIdentifier, task.Bucket, task.Scope,
+		task.Collection}, ":")
 }
 
 func (task *ValidateTask) Describe() string {
@@ -99,14 +101,7 @@ func (task *ValidateTask) Config(req *Request, reRun bool) (int64, error) {
 			task.Collection = DefaultCollection
 		}
 
-		if err := configureOperationConfig(task.OperationConfig); err != nil {
-			task.TaskPending = false
-			return 0, fmt.Errorf(err.Error())
-		}
-
-		task.MetaData = task.req.MetaData.GetCollectionMetadata(task.CollectionIdentifier(),
-			task.OperationConfig.KeySize, task.OperationConfig.DocSize, task.OperationConfig.DocType, task.OperationConfig.KeyPrefix,
-			task.OperationConfig.KeySuffix, task.OperationConfig.TemplateName)
+		task.MetaData = task.req.MetaData.GetCollectionMetadata(task.CollectionIdentifier())
 
 		task.req.lock.Lock()
 		task.State = task_state.ConfigTaskState(task.MetaData.Seed, task.MetaData.SeedEnd, task.ResultSeed)
@@ -128,14 +123,18 @@ func (task *ValidateTask) Do() error {
 
 	collectionObject, err1 := task.GetCollectionObject()
 
-	task.gen = docgenerator.ConfigGenerator(task.MetaData.DocType, task.MetaData.KeyPrefix,
-		task.MetaData.KeySuffix, task.MetaData.KeySize, task.State.SeedStart, task.State.SeedEnd,
-		template.InitialiseTemplate(task.MetaData.TemplateName))
+	task.gen = docgenerator.ConfigGenerator(
+		docgenerator.DefaultKeySize,
+		docgenerator.DefaultDocSize,
+		docgenerator.JsonDocument,
+		docgenerator.DefaultKeyPrefix,
+		docgenerator.DefaultKeySuffix,
+		template.InitialiseTemplate("person"))
 
 	if err1 != nil {
 		task.Result.ErrorOther = err1.Error()
 		task.Result.FailWholeBulkOperation(0, task.MetaData.Seed-task.MetaData.SeedEnd,
-			task.MetaData.DocSize, task.gen, err1, task.State)
+			err1, task.State, task.gen, task.MetaData.Seed)
 		return task.tearUp()
 	}
 
@@ -187,19 +186,43 @@ func validateDocuments(task *ValidateTask, collectionObject *sdk.CollectionObjec
 		dataChannel <- offset
 		group.Go(func() error {
 			offset := <-dataChannel
-			key := task.State.SeedStart + offset
-			docId := task.gen.BuildKey(key)
+
 			if _, ok := skip[offset]; ok {
 				<-routineLimiter
-				return fmt.Errorf("alreday performed operation on " + docId)
+				return nil
 			}
+
+			operationConfig, err := retrieveLastConfig(task.req, offset)
+			if err != nil {
+				<-routineLimiter
+				return err
+			}
+
+			/* Resetting the doc generator for the offset as per
+			the last configuration of operation performed on offset.
+			*/
+			task.gen.Reset(
+				operationConfig.KeySize,
+				operationConfig.DocSize,
+				operationConfig.DocType,
+				operationConfig.KeyPrefix,
+				operationConfig.KeySuffix,
+				operationConfig.TemplateName,
+			)
+
+			/* building Key and doc as per
+			local config off the offset.
+			*/
+			key := task.State.SeedStart + offset
+			docId := task.gen.BuildKey(key)
 
 			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
 			fakeSub := faker.NewWithSeed(rand.NewSource(int64(key)))
 			initTime := time.Now().UTC().Format(time.RFC850)
-			originalDocument, err := task.gen.Template.GenerateDocument(&fake, task.MetaData.DocSize)
+
+			originalDocument, err := task.gen.Template.GenerateDocument(&fake, operationConfig.DocSize)
 			if err != nil {
-				task.Result.IncrementFailure(initTime, docId, originalDocument, err, false, 0, offset)
+				task.Result.IncrementFailure(initTime, docId, err, false, 0, offset)
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 				<-routineLimiter
 				return err
@@ -209,7 +232,7 @@ func validateDocuments(task *ValidateTask, collectionObject *sdk.CollectionObjec
 				&fake,
 				task.ResultSeed)
 			if err != nil {
-				task.Result.IncrementFailure(initTime, docId, updatedDocument, err, false, 0, offset)
+				task.Result.IncrementFailure(initTime, docId, err, false, 0, offset)
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 				<-routineLimiter
 				return err
@@ -238,10 +261,10 @@ func validateDocuments(task *ValidateTask, collectionObject *sdk.CollectionObjec
 
 			result := &gocb.GetResult{}
 			var resultFromHost map[string]any
-			resultFromHostTemplate := template.InitialiseTemplate(task.MetaData.TemplateName)
+			resultFromHostTemplate := template.InitialiseTemplate(operationConfig.TemplateName)
 
 			initTime = time.Now().UTC().Format(time.RFC850)
-			for retry := 0; retry < int(math.Max(float64(1), float64(task.OperationConfig.Exceptions.
+			for retry := 0; retry < int(math.Max(float64(1), float64(operationConfig.Exceptions.
 				RetryAttempts))); retry++ {
 				result, err = collectionObject.Collection.Get(docId, nil)
 				if err == nil {
@@ -262,14 +285,14 @@ func validateDocuments(task *ValidateTask, collectionObject *sdk.CollectionObjec
 						return nil
 					}
 				}
-				task.Result.IncrementFailure(initTime, docId, updatedDocument, err, false, 0, offset)
+				task.Result.IncrementFailure(initTime, docId, err, false, 0, offset)
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 				<-routineLimiter
 				return err
 			}
 
 			if err := result.Content(&resultFromHost); err != nil {
-				task.Result.IncrementFailure(initTime, docId, updatedDocument, err, false, 0, offset)
+				task.Result.IncrementFailure(initTime, docId, err, false, 0, offset)
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 				<-routineLimiter
 				return err
@@ -281,7 +304,7 @@ func validateDocuments(task *ValidateTask, collectionObject *sdk.CollectionObjec
 			if !compareDocumentsIsSame(resultFromHost, updatedDocumentMap, subDocumentMap) {
 				ok, err := task.gen.Template.Compare(resultFromHostTemplate, updatedDocument)
 				if err != nil || !ok {
-					task.Result.IncrementFailure(initTime, docId, updatedDocument, errors.New("integrity Lost"),
+					task.Result.IncrementFailure(initTime, docId, errors.New("integrity Lost"),
 						false, 0, offset)
 					task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 					<-routineLimiter
@@ -323,4 +346,8 @@ func (task *ValidateTask) GetCollectionObject() (*sdk.CollectionObject, error) {
 }
 
 func (task *ValidateTask) SetException(exceptions Exceptions) {
+}
+
+func (task *ValidateTask) GetOperationConfig() (*OperationConfig, *task_state.TaskState) {
+	return nil, task.State
 }

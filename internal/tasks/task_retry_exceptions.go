@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/couchbaselabs/sirius/internal/sdk"
 	"github.com/couchbaselabs/sirius/internal/task_errors"
+	"github.com/couchbaselabs/sirius/internal/task_state"
 )
 
 type RetryExceptions struct {
@@ -93,4 +94,11 @@ func (r *RetryExceptions) GetCollectionObject() (*sdk.CollectionObject, error) {
 
 func (r *RetryExceptions) SetException(exceptions Exceptions) {
 	r.Task.SetException(r.Exceptions)
+}
+
+func (r *RetryExceptions) GetOperationConfig() (*OperationConfig, *task_state.TaskState) {
+	if r.Task != nil {
+		return r.Task.GetOperationConfig()
+	}
+	return nil, nil
 }

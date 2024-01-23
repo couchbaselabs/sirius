@@ -6,11 +6,13 @@ import (
 	"github.com/couchbaselabs/sirius/internal/sdk"
 	"github.com/couchbaselabs/sirius/internal/task_errors"
 	"github.com/couchbaselabs/sirius/internal/task_result"
+	"github.com/couchbaselabs/sirius/internal/task_state"
 	"github.com/couchbaselabs/sirius/internal/template"
 	"github.com/jaswdr/faker"
 	"golang.org/x/sync/errgroup"
 	"log"
 	"math/rand"
+	"strings"
 	"time"
 )
 
@@ -41,7 +43,9 @@ func (task *SingleInsertTask) BuildIdentifier() string {
 }
 
 func (task *SingleInsertTask) CollectionIdentifier() string {
-	return task.IdentifierToken + task.ClusterConfig.ConnectionString + task.Bucket + task.Scope + task.Collection
+	clusterIdentifier, _ := sdk.GetClusterIdentifier(task.ClusterConfig.ConnectionString)
+	return strings.Join([]string{task.IdentifierToken, clusterIdentifier, task.Bucket, task.Scope,
+		task.Collection}, ":")
 }
 
 func (task *SingleInsertTask) CheckIfPending() bool {
@@ -208,4 +212,8 @@ func (task *SingleInsertTask) GetCollectionObject() (*sdk.CollectionObject, erro
 
 func (task *SingleInsertTask) SetException(exceptions Exceptions) {
 
+}
+
+func (task *SingleInsertTask) GetOperationConfig() (*OperationConfig, *task_state.TaskState) {
+	return nil, nil
 }

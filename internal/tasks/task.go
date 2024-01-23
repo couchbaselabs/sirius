@@ -1,6 +1,9 @@
 package tasks
 
-import "github.com/couchbaselabs/sirius/internal/sdk"
+import (
+	"github.com/couchbaselabs/sirius/internal/sdk"
+	"github.com/couchbaselabs/sirius/internal/task_state"
+)
 
 type Task interface {
 	Describe() string
@@ -14,4 +17,5 @@ type Task interface {
 	GetCollectionObject() (*sdk.CollectionObject, error)
 	SetException(exceptions Exceptions)
 	tearUp() error
+	GetOperationConfig() (*OperationConfig, *task_state.TaskState)
 }

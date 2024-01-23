@@ -4,19 +4,20 @@ import (
 	"context"
 	"fmt"
 	"github.com/couchbaselabs/sirius/internal/tasks"
+	"log"
 )
 
 // TaskManager will act as queue which will be responsible for handling
 // document loading task.
 type TaskManager struct {
-	taskQueue chan tasks.Task
+	taskQueue chan interface{}
 	ctx       context.Context
 	cancel    context.CancelFunc
 }
 
 // NewTasKManager  returns an instance of TaskManager
 func NewTasKManager(size int) *TaskManager {
-	taskQueue := make(chan tasks.Task, size)
+	taskQueue := make(chan interface{}, size)
 	ctx, cancel := context.WithCancel(context.Background())
 
 	tm := &TaskManager{
@@ -30,7 +31,7 @@ func NewTasKManager(size int) *TaskManager {
 
 // AddTask will add task in the taskQueue for scheduling. it returns no error on
 // successful addition of task to the queue.
-func (tm *TaskManager) AddTask(task tasks.Task) error {
+func (tm *TaskManager) AddTask(task interface{}) error {
 	if err := tm.ctx.Err(); err != nil {
 		return err
 	}
@@ -53,7 +54,14 @@ func (tm *TaskManager) StartTaskManager() {
 			select {
 			case task, ok := <-tm.taskQueue:
 				if ok {
-					go task.Do()
+					if t, ok := task.(tasks.Task); ok {
+						go func() {
+							err := t.Do()
+							if err != nil {
+								log.Println(err)
+							}
+						}()
+					}
 				} else {
 					return
 				}

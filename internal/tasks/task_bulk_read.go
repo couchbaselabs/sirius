@@ -13,6 +13,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	"log"
 	"math"
+	"strings"
 	"time"
 )
 
@@ -46,7 +47,9 @@ func (task *ReadTask) Describe() string {
 }
 
 func (task *ReadTask) CollectionIdentifier() string {
-	return task.IdentifierToken + task.ClusterConfig.ConnectionString + task.Bucket + task.Scope + task.Collection
+	clusterIdentifier, _ := sdk.GetClusterIdentifier(task.ClusterConfig.ConnectionString)
+	return strings.Join([]string{task.IdentifierToken, clusterIdentifier, task.Bucket, task.Scope,
+		task.Collection}, ":")
 }
 
 func (task *ReadTask) CheckIfPending() bool {
@@ -100,9 +103,7 @@ func (task *ReadTask) Config(req *Request, reRun bool) (int64, error) {
 			return 0, fmt.Errorf(err.Error())
 		}
 
-		task.MetaData = task.req.MetaData.GetCollectionMetadata(task.CollectionIdentifier(),
-			task.OperationConfig.KeySize, task.OperationConfig.DocSize, task.OperationConfig.DocType, task.OperationConfig.KeyPrefix,
-			task.OperationConfig.KeySuffix, task.OperationConfig.TemplateName)
+		task.MetaData = task.req.MetaData.GetCollectionMetadata(task.CollectionIdentifier())
 		task.req.lock.Lock()
 		task.State = task_state.ConfigTaskState(task.MetaData.Seed, task.MetaData.SeedEnd, task.ResultSeed)
 		task.req.lock.Unlock()
@@ -125,14 +126,18 @@ func (task *ReadTask) Do() error {
 
 	collectionObject, err1 := task.GetCollectionObject()
 
-	task.gen = docgenerator.ConfigGenerator(task.MetaData.DocType, task.MetaData.KeyPrefix,
-		task.MetaData.KeySuffix, task.MetaData.KeySize, task.State.SeedStart, task.State.SeedEnd,
-		template.InitialiseTemplate(task.MetaData.TemplateName))
+	task.gen = docgenerator.ConfigGenerator(
+		task.OperationConfig.KeySize,
+		task.OperationConfig.DocSize,
+		task.OperationConfig.DocType,
+		task.OperationConfig.KeyPrefix,
+		task.OperationConfig.KeySuffix,
+		template.InitialiseTemplate(task.OperationConfig.TemplateName))
 
 	if err1 != nil {
 		task.Result.ErrorOther = err1.Error()
 		task.Result.FailWholeBulkOperation(task.OperationConfig.Start, task.OperationConfig.End,
-			task.MetaData.DocSize, task.gen, err1, task.State)
+			err1, task.State, task.gen, task.MetaData.Seed)
 		return task.tearUp()
 	}
 
@@ -172,7 +177,7 @@ func getDocuments(task *ReadTask, collectionObject *sdk.CollectionObject) {
 		dataChannel <- i
 		group.Go(func() error {
 			offset := <-dataChannel
-			key := task.State.SeedStart + offset
+			key := task.MetaData.Seed + offset
 			docId := task.gen.BuildKey(key)
 			if _, ok := skip[offset]; ok {
 				<-routineLimiter
@@ -192,7 +197,7 @@ func getDocuments(task *ReadTask, collectionObject *sdk.CollectionObject) {
 
 			if err != nil {
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
-				task.Result.IncrementFailure(initTime, docId, nil, err, false, 0, offset)
+				task.Result.IncrementFailure(initTime, docId, err, false, 0, offset)
 				<-routineLimiter
 				return err
 			}
@@ -250,7 +255,7 @@ func (task *ReadTask) PostTaskExceptionHandling(collectionObject *sdk.Collection
 					for k, _ := range m {
 						offset = k
 					}
-					key := task.State.SeedStart + offset
+					key := task.MetaData.Seed + offset
 					docId := task.gen.BuildKey(key)
 
 					retry := 0
@@ -313,4 +318,8 @@ func (task *ReadTask) GetCollectionObject() (*sdk.CollectionObject, error) {
 
 func (task *ReadTask) SetException(exceptions Exceptions) {
 	task.OperationConfig.Exceptions = exceptions
+}
+
+func (task *ReadTask) GetOperationConfig() (*OperationConfig, *task_state.TaskState) {
+	return task.OperationConfig, task.State
 }

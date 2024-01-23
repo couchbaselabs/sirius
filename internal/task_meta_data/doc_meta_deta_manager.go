@@ -76,20 +76,21 @@ func (d *DocumentMetaData) DecrementCount() {
 	d.countOfMutation++
 }
 
-func (d *DocumentMetaData) RetracePreviousMutations(template template.Template, doc interface{},
+func (d *DocumentMetaData) RetracePreviousMutations(template template.Template, doc interface{}, docSize int,
 	fake *faker.Faker) interface{} {
 	defer d.lock.Unlock()
 	defer d.lock.Lock()
 	for i := 0; i < d.countOfMutation; i++ {
-		template.UpdateDocument([]string{}, doc, fake)
+		template.UpdateDocument([]string{}, doc, docSize, fake)
 	}
 	return doc
 }
 
-func (d *DocumentMetaData) UpdateDocument(t template.Template, doc interface{}, fake *faker.Faker) interface{} {
+func (d *DocumentMetaData) UpdateDocument(t template.Template, doc interface{}, docSize int,
+	fake *faker.Faker) interface{} {
 	defer d.lock.Unlock()
 	defer d.lock.Lock()
-	updatedDoc, _ := t.UpdateDocument([]string{}, doc, fake)
+	updatedDoc, _ := t.UpdateDocument([]string{}, doc, docSize, fake)
 	d.SubDocMutations = make(map[string]*SubDocMutations)
 	d.subDocMutationsCount = 0
 	d.IncrementCount()

@@ -74,13 +74,13 @@ func (h *Hotel) GenerateDocument(fake *faker.Faker, documentSize int) (interface
 		City:          fake.Address().City(),
 		Type:          "Hotel",
 		URL:           fake.Internet().URL(),
-		Reviews:       buildReview(fake, fake.IntBetween(0, 10)),
+		Reviews:       buildReview(fake, fake.IntBetween(1, 3)),
 		Phone:         fake.Phone().Number(),
 		Price:         float64(fake.IntBetween(1000, 10000)),
 		AvgRating:     fake.Float(4, 0, 1),
 		FreeBreakfast: fake.Bool(),
 		Name:          fake.Person().Name(),
-		PublicLikes:   buildPublicLikes(fake, fake.IntBetween(0, 10)),
+		PublicLikes:   buildPublicLikes(fake, fake.IntBetween(1, 2)),
 		Email:         fake.Internet().CompanyEmail(),
 		Mutated:       MutatedPathDefaultValue,
 	}
@@ -97,13 +97,14 @@ func (h *Hotel) GenerateDocument(fake *faker.Faker, documentSize int) (interface
 	return hotel, nil
 }
 
-func (h *Hotel) UpdateDocument(fieldsToChange []string, lastUpdatedDocument interface{},
+func (h *Hotel) UpdateDocument(fieldsToChange []string, lastUpdatedDocument interface{}, documentSize int,
 	fake *faker.Faker) (interface{}, error) {
+
 	hotel, ok := lastUpdatedDocument.(*Hotel)
 	if !ok {
 		return nil, fmt.Errorf("unable to decode last updated document to person template")
 	}
-	// Generating the original document
+
 	checkFields := make(map[string]struct{})
 	for _, s := range fieldsToChange {
 		checkFields[s] = struct{}{}
@@ -125,7 +126,7 @@ func (h *Hotel) UpdateDocument(fieldsToChange []string, lastUpdatedDocument inte
 		hotel.URL = fake.Internet().URL()
 	}
 	if _, ok := checkFields["reviews"]; ok || len(checkFields) == 0 {
-		hotel.Reviews = buildReview(fake, fake.IntBetween(0, 10))
+		hotel.Reviews = buildReview(fake, fake.IntBetween(1, 3))
 	}
 	if _, ok := checkFields["phone"]; ok || len(checkFields) == 0 {
 		hotel.Phone = fake.Phone().Number()
@@ -143,10 +144,19 @@ func (h *Hotel) UpdateDocument(fieldsToChange []string, lastUpdatedDocument inte
 		hotel.Name = fake.Person().Name()
 	}
 	if _, ok := checkFields["public_likes"]; ok || len(checkFields) == 0 {
-		hotel.PublicLikes = buildPublicLikes(fake, fake.IntBetween(0, 10))
+		hotel.PublicLikes = buildPublicLikes(fake, fake.IntBetween(1, 2))
 	}
 	if _, ok := checkFields["email"]; ok || len(checkFields) == 0 {
 		hotel.Email = fake.Internet().CompanyEmail()
+	}
+	hotel.Padding = ""
+	hotelDocument, err := json.Marshal(*hotel)
+	if err != nil {
+		return nil, err
+	}
+
+	if (len(hotelDocument)) < int(documentSize) {
+		hotel.Padding = fake.RandomStringWithLength(int(documentSize) - (len(hotelDocument)))
 	}
 
 	return hotel, nil

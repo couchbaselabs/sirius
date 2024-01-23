@@ -7,9 +7,11 @@ import (
 	"github.com/couchbaselabs/sirius/internal/sdk"
 	"github.com/couchbaselabs/sirius/internal/task_errors"
 	"github.com/couchbaselabs/sirius/internal/task_result"
+	"github.com/couchbaselabs/sirius/internal/task_state"
 	"github.com/couchbaselabs/sirius/internal/template"
 	"golang.org/x/sync/errgroup"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -42,7 +44,9 @@ func (task *QueryTask) BuildIdentifier() string {
 }
 
 func (task *QueryTask) CollectionIdentifier() string {
-	return task.IdentifierToken + task.ClusterConfig.ConnectionString + task.Bucket + task.Scope + task.Collection
+	clusterIdentifier, _ := sdk.GetClusterIdentifier(task.ClusterConfig.ConnectionString)
+	return strings.Join([]string{task.IdentifierToken, clusterIdentifier, task.Bucket, task.Scope,
+		task.Collection}, ":")
 }
 
 func (task *QueryTask) CheckIfPending() bool {
@@ -278,4 +282,8 @@ func (task *QueryTask) GetCollectionObject() (*sdk.CollectionObject, error) {
 
 func (task *QueryTask) SetException(exceptions Exceptions) {
 	//TODO implement me
+}
+
+func (task *QueryTask) GetOperationConfig() (*OperationConfig, *task_state.TaskState) {
+	return nil, nil
 }

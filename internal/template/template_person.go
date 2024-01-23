@@ -132,12 +132,14 @@ func (p *Person) GenerateDocument(fake *faker.Faker, documentSize int) (interfac
 	return person, nil
 }
 
-func (p *Person) UpdateDocument(fieldsToChange []string, lastUpdatedDocument interface{}, fake *faker.Faker) (interface{}, error) {
+func (p *Person) UpdateDocument(fieldsToChange []string, lastUpdatedDocument interface{}, documentSize int,
+	fake *faker.Faker) (interface{}, error) {
+
 	person, ok := lastUpdatedDocument.(*Person)
 	if !ok {
 		return nil, fmt.Errorf("unable to decode last updated document to person template")
 	}
-	// Generating the original document
+
 	checkFields := make(map[string]struct{})
 	for _, s := range fieldsToChange {
 		checkFields[s] = struct{}{}
@@ -190,6 +192,16 @@ func (p *Person) UpdateDocument(fieldsToChange []string, lastUpdatedDocument int
 	}
 	if _, ok := checkFields["attributes.bodyType"]; ok || (len(checkFields) == 0) {
 		person.Attributes.BodyType = bodyType[fake.IntBetween(1, len(bodyType)-1)]
+	}
+
+	person.Padding = ""
+	personDocument, err := json.Marshal(*person)
+	if err != nil {
+		return nil, err
+	}
+
+	if (len(personDocument)) < int(documentSize) {
+		person.Padding = strings.Repeat("a", int(documentSize)-(len(personDocument)))
 	}
 	return person, nil
 }

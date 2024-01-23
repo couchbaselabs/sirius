@@ -5,7 +5,9 @@ import (
 	"github.com/couchbaselabs/sirius/internal/sdk"
 	"github.com/couchbaselabs/sirius/internal/task_errors"
 	"github.com/couchbaselabs/sirius/internal/task_result"
+	"github.com/couchbaselabs/sirius/internal/task_state"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -70,7 +72,9 @@ func (task *BucketWarmUpTask) BuildIdentifier() string {
 }
 
 func (task *BucketWarmUpTask) CollectionIdentifier() string {
-	return task.IdentifierToken + task.ClusterConfig.ConnectionString + task.Bucket + task.Scope + task.Collection
+	clusterIdentifier, _ := sdk.GetClusterIdentifier(task.ClusterConfig.ConnectionString)
+	return strings.Join([]string{task.IdentifierToken, clusterIdentifier, task.Bucket, task.Scope,
+		task.Collection}, ":")
 }
 
 func (task *BucketWarmUpTask) CheckIfPending() bool {
@@ -107,4 +111,8 @@ func (task *BucketWarmUpTask) tearUp() error {
 		log.Println("not able to save Result into ", task.ResultSeed, task.Operation)
 	}
 	return nil
+}
+
+func (task *BucketWarmUpTask) GetOperationConfig() (*OperationConfig, *task_state.TaskState) {
+	return nil, nil
 }

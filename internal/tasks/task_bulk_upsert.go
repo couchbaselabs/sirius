@@ -15,6 +15,7 @@ import (
 	"log"
 	"math"
 	"math/rand"
+	"strings"
 	"time"
 )
 
@@ -45,7 +46,9 @@ func (task *UpsertTask) BuildIdentifier() string {
 }
 
 func (task *UpsertTask) CollectionIdentifier() string {
-	return task.IdentifierToken + task.ClusterConfig.ConnectionString + task.Bucket + task.Scope + task.Collection
+	clusterIdentifier, _ := sdk.GetClusterIdentifier(task.ClusterConfig.ConnectionString)
+	return strings.Join([]string{task.IdentifierToken, clusterIdentifier, task.Bucket, task.Scope,
+		task.Collection}, ":")
 }
 
 func (task *UpsertTask) Describe() string {
@@ -99,9 +102,8 @@ func (task *UpsertTask) Config(req *Request, reRun bool) (int64, error) {
 			return 0, err
 		}
 
-		task.MetaData = task.req.MetaData.GetCollectionMetadata(task.CollectionIdentifier(),
-			task.OperationConfig.KeySize, task.OperationConfig.DocSize, task.OperationConfig.DocType, task.OperationConfig.KeyPrefix,
-			task.OperationConfig.KeySuffix, task.OperationConfig.TemplateName)
+		task.MetaData = task.req.MetaData.GetCollectionMetadata(task.CollectionIdentifier())
+		log.Println(task.CollectionIdentifier(), task.MetaData)
 
 		task.req.lock.Lock()
 		if task.OperationConfig.End+task.MetaData.Seed > task.MetaData.SeedEnd {
@@ -139,14 +141,18 @@ func (task *UpsertTask) Do() error {
 
 	collectionObject, err1 := task.GetCollectionObject()
 
-	task.gen = docgenerator.ConfigGenerator(task.MetaData.DocType, task.MetaData.KeyPrefix,
-		task.MetaData.KeySuffix, task.MetaData.KeySize, task.State.SeedStart, task.State.SeedEnd,
-		template.InitialiseTemplate(task.MetaData.TemplateName))
+	task.gen = docgenerator.ConfigGenerator(
+		task.OperationConfig.KeySize,
+		task.OperationConfig.DocSize,
+		task.OperationConfig.DocType,
+		task.OperationConfig.KeyPrefix,
+		task.OperationConfig.KeySuffix,
+		template.InitialiseTemplate(task.OperationConfig.TemplateName))
 
 	if err1 != nil {
 		task.Result.ErrorOther = err1.Error()
-		task.Result.FailWholeBulkOperation(task.OperationConfig.Start, task.OperationConfig.End,
-			task.MetaData.DocSize, task.gen, err1, task.State)
+		task.Result.FailWholeBulkOperation(task.OperationConfig.Start, task.OperationConfig.End, err1, task.State,
+			task.gen, task.MetaData.Seed)
 		return task.tearUp()
 	}
 
@@ -187,7 +193,7 @@ func upsertDocuments(task *UpsertTask, collectionObject *sdk.CollectionObject) {
 		group.Go(func() error {
 			var err error
 			offset := <-dataChannel
-			key := task.State.SeedStart + offset
+			key := task.MetaData.Seed + offset
 			docId := task.gen.BuildKey(key)
 			if _, ok := skip[offset]; ok {
 				<-routineLimiter
@@ -196,19 +202,20 @@ func upsertDocuments(task *UpsertTask, collectionObject *sdk.CollectionObject) {
 
 			initTime := time.Now().UTC().Format(time.RFC850)
 			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
-			originalDoc, err := task.gen.Template.GenerateDocument(&fake, task.MetaData.DocSize)
+			originalDoc, err := task.gen.Template.GenerateDocument(&fake, task.OperationConfig.DocSize)
 			if err != nil {
 				<-routineLimiter
 				return err
 			}
-			originalDoc, err = task.req.retracePreviousMutations(task.CollectionIdentifier(), offset, originalDoc, *task.gen, &fake,
-				task.ResultSeed)
+			originalDoc, err = task.req.retracePreviousMutations(task.CollectionIdentifier(), offset, originalDoc,
+				*task.gen, &fake, task.ResultSeed)
 			if err != nil {
-				task.Result.IncrementFailure(initTime, docId, originalDoc, err, false, 0, offset)
+				task.Result.IncrementFailure(initTime, docId, err, false, 0, offset)
 				<-routineLimiter
 				return err
 			}
-			docUpdated, err := task.gen.Template.UpdateDocument(task.OperationConfig.FieldsToChange, originalDoc, &fake)
+			docUpdated, err := task.gen.Template.UpdateDocument(task.OperationConfig.FieldsToChange, originalDoc,
+				task.OperationConfig.DocSize, &fake)
 
 			for retry := 0; retry < int(math.Max(float64(1), float64(task.OperationConfig.Exceptions.
 				RetryAttempts))); retry++ {
@@ -227,7 +234,7 @@ func upsertDocuments(task *UpsertTask, collectionObject *sdk.CollectionObject) {
 			}
 
 			if err != nil {
-				task.Result.IncrementFailure(initTime, docId, docUpdated, err, false, 0, offset)
+				task.Result.IncrementFailure(initTime, docId, err, false, 0, offset)
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 				<-routineLimiter
 				return err
@@ -287,11 +294,11 @@ func (task *UpsertTask) PostTaskExceptionHandling(collectionObject *sdk.Collecti
 					for k, _ := range m {
 						offset = k
 					}
-					key := task.State.SeedStart + offset
+					key := task.MetaData.Seed + offset
 					docId := task.gen.BuildKey(key)
 					fake := faker.NewWithSeed(rand.NewSource(int64(key)))
 
-					originalDoc, err := task.gen.Template.GenerateDocument(&fake, task.MetaData.DocSize)
+					originalDoc, err := task.gen.Template.GenerateDocument(&fake, task.OperationConfig.DocSize)
 					if err != nil {
 						<-routineLimiter
 						return err
@@ -300,11 +307,12 @@ func (task *UpsertTask) PostTaskExceptionHandling(collectionObject *sdk.Collecti
 						task.ResultSeed)
 					if err != nil {
 						initTime := time.Now().UTC().Format(time.RFC850)
-						task.Result.IncrementFailure(initTime, docId, originalDoc, err, false, 0, offset)
+						task.Result.IncrementFailure(initTime, docId, err, false, 0, offset)
 						<-routineLimiter
 						return err
 					}
-					docUpdated, err := task.gen.Template.UpdateDocument(task.OperationConfig.FieldsToChange, originalDoc, &fake)
+					docUpdated, err := task.gen.Template.UpdateDocument(task.OperationConfig.FieldsToChange,
+						originalDoc, task.OperationConfig.DocSize, &fake)
 
 					retry := 0
 					result := &gocb.MutationResult{}
@@ -372,4 +380,8 @@ func (task *UpsertTask) GetCollectionObject() (*sdk.CollectionObject, error) {
 
 func (task *UpsertTask) SetException(exceptions Exceptions) {
 	task.OperationConfig.Exceptions = exceptions
+}
+
+func (task *UpsertTask) GetOperationConfig() (*OperationConfig, *task_state.TaskState) {
+	return task.OperationConfig, task.State
 }

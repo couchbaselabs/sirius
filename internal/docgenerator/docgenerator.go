@@ -9,35 +9,35 @@ import (
 type DocumentType string
 
 const (
-	JsonDocument   string = "json"
-	BinaryDocument string = "binary"
+	JsonDocument     string = "json"
+	BinaryDocument   string = "binary"
+	DefaultKeyPrefix        = ""
+	DefaultKeySuffix        = ""
+	DefaultTemplate         = "person"
+	DefaultDocSize   int    = 128
+	DefaultKeySize   int    = 250
 )
-
-const DefaultDocSize int = 128
-const DefaultKeySize int = 250
 
 // Generator helps to generate random document for inserting and updating random
 // as per the doc loading task requirement.
 type Generator struct {
 	KeySize   int               `json:"keySize"`
+	DocSize   int               `json:"docSize"`
 	DocType   string            `json:"docType"`
 	KeyPrefix string            `json:"keyPrefix"`
 	KeySuffix string            `json:"keySuffix"`
-	Seed      int64             `json:"seed"`
-	SeedEnd   int64             `json:"seedEnd"`
 	Template  template.Template `json:"template"`
 }
 
-func ConfigGenerator(doctype, keyPrefix, keySuffix string, keySize int, seed, seedEnd int64,
+func ConfigGenerator(keySize, docSize int, doctype, keyPrefix, keySuffix string,
 	template template.Template) *Generator {
 
 	return &Generator{
 		KeySize:   keySize,
+		DocSize:   docSize,
 		DocType:   doctype,
 		KeyPrefix: keyPrefix,
 		KeySuffix: keySuffix,
-		Seed:      seed,
-		SeedEnd:   seedEnd,
 		Template:  template,
 	}
 }
@@ -52,12 +52,6 @@ func ConfigQueryGenerator(template template.Template) *QueryGenerator {
 	}
 }
 
-// GetDocIdAndKey will return key for the next document
-func (g *Generator) GetDocIdAndKey(iteration int64) (string, int64) {
-	newKey := iteration + g.Seed
-	return fmt.Sprintf("%s%d%s", g.KeyPrefix, newKey, g.KeySuffix), newKey
-}
-
 // BuildKey returns the formatted key with unique identifier.
 func (g *Generator) BuildKey(key int64) string {
 	tempKey := fmt.Sprintf("%s%d%s", g.KeyPrefix, key, g.KeySuffix)
@@ -65,4 +59,13 @@ func (g *Generator) BuildKey(key int64) string {
 		tempKey += strings.Repeat("a", g.KeySize-len(tempKey))
 	}
 	return tempKey
+}
+
+func (g *Generator) Reset(keySize, docSize int, docType, keyPrefix, keySuffix, templateName string) {
+	g.KeySize = keySize
+	g.DocSize = docSize
+	g.DocType = docType
+	g.KeyPrefix = keyPrefix
+	g.KeySuffix = keySuffix
+	g.Template = template.InitialiseTemplate(templateName)
 }

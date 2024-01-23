@@ -8,7 +8,7 @@ import (
 
 type TaskRegister struct {
 	httpMethod string
-	config     tasks.Task
+	config     interface{}
 }
 
 type Register struct {

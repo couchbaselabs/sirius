@@ -7,24 +7,25 @@ import (
 )
 
 type SmallTemplate struct {
-	RandomData string `json:"data,omitempty"`
+	RandomData string `json:"d,omitempty"`
 	Mutated    int    `json:"mutated,omitempty"`
 }
 
 func (s *SmallTemplate) GenerateDocument(fake *faker.Faker, documentSize int) (interface{}, error) {
 	return &SmallTemplate{
-		RandomData: fake.RandomStringWithLength(int(documentSize)),
+		RandomData: fake.RandomStringWithLength(int(documentSize) - 1),
 		Mutated:    0,
 	}, nil
 }
 
-func (s *SmallTemplate) UpdateDocument(fieldsToChange []string, lastUpdatedDocument interface{}, fake *faker.Faker) (interface{}, error) {
+func (s *SmallTemplate) UpdateDocument(fieldsToChange []string, lastUpdatedDocument interface{}, documentSize int,
+	fake *faker.Faker) (interface{}, error) {
+
 	t, ok := lastUpdatedDocument.(*SmallTemplate)
 	if !ok {
 		return nil, fmt.Errorf("unable to decode last updated document to person template")
 	}
-	size := len(t.RandomData)
-	t.RandomData = fake.RandomStringWithLength(size)
+	t.RandomData = fake.RandomStringWithLength(documentSize - 1)
 	return t, nil
 }
 

@@ -6,8 +6,10 @@ import (
 	"github.com/couchbaselabs/sirius/internal/sdk"
 	"github.com/couchbaselabs/sirius/internal/task_errors"
 	"github.com/couchbaselabs/sirius/internal/task_result"
+	"github.com/couchbaselabs/sirius/internal/task_state"
 	"golang.org/x/sync/errgroup"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -38,7 +40,9 @@ func (task *SingleDeleteTask) BuildIdentifier() string {
 }
 
 func (task *SingleDeleteTask) CollectionIdentifier() string {
-	return task.IdentifierToken + task.ClusterConfig.ConnectionString + task.Bucket + task.Scope + task.Collection
+	clusterIdentifier, _ := sdk.GetClusterIdentifier(task.ClusterConfig.ConnectionString)
+	return strings.Join([]string{task.IdentifierToken, clusterIdentifier, task.Bucket, task.Scope,
+		task.Collection}, ":")
 }
 
 func (task *SingleDeleteTask) CheckIfPending() bool {
@@ -196,4 +200,8 @@ func (task *SingleDeleteTask) GetCollectionObject() (*sdk.CollectionObject, erro
 
 func (task *SingleDeleteTask) SetException(exceptions Exceptions) {
 
+}
+
+func (task *SingleDeleteTask) GetOperationConfig() (*OperationConfig, *task_state.TaskState) {
+	return nil, nil
 }

@@ -41,10 +41,14 @@ configuration that is also available on a per-task basis:
 
 	for _, k := range keys {
 		entry := tk[k]
-		val := reflect.ValueOf(entry.config)
+		x, ok := entry.config.(tasks.Task)
+		if !ok {
+			continue
+		}
+		val := reflect.ValueOf(x)
 		output += fmt.Sprintf("#### %s\n\n", k)
 		output += fmt.Sprintf(" REST : %s\n\n", entry.httpMethod)
-		output += fmt.Sprintf("Description : %s\n\n", entry.config.Describe())
+		output += fmt.Sprintf("Description : %s\n\n", x.Describe())
 
 		if !val.IsValid() {
 			output += fmt.Sprintf("No config found.\n\n")

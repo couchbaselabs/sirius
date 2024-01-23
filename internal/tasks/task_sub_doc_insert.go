@@ -16,27 +16,28 @@ import (
 	"log"
 	"math"
 	"math/rand"
+	"strings"
 	"time"
 )
 
 type SubDocInsert struct {
-	IdentifierToken       string                             `json:"identifierToken" doc:"true"`
-	ClusterConfig         *sdk.ClusterConfig                 `json:"clusterConfig" doc:"true"`
-	Bucket                string                             `json:"bucket" doc:"true"`
-	Scope                 string                             `json:"scope,omitempty" doc:"true"`
-	Collection            string                             `json:"collection,omitempty" doc:"true"`
-	SubDocOperationConfig *SubDocOperationConfig             `json:"subDocOperationConfig" doc:"true"`
-	InsertSpecOptions     *InsertSpecOptions                 `json:"insertSpecOptions" doc:"true"`
-	MutateInOptions       *MutateInOptions                   `json:"mutateInOptions" doc:"true"`
-	Operation             string                             `json:"operation" doc:"false"`
-	ResultSeed            int64                              `json:"resultSeed" doc:"false"`
-	TaskPending           bool                               `json:"taskPending" doc:"false"`
-	State                 *task_state.TaskState              `json:"State" doc:"false"`
-	MetaData              *task_meta_data.CollectionMetaData `json:"metaData" doc:"false"`
-	Result                *task_result.TaskResult            `json:"-" doc:"false"`
-	gen                   *docgenerator.Generator            `json:"-" doc:"false"`
-	req                   *Request                           `json:"-" doc:"false"`
-	rerun                 bool                               `json:"-" doc:"false"`
+	IdentifierToken   string                             `json:"identifierToken" doc:"true"`
+	ClusterConfig     *sdk.ClusterConfig                 `json:"clusterConfig" doc:"true"`
+	Bucket            string                             `json:"bucket" doc:"true"`
+	Scope             string                             `json:"scope,omitempty" doc:"true"`
+	Collection        string                             `json:"collection,omitempty" doc:"true"`
+	OperationConfig   *OperationConfig                   `json:"operationConfig" doc:"true"`
+	InsertSpecOptions *InsertSpecOptions                 `json:"insertSpecOptions" doc:"true"`
+	MutateInOptions   *MutateInOptions                   `json:"mutateInOptions" doc:"true"`
+	Operation         string                             `json:"operation" doc:"false"`
+	ResultSeed        int64                              `json:"resultSeed" doc:"false"`
+	TaskPending       bool                               `json:"taskPending" doc:"false"`
+	State             *task_state.TaskState              `json:"State" doc:"false"`
+	MetaData          *task_meta_data.CollectionMetaData `json:"metaData" doc:"false"`
+	Result            *task_result.TaskResult            `json:"-" doc:"false"`
+	gen               *docgenerator.Generator            `json:"-" doc:"false"`
+	req               *Request                           `json:"-" doc:"false"`
+	rerun             bool                               `json:"-" doc:"false"`
 }
 
 func (task *SubDocInsert) Describe() string {
@@ -51,7 +52,9 @@ func (task *SubDocInsert) BuildIdentifier() string {
 }
 
 func (task *SubDocInsert) CollectionIdentifier() string {
-	return task.IdentifierToken + task.ClusterConfig.ConnectionString + task.Bucket + task.Scope + task.Collection
+	clusterIdentifier, _ := sdk.GetClusterIdentifier(task.ClusterConfig.ConnectionString)
+	return strings.Join([]string{task.IdentifierToken, clusterIdentifier, task.Bucket, task.Scope,
+		task.Collection}, ":")
 }
 
 func (task *SubDocInsert) CheckIfPending() bool {
@@ -90,7 +93,7 @@ func (task *SubDocInsert) Config(req *Request, reRun bool) (int64, error) {
 			task.Collection = DefaultCollection
 		}
 
-		if err := configSubDocOperationConfig(task.SubDocOperationConfig); err != nil {
+		if err := configureOperationConfig(task.OperationConfig); err != nil {
 			task.TaskPending = false
 			return 0, err
 		}
@@ -105,13 +108,13 @@ func (task *SubDocInsert) Config(req *Request, reRun bool) (int64, error) {
 			return 0, err
 		}
 
-		task.MetaData = task.req.MetaData.GetCollectionMetadata(task.CollectionIdentifier(), 0, 0, "",
-			"", "", "")
+		task.MetaData = task.req.MetaData.GetCollectionMetadata(task.CollectionIdentifier())
 
 		task.req.lock.Lock()
-		if task.SubDocOperationConfig.End+task.MetaData.Seed > task.MetaData.SeedEnd {
-			task.req.AddToSeedEnd(task.MetaData, (task.SubDocOperationConfig.End+task.MetaData.Seed)-(task.MetaData.SeedEnd))
+		if task.OperationConfig.End+task.MetaData.Seed > task.MetaData.SeedEnd {
+			task.req.AddToSeedEnd(task.MetaData, (task.OperationConfig.End+task.MetaData.Seed)-(task.MetaData.SeedEnd))
 		}
+		log.Println(task.MetaData)
 		task.State = task_state.ConfigTaskState(task.MetaData.Seed, task.MetaData.SeedEnd, task.ResultSeed)
 		task.req.lock.Unlock()
 
@@ -147,19 +150,23 @@ func (task *SubDocInsert) Do() error {
 
 	collectionObject, err1 := task.GetCollectionObject()
 
-	task.gen = docgenerator.ConfigGenerator(task.MetaData.DocType, task.MetaData.KeyPrefix,
-		task.MetaData.KeySuffix, task.MetaData.KeySize, task.State.SeedStart, task.State.SeedEnd,
-		template.InitialiseTemplate(task.MetaData.TemplateName))
+	task.gen = docgenerator.ConfigGenerator(
+		task.OperationConfig.KeySize,
+		task.OperationConfig.DocSize,
+		task.OperationConfig.DocType,
+		task.OperationConfig.KeyPrefix,
+		task.OperationConfig.KeySuffix,
+		template.InitialiseTemplate(task.OperationConfig.TemplateName))
 
 	if err1 != nil {
 		task.Result.ErrorOther = err1.Error()
-		task.Result.FailWholeBulkOperation(task.SubDocOperationConfig.Start, task.SubDocOperationConfig.End,
-			task.MetaData.DocSize, task.gen, err1, task.State)
+		task.Result.FailWholeBulkOperation(task.OperationConfig.Start, task.OperationConfig.End,
+			err1, task.State, task.gen, task.MetaData.Seed)
 		return task.tearUp()
 	}
 
 	insertSubDocuments(task, collectionObject)
-	task.Result.Success = (task.SubDocOperationConfig.End - task.SubDocOperationConfig.Start) - task.Result.Failure
+	task.Result.Success = (task.OperationConfig.End - task.OperationConfig.Start) - task.Result.Failure
 
 	return task.tearUp()
 }
@@ -182,7 +189,7 @@ func insertSubDocuments(task *SubDocInsert, collectionObject *sdk.CollectionObje
 		skip[offset] = struct{}{}
 	}
 	group := errgroup.Group{}
-	for iteration := task.SubDocOperationConfig.Start; iteration < task.SubDocOperationConfig.End; iteration++ {
+	for iteration := task.OperationConfig.Start; iteration < task.OperationConfig.End; iteration++ {
 
 		if task.req.ContextClosed() {
 			close(routineLimiter)
@@ -205,7 +212,7 @@ func insertSubDocuments(task *SubDocInsert, collectionObject *sdk.CollectionObje
 
 			var err error
 			initTime := time.Now().UTC().Format(time.RFC850)
-			for retry := 0; retry < int(math.Max(float64(1), float64(task.SubDocOperationConfig.Exceptions.
+			for retry := 0; retry < int(math.Max(float64(1), float64(task.OperationConfig.Exceptions.
 				RetryAttempts))); retry++ {
 
 				var iOps []gocb.MutateInSpec
@@ -245,7 +252,7 @@ func insertSubDocuments(task *SubDocInsert, collectionObject *sdk.CollectionObje
 					<-routineLimiter
 					return nil
 				} else {
-					task.Result.IncrementFailure(initTime, docId, nil, err, false, 0, offset)
+					task.Result.IncrementFailure(initTime, docId, err, false, 0, offset)
 					task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 					<-routineLimiter
 					return err
@@ -268,7 +275,7 @@ func insertSubDocuments(task *SubDocInsert, collectionObject *sdk.CollectionObje
 func (task *SubDocInsert) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
 	task.Result.StopStoringResult()
 	task.State.StopStoringState()
-	if task.SubDocOperationConfig.Exceptions.RetryAttempts <= 0 {
+	if task.OperationConfig.Exceptions.RetryAttempts <= 0 {
 		return
 	}
 
@@ -278,11 +285,11 @@ func (task *SubDocInsert) PostTaskExceptionHandling(collectionObject *sdk.Collec
 	completedOffsetMaps := task.State.ReturnCompletedOffset()
 
 	// For the offset in ignore exceptions :-> move them from error to completed
-	shiftErrToCompletedOnIgnore(task.SubDocOperationConfig.Exceptions.IgnoreExceptions, task.Result, errorOffsetMaps, completedOffsetMaps)
+	shiftErrToCompletedOnIgnore(task.OperationConfig.Exceptions.IgnoreExceptions, task.Result, errorOffsetMaps, completedOffsetMaps)
 
-	if task.SubDocOperationConfig.Exceptions.RetryAttempts > 0 {
+	if task.OperationConfig.Exceptions.RetryAttempts > 0 {
 
-		exceptionList := getExceptions(task.Result, task.SubDocOperationConfig.Exceptions.RetryExceptions)
+		exceptionList := getExceptions(task.Result, task.OperationConfig.Exceptions.RetryExceptions)
 
 		// For the retry exceptions :-> move them on success after retrying from err to completed
 		for _, exception := range exceptionList {
@@ -306,14 +313,15 @@ func (task *SubDocInsert) PostTaskExceptionHandling(collectionObject *sdk.Collec
 					for k, _ := range m {
 						offset = k
 					}
-					docId, key := task.gen.GetDocIdAndKey(offset)
+					key := offset + task.MetaData.Seed
+					docId := task.gen.BuildKey(key)
 					fake := faker.NewWithSeed(rand.NewSource(int64(key)))
 					retry := 0
 					var err error
 
 					result := &gocb.MutateInResult{}
 					initTime := time.Now().UTC().Format(time.RFC850)
-					for retry = 0; retry <= task.SubDocOperationConfig.Exceptions.RetryAttempts; retry++ {
+					for retry = 0; retry <= task.OperationConfig.Exceptions.RetryAttempts; retry++ {
 
 						var iOps []gocb.MutateInSpec
 						for path, value := range task.gen.Template.GenerateSubPathAndValue(&fake) {
@@ -396,5 +404,9 @@ func (task *SubDocInsert) GetCollectionObject() (*sdk.CollectionObject, error) {
 }
 
 func (task *SubDocInsert) SetException(exceptions Exceptions) {
-	task.SubDocOperationConfig.Exceptions = exceptions
+	task.OperationConfig.Exceptions = exceptions
+}
+
+func (task *SubDocInsert) GetOperationConfig() (*OperationConfig, *task_state.TaskState) {
+	return task.OperationConfig, task.State
 }

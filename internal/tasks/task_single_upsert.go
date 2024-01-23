@@ -6,11 +6,13 @@ import (
 	"github.com/couchbaselabs/sirius/internal/sdk"
 	"github.com/couchbaselabs/sirius/internal/task_errors"
 	"github.com/couchbaselabs/sirius/internal/task_result"
+	"github.com/couchbaselabs/sirius/internal/task_state"
 	"github.com/couchbaselabs/sirius/internal/template"
 	"github.com/jaswdr/faker"
 	"golang.org/x/sync/errgroup"
 	"log"
 	"math/rand"
+	"strings"
 	"time"
 )
 
@@ -41,7 +43,9 @@ func (task *SingleUpsertTask) BuildIdentifier() string {
 }
 
 func (task *SingleUpsertTask) CollectionIdentifier() string {
-	return task.IdentifierToken + task.ClusterConfig.ConnectionString + task.Bucket + task.Scope + task.Collection
+	clusterIdentifier, _ := sdk.GetClusterIdentifier(task.ClusterConfig.ConnectionString)
+	return strings.Join([]string{task.IdentifierToken, clusterIdentifier, task.Bucket, task.Scope,
+		task.Collection}, ":")
 }
 
 func (task *SingleUpsertTask) CheckIfPending() bool {
@@ -158,9 +162,9 @@ func singleUpsertDocuments(task *SingleUpsertTask, collectionObject *sdk.Collect
 
 			doc, _ := t.GenerateDocument(&fake, documentMetaData.DocSize)
 
-			doc = documentMetaData.RetracePreviousMutations(t, doc, &fake)
+			doc = documentMetaData.RetracePreviousMutations(t, doc, task.SingleOperationConfig.DocSize, &fake)
 
-			updatedDoc := documentMetaData.UpdateDocument(t, doc, &fake)
+			updatedDoc := documentMetaData.UpdateDocument(t, doc, task.SingleOperationConfig.DocSize, &fake)
 
 			initTime := time.Now().UTC().Format(time.RFC850)
 			m, err := collectionObject.Collection.Upsert(key, updatedDoc, &gocb.UpsertOptions{
@@ -210,4 +214,8 @@ func (task *SingleUpsertTask) GetCollectionObject() (*sdk.CollectionObject, erro
 }
 
 func (task *SingleUpsertTask) SetException(exceptions Exceptions) {
+}
+
+func (task *SingleUpsertTask) GetOperationConfig() (*OperationConfig, *task_state.TaskState) {
+	return nil, nil
 }
