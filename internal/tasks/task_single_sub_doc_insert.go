@@ -193,14 +193,17 @@ func singleInsertSubDocuments(task *SingleSubDocInsert, collectionObject *sdk.Co
 func (task *SingleSubDocInsert) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
 }
 
-func (task *SingleSubDocInsert) MatchResultSeed(resultSeed string) bool {
+func (task *SingleSubDocInsert) MatchResultSeed(resultSeed string) (bool, error) {
 	if fmt.Sprintf("%d", task.ResultSeed) == resultSeed {
+		if task.TaskPending {
+			return true, task_errors.ErrTaskInPendingState
+		}
 		if task.Result == nil {
 			task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 		}
-		return true
+		return true, nil
 	}
-	return false
+	return false, nil
 }
 
 func (task *SingleSubDocInsert) GetCollectionObject() (*sdk.CollectionObject, error) {

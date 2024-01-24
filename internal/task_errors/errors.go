@@ -25,4 +25,6 @@ var (
 	ErrParsingSingleSubDocOperationConfig = errors.New("unable to parse SingleSubDocOperationConfig")
 	ErrParsingMutateInOptions             = errors.New("unable to parse MutateInOptions")
 	ErrNilOperationConfig                 = errors.New("no operation found for the given offset")
+	ErrTaskingRetryFailed                 = errors.New("Task is still in pending state before retrying")
+	ErrTaskInPendingState                 = errors.New("current task is still in progress")
 )

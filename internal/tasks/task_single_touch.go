@@ -182,14 +182,17 @@ func (task *SingleTouchTask) PostTaskExceptionHandling(_ *sdk.CollectionObject) 
 	//TODO implement me
 }
 
-func (task *SingleTouchTask) MatchResultSeed(resultSeed string) bool {
+func (task *SingleTouchTask) MatchResultSeed(resultSeed string) (bool, error) {
 	if fmt.Sprintf("%d", task.ResultSeed) == resultSeed {
+		if task.TaskPending {
+			return true, task_errors.ErrTaskInPendingState
+		}
 		if task.Result == nil {
 			task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 		}
-		return true
+		return true, nil
 	}
-	return false
+	return false, nil
 }
 
 func (task *SingleTouchTask) GetCollectionObject() (*sdk.CollectionObject, error) {

@@ -16,6 +16,7 @@ import (
 	"math"
 	"math/rand"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -37,6 +38,7 @@ type SubDocUpsert struct {
 	gen               *docgenerator.Generator            `json:"-" doc:"false"`
 	req               *Request                           `json:"-" doc:"false"`
 	rerun             bool                               `json:"-" doc:"false"`
+	lock              sync.Mutex                         `json:"-" doc:"false"`
 }
 
 func (task *SubDocUpsert) Describe() string {
@@ -76,6 +78,7 @@ func (task *SubDocUpsert) Config(req *Request, reRun bool) (int64, error) {
 		return 0, err
 	}
 
+	task.lock = sync.Mutex{}
 	task.rerun = reRun
 
 	if !reRun {
@@ -385,14 +388,19 @@ func (task *SubDocUpsert) PostTaskExceptionHandling(collectionObject *sdk.Collec
 
 }
 
-func (task *SubDocUpsert) MatchResultSeed(resultSeed string) bool {
+func (task *SubDocUpsert) MatchResultSeed(resultSeed string) (bool, error) {
+	defer task.lock.Unlock()
+	task.lock.Lock()
 	if fmt.Sprintf("%d", task.ResultSeed) == resultSeed {
+		if task.TaskPending {
+			return true, task_errors.ErrTaskInPendingState
+		}
 		if task.Result == nil {
 			task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 		}
-		return true
+		return true, nil
 	}
-	return false
+	return false, nil
 }
 
 func (task *SubDocUpsert) GetCollectionObject() (*sdk.CollectionObject, error) {

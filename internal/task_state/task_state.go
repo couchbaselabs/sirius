@@ -93,8 +93,8 @@ func (t *TaskState) AddRangeToErrSet(start, end int64) {
 
 // ReturnCompletedOffset returns a lookup table for searching completed offsets
 func (t *TaskState) ReturnCompletedOffset() map[int64]struct{} {
-	defer t.lock.Unlock()
-	t.lock.Lock()
+	//defer t.lock.Unlock()
+	//t.lock.Lock()
 	completed := make(map[int64]struct{})
 	for _, v := range t.KeyStates.Completed {
 		completed[v] = struct{}{}
@@ -104,8 +104,8 @@ func (t *TaskState) ReturnCompletedOffset() map[int64]struct{} {
 
 // ReturnErrOffset returns a lookup table for searching  error offsets
 func (t *TaskState) ReturnErrOffset() map[int64]struct{} {
-	defer t.lock.Unlock()
-	t.lock.Lock()
+	//defer t.lock.Unlock()
+	//t.lock.Lock()
 	err := make(map[int64]struct{})
 	for _, v := range t.KeyStates.Err {
 		err[v] = struct{}{}

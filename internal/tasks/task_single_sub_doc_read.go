@@ -177,14 +177,17 @@ func singleReadSubDocuments(task *SingleSubDocRead, collectionObject *sdk.Collec
 func (task *SingleSubDocRead) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
 }
 
-func (task *SingleSubDocRead) MatchResultSeed(resultSeed string) bool {
+func (task *SingleSubDocRead) MatchResultSeed(resultSeed string) (bool, error) {
 	if fmt.Sprintf("%d", task.ResultSeed) == resultSeed {
+		if task.TaskPending {
+			return true, task_errors.ErrTaskInPendingState
+		}
 		if task.Result == nil {
 			task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 		}
-		return true
+		return true, nil
 	}
-	return false
+	return false, nil
 }
 
 func (task *SingleSubDocRead) GetCollectionObject() (*sdk.CollectionObject, error) {

@@ -183,14 +183,17 @@ func (task *SingleDeleteTask) PostTaskExceptionHandling(_ *sdk.CollectionObject)
 
 }
 
-func (task *SingleDeleteTask) MatchResultSeed(resultSeed string) bool {
+func (task *SingleDeleteTask) MatchResultSeed(resultSeed string) (bool, error) {
 	if fmt.Sprintf("%d", task.ResultSeed) == resultSeed {
+		if task.TaskPending {
+			return true, task_errors.ErrTaskInPendingState
+		}
 		if task.Result == nil {
 			task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 		}
-		return true
+		return true, nil
 	}
-	return false
+	return false, nil
 }
 
 func (task *SingleDeleteTask) GetCollectionObject() (*sdk.CollectionObject, error) {
