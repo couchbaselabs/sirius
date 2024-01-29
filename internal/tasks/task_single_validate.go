@@ -7,11 +7,13 @@ import (
 	"github.com/couchbaselabs/sirius/internal/sdk"
 	"github.com/couchbaselabs/sirius/internal/task_errors"
 	"github.com/couchbaselabs/sirius/internal/task_result"
+	"github.com/couchbaselabs/sirius/internal/task_state"
 	"github.com/couchbaselabs/sirius/internal/template"
 	"github.com/jaswdr/faker"
 	"golang.org/x/sync/errgroup"
 	"log"
 	"math/rand"
+	"strings"
 	"time"
 )
 
@@ -150,7 +152,7 @@ func validateSingleDocuments(task *SingleValidate, collectionObject *sdk.Collect
 				<-routineLimiter
 				return err
 			}
-			doc = documentMetaData.RetracePreviousMutations(t, doc, &fake)
+			doc = documentMetaData.RetracePreviousMutations(t, doc, task.SingleOperationConfig.DocSize, &fake)
 
 			docBytes, err := json.Marshal(&doc)
 			if err != nil {
@@ -238,7 +240,9 @@ func validateSingleDocuments(task *SingleValidate, collectionObject *sdk.Collect
 }
 
 func (task *SingleValidate) CollectionIdentifier() string {
-	return task.IdentifierToken + task.ClusterConfig.ConnectionString + task.Bucket + task.Scope + task.Collection
+	clusterIdentifier, _ := sdk.GetClusterIdentifier(task.ClusterConfig.ConnectionString)
+	return strings.Join([]string{task.IdentifierToken, clusterIdentifier, task.Bucket, task.Scope,
+		task.Collection}, ":")
 }
 
 func (task *SingleValidate) CheckIfPending() bool {
@@ -248,14 +252,17 @@ func (task *SingleValidate) CheckIfPending() bool {
 func (task *SingleValidate) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
 }
 
-func (task *SingleValidate) MatchResultSeed(resultSeed string) bool {
+func (task *SingleValidate) MatchResultSeed(resultSeed string) (bool, error) {
 	if fmt.Sprintf("%d", task.ResultSeed) == resultSeed {
+		if task.TaskPending {
+			return true, task_errors.ErrTaskInPendingState
+		}
 		if task.Result == nil {
 			task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 		}
-		return true
+		return true, nil
 	}
-	return false
+	return false, nil
 }
 
 func (task *SingleValidate) GetCollectionObject() (*sdk.CollectionObject, error) {
@@ -265,4 +272,8 @@ func (task *SingleValidate) GetCollectionObject() (*sdk.CollectionObject, error)
 
 func (task *SingleValidate) SetException(exceptions Exceptions) {
 
+}
+
+func (task *SingleValidate) GetOperationConfig() (*OperationConfig, *task_state.TaskState) {
+	return nil, nil
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/couchbaselabs/sirius/internal/sdk"
 	"github.com/couchbaselabs/sirius/internal/task_errors"
+	"github.com/couchbaselabs/sirius/internal/task_state"
 )
 
 type RetryExceptions struct {
@@ -48,15 +49,19 @@ func (r *RetryExceptions) Config(req *Request, reRun bool) (int64, error) {
 		return 0, fmt.Errorf("request.Task struct is nil")
 	}
 	for i := range r.req.Tasks {
-		if r.req.Tasks[i].Task.MatchResultSeed(r.ResultSeed) {
+		if ok, err := r.req.Tasks[i].Task.MatchResultSeed(r.ResultSeed); ok {
+			if err != nil {
+				return 0, err
+			}
 			r.Task = r.req.Tasks[i].Task
 			break
 		}
 	}
 
 	if r.Task == nil {
-		return 0, fmt.Errorf("no such task found in " + r.req.Identifier)
+		return 0, fmt.Errorf("task found in %s for seed ", r.req.Identifier)
 	}
+
 	return r.Task.Config(req, true)
 
 }
@@ -83,7 +88,7 @@ func (r *RetryExceptions) PostTaskExceptionHandling(_ *sdk.CollectionObject) {
 func (r *RetryExceptions) tearUp() error {
 	return r.Task.tearUp()
 }
-func (r *RetryExceptions) MatchResultSeed(resultSeed string) bool {
+func (r *RetryExceptions) MatchResultSeed(resultSeed string) (bool, error) {
 	return r.Task.MatchResultSeed(resultSeed)
 }
 
@@ -93,4 +98,11 @@ func (r *RetryExceptions) GetCollectionObject() (*sdk.CollectionObject, error) {
 
 func (r *RetryExceptions) SetException(exceptions Exceptions) {
 	r.Task.SetException(r.Exceptions)
+}
+
+func (r *RetryExceptions) GetOperationConfig() (*OperationConfig, *task_state.TaskState) {
+	if r.Task != nil {
+		return r.Task.GetOperationConfig()
+	}
+	return nil, nil
 }

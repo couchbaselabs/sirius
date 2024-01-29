@@ -44,22 +44,28 @@ func TestConfigConnectionManager(t *testing.T) {
 	} else {
 
 		m := task_meta_data.NewMetaData()
-		cm1 := m.GetCollectionMetadata("x", 255, 1024, "json", "", "", "person")
+		cm1 := m.GetCollectionMetadata("x")
 
-		cm2 := m.GetCollectionMetadata("x", 255, 1024, "json", "", "", "person")
+		cm2 := m.GetCollectionMetadata("x")
 
 		if cm1.Seed != cm2.Seed {
 			t.Fail()
 		}
 
-		temp := template.InitialiseTemplate(cm1.TemplateName)
+		temp := template.InitialiseTemplate("person")
 		g := docgenerator.Generator{
-			Seed:     int64(cm1.Seed),
-			SeedEnd:  int64(cm1.Seed),
 			Template: temp,
 		}
+		gen := &docgenerator.Generator{
+			KeySize:   25,
+			DocType:   "json",
+			KeyPrefix: "",
+			KeySuffix: "",
+			Template:  template.InitialiseTemplate("person"),
+		}
 		for i := int64(0); i < int64(10000); i++ {
-			docId, key := g.GetDocIdAndKey(i)
+			key := i + cm1.Seed
+			docId := gen.BuildKey(key)
 			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
 			doc, _ := g.Template.GenerateDocument(&fake, 100)
 			//log.Println(docId, doc)
@@ -70,7 +76,7 @@ func TestConfigConnectionManager(t *testing.T) {
 			}
 		}
 		for i := int64(0); i < int64(10000); i++ {
-			docId, _ := g.GetDocIdAndKey(i)
+			docId := gen.BuildKey(i + cm1.Seed)
 			r, e := c.Collection.Get(docId, nil)
 			if e != nil {
 				t.Error(e)
@@ -85,8 +91,8 @@ func TestConfigConnectionManager(t *testing.T) {
 
 }
 
-func TestGetClusterIdentfier(t *testing.T) {
-	clusterIdentifier, err := getClusterIdentifier("couchbases://172.23.100.17,172.23.100.18,172.23.100.19," +
+func TestGetClusterIdentifier(t *testing.T) {
+	clusterIdentifier, err := GetClusterIdentifier("couchbases://172.23.100.17,172.23.100.18,172.23.100.19," +
 		"172.23.100.20")
 	log.Println(clusterIdentifier)
 	if err != nil {
@@ -98,7 +104,7 @@ func TestGetClusterIdentfier(t *testing.T) {
 		t.Fail()
 	}
 
-	clusterIdentifier, err = getClusterIdentifier("couchbases://172.23.100.17,172.23.100.18,172.23.100.19," +
+	clusterIdentifier, err = GetClusterIdentifier("couchbases://172.23.100.17,172.23.100.18,172.23.100.19," +
 		"172.23.100.20?kv_pool_size=32")
 	log.Println(clusterIdentifier)
 	if err != nil {

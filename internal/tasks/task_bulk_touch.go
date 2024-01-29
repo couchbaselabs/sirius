@@ -13,6 +13,8 @@ import (
 	"golang.org/x/sync/errgroup"
 	"log"
 	"math"
+	"strings"
+	"sync"
 	"time"
 )
 
@@ -34,6 +36,7 @@ type TouchTask struct {
 	gen             *docgenerator.Generator            `json:"-" doc:"false"`
 	req             *Request                           `json:"-" doc:"false"`
 	rerun           bool                               `json:"-" doc:"false"`
+	lock            sync.Mutex                         `json:"-" doc:"false"`
 }
 
 func (task *TouchTask) BuildIdentifier() string {
@@ -44,7 +47,9 @@ func (task *TouchTask) BuildIdentifier() string {
 }
 
 func (task *TouchTask) CollectionIdentifier() string {
-	return task.IdentifierToken + task.ClusterConfig.ConnectionString + task.Bucket + task.Scope + task.Collection
+	clusterIdentifier, _ := sdk.GetClusterIdentifier(task.ClusterConfig.ConnectionString)
+	return strings.Join([]string{task.IdentifierToken, clusterIdentifier, task.Bucket, task.Scope,
+		task.Collection}, ":")
 }
 
 func (task *TouchTask) Describe() string {
@@ -72,6 +77,7 @@ func (task *TouchTask) Config(req *Request, reRun bool) (int64, error) {
 		return 0, err
 	}
 
+	task.lock = sync.Mutex{}
 	task.rerun = reRun
 
 	if !reRun {
@@ -98,9 +104,7 @@ func (task *TouchTask) Config(req *Request, reRun bool) (int64, error) {
 			return 0, err
 		}
 
-		task.MetaData = task.req.MetaData.GetCollectionMetadata(task.CollectionIdentifier(),
-			task.OperationConfig.KeySize, task.OperationConfig.DocSize, task.OperationConfig.DocType, task.OperationConfig.KeyPrefix,
-			task.OperationConfig.KeySuffix, task.OperationConfig.TemplateName)
+		task.MetaData = task.req.MetaData.GetCollectionMetadata(task.CollectionIdentifier())
 
 		task.req.lock.Lock()
 		if task.OperationConfig.End+task.MetaData.Seed > task.MetaData.SeedEnd {
@@ -139,14 +143,18 @@ func (task *TouchTask) Do() error {
 
 	collectionObject, err1 := task.GetCollectionObject()
 
-	task.gen = docgenerator.ConfigGenerator(task.MetaData.DocType, task.MetaData.KeyPrefix,
-		task.MetaData.KeySuffix, task.MetaData.KeySize, task.State.SeedStart, task.State.SeedEnd,
-		template.InitialiseTemplate(task.MetaData.TemplateName))
+	task.gen = docgenerator.ConfigGenerator(
+		task.OperationConfig.KeySize,
+		task.OperationConfig.DocSize,
+		task.OperationConfig.DocType,
+		task.OperationConfig.KeyPrefix,
+		task.OperationConfig.KeySuffix,
+		template.InitialiseTemplate(task.OperationConfig.TemplateName))
 
 	if err1 != nil {
 		task.Result.ErrorOther = err1.Error()
 		task.Result.FailWholeBulkOperation(task.OperationConfig.Start, task.OperationConfig.End,
-			task.MetaData.DocSize, task.gen, err1, task.State)
+			err1, task.State, task.gen, task.MetaData.Seed)
 		return task.tearUp()
 	}
 
@@ -187,7 +195,7 @@ func touchDocuments(task *TouchTask, collectionObject *sdk.CollectionObject) {
 		group.Go(func() error {
 			var err error
 			offset := <-dataChannel
-			key := task.State.SeedStart + offset
+			key := task.MetaData.Seed + offset
 			docId := task.gen.BuildKey(key)
 			if _, ok := skip[offset]; ok {
 				<-routineLimiter
@@ -210,7 +218,7 @@ func touchDocuments(task *TouchTask, collectionObject *sdk.CollectionObject) {
 			}
 
 			if err != nil {
-				task.Result.IncrementFailure(initTime, docId, nil, err, false, 0, offset)
+				task.Result.IncrementFailure(initTime, docId, err, false, 0, offset)
 				task.State.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 				<-routineLimiter
 				return err
@@ -270,7 +278,7 @@ func (task *TouchTask) PostTaskExceptionHandling(collectionObject *sdk.Collectio
 					for k, _ := range m {
 						offset = k
 					}
-					key := task.State.SeedStart + offset
+					key := task.MetaData.Seed + offset
 					docId := task.gen.BuildKey(key)
 
 					result := &gocb.MutationResult{}
@@ -318,14 +326,19 @@ func (task *TouchTask) PostTaskExceptionHandling(collectionObject *sdk.Collectio
 	log.Println("completed retrying:- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
 }
 
-func (task *TouchTask) MatchResultSeed(resultSeed string) bool {
+func (task *TouchTask) MatchResultSeed(resultSeed string) (bool, error) {
+	defer task.lock.Unlock()
+	task.lock.Lock()
 	if fmt.Sprintf("%d", task.ResultSeed) == resultSeed {
+		if task.TaskPending {
+			return true, task_errors.ErrTaskInPendingState
+		}
 		if task.Result == nil {
 			task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 		}
-		return true
+		return true, nil
 	}
-	return false
+	return false, nil
 }
 
 func (task *TouchTask) GetCollectionObject() (*sdk.CollectionObject, error) {
@@ -335,4 +348,8 @@ func (task *TouchTask) GetCollectionObject() (*sdk.CollectionObject, error) {
 
 func (task *TouchTask) SetException(exceptions Exceptions) {
 	task.OperationConfig.Exceptions = exceptions
+}
+
+func (task *TouchTask) GetOperationConfig() (*OperationConfig, *task_state.TaskState) {
+	return task.OperationConfig, task.State
 }

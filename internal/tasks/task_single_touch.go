@@ -6,8 +6,10 @@ import (
 	"github.com/couchbaselabs/sirius/internal/sdk"
 	"github.com/couchbaselabs/sirius/internal/task_errors"
 	"github.com/couchbaselabs/sirius/internal/task_result"
+	"github.com/couchbaselabs/sirius/internal/task_state"
 	"golang.org/x/sync/errgroup"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -38,7 +40,9 @@ func (task *SingleTouchTask) BuildIdentifier() string {
 }
 
 func (task *SingleTouchTask) CollectionIdentifier() string {
-	return task.IdentifierToken + task.ClusterConfig.ConnectionString + task.Bucket + task.Scope + task.Collection
+	clusterIdentifier, _ := sdk.GetClusterIdentifier(task.ClusterConfig.ConnectionString)
+	return strings.Join([]string{task.IdentifierToken, clusterIdentifier, task.Bucket, task.Scope,
+		task.Collection}, ":")
 }
 
 func (task *SingleTouchTask) CheckIfPending() bool {
@@ -178,14 +182,17 @@ func (task *SingleTouchTask) PostTaskExceptionHandling(_ *sdk.CollectionObject) 
 	//TODO implement me
 }
 
-func (task *SingleTouchTask) MatchResultSeed(resultSeed string) bool {
+func (task *SingleTouchTask) MatchResultSeed(resultSeed string) (bool, error) {
 	if fmt.Sprintf("%d", task.ResultSeed) == resultSeed {
+		if task.TaskPending {
+			return true, task_errors.ErrTaskInPendingState
+		}
 		if task.Result == nil {
 			task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 		}
-		return true
+		return true, nil
 	}
-	return false
+	return false, nil
 }
 
 func (task *SingleTouchTask) GetCollectionObject() (*sdk.CollectionObject, error) {
@@ -194,4 +201,8 @@ func (task *SingleTouchTask) GetCollectionObject() (*sdk.CollectionObject, error
 }
 
 func (task *SingleTouchTask) SetException(exceptions Exceptions) {
+}
+
+func (task *SingleTouchTask) GetOperationConfig() (*OperationConfig, *task_state.TaskState) {
+	return nil, nil
 }

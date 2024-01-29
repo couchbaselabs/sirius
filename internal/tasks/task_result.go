@@ -1,6 +1,9 @@
 package tasks
 
-import "github.com/couchbaselabs/sirius/internal/sdk"
+import (
+	"github.com/couchbaselabs/sirius/internal/sdk"
+	"github.com/couchbaselabs/sirius/internal/task_state"
+)
 
 // TaskResult represents a request structure for retrieving Result of the task.
 type TaskResult struct {
@@ -48,8 +51,8 @@ func (r *TaskResult) PostTaskExceptionHandling(_ *sdk.CollectionObject) {
 
 }
 
-func (r *TaskResult) MatchResultSeed(_ string) bool {
-	return false
+func (r *TaskResult) MatchResultSeed(_ string) (bool, error) {
+	return false, nil
 }
 
 func (r *TaskResult) GetCollectionObject() (*sdk.CollectionObject, error) {
@@ -57,4 +60,8 @@ func (r *TaskResult) GetCollectionObject() (*sdk.CollectionObject, error) {
 }
 
 func (r *TaskResult) SetException(exceptions Exceptions) {
+}
+
+func (r *TaskResult) GetOperationConfig() (*OperationConfig, *task_state.TaskState) {
+	return nil, nil
 }

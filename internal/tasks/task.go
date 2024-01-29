@@ -1,6 +1,9 @@
 package tasks
 
-import "github.com/couchbaselabs/sirius/internal/sdk"
+import (
+	"github.com/couchbaselabs/sirius/internal/sdk"
+	"github.com/couchbaselabs/sirius/internal/task_state"
+)
 
 type Task interface {
 	Describe() string
@@ -10,8 +13,9 @@ type Task interface {
 	CollectionIdentifier() string
 	CheckIfPending() bool
 	PostTaskExceptionHandling(collectionObject *sdk.CollectionObject)
-	MatchResultSeed(resultSeed string) bool
+	MatchResultSeed(resultSeed string) (bool, error)
 	GetCollectionObject() (*sdk.CollectionObject, error)
 	SetException(exceptions Exceptions)
 	tearUp() error
+	GetOperationConfig() (*OperationConfig, *task_state.TaskState)
 }

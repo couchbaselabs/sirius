@@ -36,28 +36,30 @@ func TestGeneratePerson(t *testing.T) {
 	}
 
 	// test to update the document1 and comparing it with original document
-	document3, err := template.UpdateDocument([]string{}, document1, &fake1)
+	document3, err := template.UpdateDocument([]string{}, document1, 2100, &fake1)
 	if err != nil {
 		log.Println(err)
 		t.Fail()
 	}
+
+	log.Println()
+	log.Println(document3)
+	log.Println()
 
 	document1Updated, ok := document3.(*Person)
 	if !ok {
 		log.Println("test failed while updating the document3")
 		t.Fail()
 	}
-	log.Println(document1Updated, document1)
 
 	ok, err = template.Compare(document1Updated, document1)
+	if !ok {
+		log.Println("test failed while comparing the document1 and document1updated")
+		t.Fatal("test failed while comparing the document1 and document1updated")
+	}
 
 	if err != nil {
 		fmt.Println(err)
-		t.Fail()
-	}
-
-	if !ok {
-		log.Println("test failed while comparing the document1 and document1updated")
 		t.Fail()
 	}
 

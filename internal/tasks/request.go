@@ -124,7 +124,8 @@ func (r *Request) retracePreviousMutations(collectionIdentifier string, offset i
 					if _, ok := errOffset[offset]; ok {
 						continue
 					} else {
-						doc, _ = gen.Template.UpdateDocument(u.OperationConfig.FieldsToChange, doc, fake)
+						doc, _ = gen.Template.UpdateDocument(u.OperationConfig.FieldsToChange, doc,
+							u.OperationConfig.DocSize, fake)
 					}
 				}
 			}
@@ -146,7 +147,7 @@ func (r *Request) retracePreviousSubDocMutations(collectionIdentifier string, of
 				if collectionIdentifier != u.CollectionIdentifier() {
 					continue
 				}
-				if offset >= (u.SubDocOperationConfig.Start) && (offset < u.SubDocOperationConfig.End) && resultSeed != u.
+				if offset >= (u.OperationConfig.Start) && (offset < u.OperationConfig.End) && resultSeed != u.
 					ResultSeed {
 					errOffset := u.State.ReturnErrOffset()
 					if _, ok := errOffset[offset]; ok {
@@ -174,7 +175,7 @@ func (r *Request) countMutation(collectionIdentifier string, offset int64, resul
 				if collectionIdentifier != u.CollectionIdentifier() {
 					continue
 				}
-				if offset >= (u.SubDocOperationConfig.Start) && (offset < u.SubDocOperationConfig.End) && resultSeed != u.
+				if offset >= (u.OperationConfig.Start) && (offset < u.OperationConfig.End) && resultSeed != u.
 					ResultSeed {
 					completeOffset := u.State.ReturnCompletedOffset()
 					if _, ok := completeOffset[offset]; ok {
@@ -188,7 +189,7 @@ func (r *Request) countMutation(collectionIdentifier string, offset int64, resul
 				if collectionIdentifier != u.CollectionIdentifier() {
 					continue
 				}
-				if offset >= (u.SubDocOperationConfig.Start) && (offset < u.SubDocOperationConfig.End) && resultSeed != u.
+				if offset >= (u.OperationConfig.Start) && (offset < u.OperationConfig.End) && resultSeed != u.
 					ResultSeed {
 					completeOffset := u.State.ReturnCompletedOffset()
 					if _, ok := completeOffset[offset]; ok {
@@ -202,7 +203,7 @@ func (r *Request) countMutation(collectionIdentifier string, offset int64, resul
 				if collectionIdentifier != u.CollectionIdentifier() {
 					continue
 				}
-				if offset >= (u.SubDocOperationConfig.Start) && (offset < u.SubDocOperationConfig.End) && resultSeed != u.
+				if offset >= (u.OperationConfig.Start) && (offset < u.OperationConfig.End) && resultSeed != u.
 					ResultSeed {
 					completeOffset := u.State.ReturnCompletedOffset()
 					if _, ok := completeOffset[offset]; ok {
@@ -216,7 +217,7 @@ func (r *Request) countMutation(collectionIdentifier string, offset int64, resul
 				if collectionIdentifier != u.CollectionIdentifier() {
 					continue
 				}
-				if offset >= (u.SubDocOperationConfig.Start) && (offset < u.SubDocOperationConfig.End) && resultSeed != u.
+				if offset >= (u.OperationConfig.Start) && (offset < u.OperationConfig.End) && resultSeed != u.
 					ResultSeed {
 					completeOffset := u.State.ReturnCompletedOffset()
 					if _, ok := completeOffset[offset]; ok {

@@ -5,7 +5,9 @@ import (
 	"github.com/couchbaselabs/sirius/internal/sdk"
 	"github.com/couchbaselabs/sirius/internal/task_errors"
 	"github.com/couchbaselabs/sirius/internal/task_result"
+	"github.com/couchbaselabs/sirius/internal/task_state"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -19,6 +21,7 @@ type BucketWarmUpTask struct {
 	Operation       string                  `json:"operation" doc:"false"`
 	ResultSeed      int64                   `json:"resultSeed" doc:"false"`
 	req             *Request                `json:"-" doc:"false"`
+	TaskPending     bool                    `json:"taskPending" doc:"false"`
 }
 
 func (task *BucketWarmUpTask) Describe() string {
@@ -36,6 +39,7 @@ func (task *BucketWarmUpTask) Do() error {
 }
 
 func (task *BucketWarmUpTask) Config(req *Request, reRun bool) (int64, error) {
+	task.TaskPending = false
 	task.req = req
 
 	if task.req == nil {
@@ -70,11 +74,13 @@ func (task *BucketWarmUpTask) BuildIdentifier() string {
 }
 
 func (task *BucketWarmUpTask) CollectionIdentifier() string {
-	return task.IdentifierToken + task.ClusterConfig.ConnectionString + task.Bucket + task.Scope + task.Collection
+	clusterIdentifier, _ := sdk.GetClusterIdentifier(task.ClusterConfig.ConnectionString)
+	return strings.Join([]string{task.IdentifierToken, clusterIdentifier, task.Bucket, task.Scope,
+		task.Collection}, ":")
 }
 
 func (task *BucketWarmUpTask) CheckIfPending() bool {
-	return false
+	return task.TaskPending
 }
 
 func (task *BucketWarmUpTask) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
@@ -82,14 +88,17 @@ func (task *BucketWarmUpTask) PostTaskExceptionHandling(collectionObject *sdk.Co
 
 }
 
-func (task *BucketWarmUpTask) MatchResultSeed(resultSeed string) bool {
+func (task *BucketWarmUpTask) MatchResultSeed(resultSeed string) (bool, error) {
 	if fmt.Sprintf("%d", task.ResultSeed) == resultSeed {
+		if task.TaskPending {
+			return true, task_errors.ErrTaskInPendingState
+		}
 		if task.Result == nil {
 			task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 		}
-		return true
+		return true, nil
 	}
-	return false
+	return false, nil
 }
 
 func (task *BucketWarmUpTask) GetCollectionObject() (*sdk.CollectionObject, error) {
@@ -106,5 +115,10 @@ func (task *BucketWarmUpTask) tearUp() error {
 	if err := task.Result.SaveResultIntoFile(); err != nil {
 		log.Println("not able to save Result into ", task.ResultSeed, task.Operation)
 	}
+	task.TaskPending = false
 	return nil
+}
+
+func (task *BucketWarmUpTask) GetOperationConfig() (*OperationConfig, *task_state.TaskState) {
+	return nil, nil
 }

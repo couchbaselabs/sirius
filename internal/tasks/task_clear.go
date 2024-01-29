@@ -2,6 +2,7 @@ package tasks
 
 import (
 	"github.com/couchbaselabs/sirius/internal/sdk"
+	"github.com/couchbaselabs/sirius/internal/task_state"
 )
 
 // ClearTask represents a request structure for clearing everything.
@@ -51,8 +52,8 @@ func (task *ClearTask) PostTaskExceptionHandling(_ *sdk.CollectionObject) {
 
 }
 
-func (task *ClearTask) MatchResultSeed(_ string) bool {
-	return false
+func (task *ClearTask) MatchResultSeed(string) (bool, error) {
+	return false, nil
 }
 
 func (task *ClearTask) GetCollectionObject() (*sdk.CollectionObject, error) {
@@ -60,4 +61,7 @@ func (task *ClearTask) GetCollectionObject() (*sdk.CollectionObject, error) {
 }
 
 func (task *ClearTask) SetException(exceptions Exceptions) {
+}
+func (task *ClearTask) GetOperationConfig() (*OperationConfig, *task_state.TaskState) {
+	return nil, nil
 }

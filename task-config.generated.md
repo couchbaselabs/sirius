@@ -414,7 +414,7 @@ Description :  SubDocDelete deletes sub-documents in bulk
 | `Bucket` | `string` | `json:bucket`  |
 | `Scope` | `string` | `json:scope,omitempty`  |
 | `Collection` | `string` | `json:collection,omitempty`  |
-| `SubDocOperationConfig` | `ptr` | `json:subDocOperationConfig`  |
+| `OperationConfig` | `ptr` | `json:operationConfig`  |
 | `RemoveSpecOptions` | `ptr` | `json:removeSpecOptions`  |
 | `MutateInOptions` | `ptr` | `json:mutateInOptions`  |
 
@@ -432,7 +432,7 @@ Description :  SubDocInsert inserts a Sub-Document
 | `Bucket` | `string` | `json:bucket`  |
 | `Scope` | `string` | `json:scope,omitempty`  |
 | `Collection` | `string` | `json:collection,omitempty`  |
-| `SubDocOperationConfig` | `ptr` | `json:subDocOperationConfig`  |
+| `OperationConfig` | `ptr` | `json:operationConfig`  |
 | `InsertSpecOptions` | `ptr` | `json:insertSpecOptions`  |
 | `MutateInOptions` | `ptr` | `json:mutateInOptions`  |
 
@@ -450,7 +450,7 @@ Description :  SubDocRead reads sub-document in bulk
 | `Bucket` | `string` | `json:bucket`  |
 | `Scope` | `string` | `json:scope,omitempty`  |
 | `Collection` | `string` | `json:collection,omitempty`  |
-| `SubDocOperationConfig` | `ptr` | `json:subDocOperationConfig`  |
+| `OperationConfig` | `ptr` | `json:operationConfig`  |
 | `GetSpecOptions` | `ptr` | `json:getSpecOptions`  |
 | `LookupInOptions` | `ptr` | `json:lookupInOptions`  |
 
@@ -468,7 +468,7 @@ Description :  SubDocReplace upserts a Sub-Document
 | `Bucket` | `string` | `json:bucket`  |
 | `Scope` | `string` | `json:scope,omitempty`  |
 | `Collection` | `string` | `json:collection,omitempty`  |
-| `SubDocOperationConfig` | `ptr` | `json:subDocOperationConfig`  |
+| `OperationConfig` | `ptr` | `json:operationConfig`  |
 | `ReplaceSpecOptions` | `ptr` | `json:replaceSpecOptions`  |
 | `MutateInOptions` | `ptr` | `json:mutateInOptions`  |
 
@@ -486,7 +486,7 @@ Description :  SubDocUpsert upserts a Sub-Document
 | `Bucket` | `string` | `json:bucket`  |
 | `Scope` | `string` | `json:scope,omitempty`  |
 | `Collection` | `string` | `json:collection,omitempty`  |
-| `SubDocOperationConfig` | `ptr` | `json:subDocOperationConfig`  |
+| `OperationConfig` | `ptr` | `json:operationConfig`  |
 | `InsertSpecOptions` | `ptr` | `json:insertSpecOptions`  |
 | `MutateInOptions` | `ptr` | `json:mutateInOptions`  |
 
@@ -504,7 +504,6 @@ Description : Validates every document in the cluster's bucket
 | `Bucket` | `string` | `json:bucket`  |
 | `Scope` | `string` | `json:scope,omitempty`  |
 | `Collection` | `string` | `json:collection,omitempty`  |
-| `OperationConfig` | `ptr` | `json:operationConfig,omitempty`  |
 
 ---
 #### /warmup-bucket

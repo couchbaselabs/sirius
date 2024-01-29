@@ -477,3 +477,20 @@ func configSingleSubDocOperationConfig(s *SingleSubDocOperationConfig) error {
 	}
 	return nil
 }
+
+// retrieveLastConfig retrieves the OperationConfig for the offset for a successful Sirius operation.
+func retrieveLastConfig(req *Request, offset int64) (OperationConfig, error) {
+	for i := range req.Tasks {
+		operationConfig, taskState := req.Tasks[len(req.Tasks)-i-1].Task.GetOperationConfig()
+		if operationConfig == nil {
+			continue
+		} else {
+			if offset >= (operationConfig.Start) && (offset < operationConfig.End) {
+				if _, ok := taskState.ReturnCompletedOffset()[offset]; ok {
+					return *operationConfig, nil
+				}
+			}
+		}
+	}
+	return OperationConfig{}, task_errors.ErrNilOperationConfig
+}

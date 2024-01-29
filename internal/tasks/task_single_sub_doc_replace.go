@@ -6,10 +6,12 @@ import (
 	"github.com/couchbaselabs/sirius/internal/sdk"
 	"github.com/couchbaselabs/sirius/internal/task_errors"
 	"github.com/couchbaselabs/sirius/internal/task_result"
+	"github.com/couchbaselabs/sirius/internal/task_state"
 	"github.com/couchbaselabs/sirius/internal/template"
 	"github.com/jaswdr/faker"
 	"log"
 	"math/rand"
+	"strings"
 	"time"
 )
 
@@ -41,7 +43,9 @@ func (task *SingleSubDocReplace) BuildIdentifier() string {
 }
 
 func (task *SingleSubDocReplace) CollectionIdentifier() string {
-	return task.IdentifierToken + task.ClusterConfig.ConnectionString + task.Bucket + task.Scope + task.Collection
+	clusterIdentifier, _ := sdk.GetClusterIdentifier(task.ClusterConfig.ConnectionString)
+	return strings.Join([]string{task.IdentifierToken, clusterIdentifier, task.Bucket, task.Scope,
+		task.Collection}, ":")
 }
 
 func (task *SingleSubDocReplace) CheckIfPending() bool {
@@ -186,14 +190,17 @@ func singleReplaceSubDocuments(task *SingleSubDocReplace, collectionObject *sdk.
 func (task *SingleSubDocReplace) PostTaskExceptionHandling(collectionObject *sdk.CollectionObject) {
 }
 
-func (task *SingleSubDocReplace) MatchResultSeed(resultSeed string) bool {
+func (task *SingleSubDocReplace) MatchResultSeed(resultSeed string) (bool, error) {
 	if fmt.Sprintf("%d", task.ResultSeed) == resultSeed {
+		if task.TaskPending {
+			return true, task_errors.ErrTaskInPendingState
+		}
 		if task.Result == nil {
 			task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 		}
-		return true
+		return true, nil
 	}
-	return false
+	return false, nil
 }
 
 func (task *SingleSubDocReplace) GetCollectionObject() (*sdk.CollectionObject, error) {
@@ -202,4 +209,8 @@ func (task *SingleSubDocReplace) GetCollectionObject() (*sdk.CollectionObject, e
 }
 
 func (task *SingleSubDocReplace) SetException(exceptions Exceptions) {
+}
+
+func (task *SingleSubDocReplace) GetOperationConfig() (*OperationConfig, *task_state.TaskState) {
+	return nil, nil
 }

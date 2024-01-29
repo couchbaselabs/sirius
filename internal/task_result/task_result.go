@@ -7,10 +7,8 @@ import (
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
 	"github.com/couchbaselabs/sirius/internal/sdk"
 	"github.com/couchbaselabs/sirius/internal/task_state"
-	"github.com/jaswdr/faker"
 	"golang.org/x/sync/errgroup"
 	"log"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"sync"
@@ -108,7 +106,7 @@ func ConfigTaskResult(operation string, resultSeed int64) *TaskResult {
 }
 
 // IncrementFailure saves the failure count of doc loading operation.
-func (t *TaskResult) IncrementFailure(initTime, docId string, _ interface{}, err error, status bool, cas uint64,
+func (t *TaskResult) IncrementFailure(initTime, docId string, err error, status bool, cas uint64,
 	offset int64) {
 
 	t.ResultChannel <- ResultHelper{
@@ -193,8 +191,8 @@ func (t *TaskResult) CreateSingleErrorResult(initTime, docId string, errorString
 	}
 }
 
-func (t *TaskResult) FailWholeBulkOperation(start, end int64, docSize int, gen *docgenerator.Generator, err error,
-	state *task_state.TaskState) {
+func (t *TaskResult) FailWholeBulkOperation(start, end int64, err error, state *task_state.TaskState,
+	gen *docgenerator.Generator, seed int64) {
 
 	const routineLimit = 10
 	routineLimiter := make(chan struct{}, routineLimit)
@@ -207,10 +205,8 @@ func (t *TaskResult) FailWholeBulkOperation(start, end int64, docSize int, gen *
 		dataChannel <- i
 		wg.Go(func() error {
 			offset := <-dataChannel
-			docId, key := gen.GetDocIdAndKey(offset)
-			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
-			originalDoc, _ := gen.Template.GenerateDocument(&fake, docSize)
-			t.IncrementFailure(initTime, docId, originalDoc, err, false, 0, offset)
+			docId := gen.BuildKey(offset + seed)
+			t.IncrementFailure(initTime, docId, err, false, 0, offset)
 			state.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 			<-routineLimiter
 			return nil

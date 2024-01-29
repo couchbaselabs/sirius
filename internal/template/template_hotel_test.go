@@ -35,7 +35,7 @@ func TestGenerateHotel(t *testing.T) {
 		t.Fail()
 	}
 
-	template.UpdateDocument([]string{}, document1, &fake1)
+	template.UpdateDocument([]string{}, document1, 0, &fake1)
 
 	//// test to update the document1 and comparing it with original document
 	//document3, err := template.UpdateDocument([]string{}, document1, &fake1)
@@ -65,7 +65,7 @@ func TestGenerateHotel(t *testing.T) {
 	//}
 
 	document1Copy, _ := template.GenerateDocument(&fake11, 0)
-	template.UpdateDocument([]string{}, document1Copy, &fake11)
+	template.UpdateDocument([]string{}, document1Copy, 0, &fake11)
 	ok, err = template.Compare(document1Copy, document1)
 
 	if err != nil {
@@ -74,12 +74,5 @@ func TestGenerateHotel(t *testing.T) {
 	if !ok {
 		t.Fail()
 	}
-	//ok, err = template.Compare(document1Copy, document2)
-	//if err != nil {
-	//	t.Fail()
-	//}
-	//if !ok {
-	//	t.Fail()
-	//}
 
 }

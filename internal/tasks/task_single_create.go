@@ -6,11 +6,13 @@ import (
 	"github.com/couchbaselabs/sirius/internal/sdk"
 	"github.com/couchbaselabs/sirius/internal/task_errors"
 	"github.com/couchbaselabs/sirius/internal/task_result"
+	"github.com/couchbaselabs/sirius/internal/task_state"
 	"github.com/couchbaselabs/sirius/internal/template"
 	"github.com/jaswdr/faker"
 	"golang.org/x/sync/errgroup"
 	"log"
 	"math/rand"
+	"strings"
 	"time"
 )
 
@@ -41,7 +43,9 @@ func (task *SingleInsertTask) BuildIdentifier() string {
 }
 
 func (task *SingleInsertTask) CollectionIdentifier() string {
-	return task.IdentifierToken + task.ClusterConfig.ConnectionString + task.Bucket + task.Scope + task.Collection
+	clusterIdentifier, _ := sdk.GetClusterIdentifier(task.ClusterConfig.ConnectionString)
+	return strings.Join([]string{task.IdentifierToken, clusterIdentifier, task.Bucket, task.Scope,
+		task.Collection}, ":")
 }
 
 func (task *SingleInsertTask) CheckIfPending() bool {
@@ -191,14 +195,17 @@ func singleInsertDocuments(task *SingleInsertTask, collectionObject *sdk.Collect
 func (task *SingleInsertTask) PostTaskExceptionHandling(_ *sdk.CollectionObject) {
 }
 
-func (task *SingleInsertTask) MatchResultSeed(resultSeed string) bool {
+func (task *SingleInsertTask) MatchResultSeed(resultSeed string) (bool, error) {
 	if fmt.Sprintf("%d", task.ResultSeed) == resultSeed {
+		if task.TaskPending {
+			return true, task_errors.ErrTaskInPendingState
+		}
 		if task.Result == nil {
 			task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
 		}
-		return true
+		return true, nil
 	}
-	return false
+	return false, nil
 }
 
 func (task *SingleInsertTask) GetCollectionObject() (*sdk.CollectionObject, error) {
@@ -208,4 +215,8 @@ func (task *SingleInsertTask) GetCollectionObject() (*sdk.CollectionObject, erro
 
 func (task *SingleInsertTask) SetException(exceptions Exceptions) {
 
+}
+
+func (task *SingleInsertTask) GetOperationConfig() (*OperationConfig, *task_state.TaskState) {
+	return nil, nil
 }
