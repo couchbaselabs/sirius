@@ -106,7 +106,6 @@ func (task *UpsertTask) Config(req *Request, reRun bool) (int64, error) {
 		}
 
 		task.MetaData = task.req.MetaData.GetCollectionMetadata(task.CollectionIdentifier())
-		log.Println(task.CollectionIdentifier(), task.MetaData)
 
 		task.req.lock.Lock()
 		if task.OperationConfig.End+task.MetaData.Seed > task.MetaData.SeedEnd {

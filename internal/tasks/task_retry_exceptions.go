@@ -59,7 +59,7 @@ func (r *RetryExceptions) Config(req *Request, reRun bool) (int64, error) {
 	}
 
 	if r.Task == nil {
-		return 0, fmt.Errorf("task found in %s for seed ", r.req.Identifier)
+		return 0, fmt.Errorf(" no task found for %s : %s ", r.req.Identifier, r.ResultSeed)
 	}
 
 	return r.Task.Config(req, true)
