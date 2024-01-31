@@ -18,7 +18,7 @@ const (
 	DefaultKeySize   int    = 250
 )
 
-// Generator helps to generate random document for inserting and updating random
+// Generator helps to sirius_documentation random document for inserting and updating random
 // as per the doc loading task requirement.
 type Generator struct {
 	KeySize   int               `json:"keySize"`
@@ -61,11 +61,6 @@ func (g *Generator) BuildKey(key int64) string {
 	return tempKey
 }
 
-func (g *Generator) Reset(keySize, docSize int, docType, keyPrefix, keySuffix, templateName string) {
-	g.KeySize = keySize
-	g.DocSize = docSize
-	g.DocType = docType
-	g.KeyPrefix = keyPrefix
-	g.KeySuffix = keySuffix
-	g.Template = template.InitialiseTemplate(templateName)
+func Reset(keySize, docSize int, docType, keyPrefix, keySuffix, templateName string) *Generator {
+	return ConfigGenerator(keySize, docSize, docType, keyPrefix, keySuffix, template.InitialiseTemplate(templateName))
 }

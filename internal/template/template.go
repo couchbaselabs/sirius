@@ -19,7 +19,7 @@ type Template interface {
 	GenerateIndexes(bucketName string, scopeName string, collectionName string) ([]string, error)
 	GenerateQueries(bucketName string, scopeName string, collectionName string) ([]string, error)
 	GenerateIndexesForSdk() (map[string][]string, error)
-	GenerateSubPathAndValue(fake *faker.Faker) map[string]any
+	GenerateSubPathAndValue(fake *faker.Faker, subDocSize int) map[string]any
 }
 
 // InitialiseTemplate returns a template as an interface defined by user request.

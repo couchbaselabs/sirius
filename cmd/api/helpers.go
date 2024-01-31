@@ -3,12 +3,17 @@ package main
 import (
 	"encoding/gob"
 	"encoding/json"
-	"github.com/couchbaselabs/sirius/internal/generate"
 	"github.com/couchbaselabs/sirius/internal/server_requests"
+	"github.com/couchbaselabs/sirius/internal/sirius_documentation"
 	"github.com/couchbaselabs/sirius/internal/task_meta_data"
 	"github.com/couchbaselabs/sirius/internal/task_result"
 	"github.com/couchbaselabs/sirius/internal/task_state"
 	"github.com/couchbaselabs/sirius/internal/tasks"
+	"github.com/couchbaselabs/sirius/internal/tasks/bulk_loading_cb"
+	"github.com/couchbaselabs/sirius/internal/tasks/bulk_query_cb"
+	"github.com/couchbaselabs/sirius/internal/tasks/key_based_loading_cb"
+	"github.com/couchbaselabs/sirius/internal/tasks/util_cb"
+	"github.com/couchbaselabs/sirius/internal/tasks/util_sirius"
 	"github.com/couchbaselabs/sirius/internal/template"
 	"net/http"
 )
@@ -70,43 +75,45 @@ func registerInterfaces() {
 	gob.Register(&map[string]interface{}{})
 	gob.Register(&map[string]any{})
 	gob.Register(&tasks.Request{})
+	gob.Register(&task_meta_data.MetaData{})
+	gob.Register(&task_meta_data.DocumentsMetaData{})
 	gob.Register(&template.Person{})
 	gob.Register(&template.Hotel{})
 	gob.Register(&template.SmallTemplate{})
 	gob.Register(&server_requests.ServerRequests{})
-	gob.Register(&tasks.InsertTask{})
-	gob.Register(&tasks.UpsertTask{})
-	gob.Register(&tasks.TaskResult{})
-	gob.Register(&tasks.DeleteTask{})
-	gob.Register(&tasks.TouchTask{})
-	gob.Register(&tasks.ValidateTask{})
+	gob.Register(&bulk_loading_cb.InsertTask{})
+	gob.Register(&bulk_loading_cb.UpsertTask{})
+	gob.Register(&util_sirius.TaskResult{})
+	gob.Register(&bulk_loading_cb.DeleteTask{})
+	gob.Register(&bulk_loading_cb.TouchTask{})
+	gob.Register(&bulk_loading_cb.ValidateTask{})
 	gob.Register(&task_result.TaskResult{})
 	gob.Register(&task_state.TaskState{})
-	gob.Register(&tasks.ReadTask{})
-	gob.Register(&tasks.SingleInsertTask{})
-	gob.Register(&tasks.SingleDeleteTask{})
-	gob.Register(&tasks.SingleUpsertTask{})
-	gob.Register(&tasks.SingleReadTask{})
-	gob.Register(&tasks.SingleTouchTask{})
-	gob.Register(&tasks.SingleReplaceTask{})
-	gob.Register(&tasks.QueryTask{})
+	gob.Register(&bulk_loading_cb.ReadTask{})
+	gob.Register(&key_based_loading_cb.SingleInsertTask{})
+	gob.Register(&key_based_loading_cb.SingleDeleteTask{})
+	gob.Register(&key_based_loading_cb.SingleUpsertTask{})
+	gob.Register(&key_based_loading_cb.SingleReadTask{})
+	gob.Register(&key_based_loading_cb.SingleTouchTask{})
+	gob.Register(&key_based_loading_cb.SingleReplaceTask{})
+	gob.Register(&bulk_query_cb.QueryTask{})
 	gob.Register(&task_meta_data.MetaData{})
 	gob.Register(&task_meta_data.CollectionMetaData{})
-	gob.Register(&tasks.RetryExceptions{})
-	gob.Register(&tasks.SubDocInsert{})
-	gob.Register(&tasks.SubDocUpsert{})
-	gob.Register(&tasks.SubDocDelete{})
-	gob.Register(&tasks.SubDocRead{})
-	gob.Register(&tasks.SubDocReplace{})
-	gob.Register(&tasks.SingleSubDocInsert{})
-	gob.Register(&tasks.SingleSubDocUpsert{})
-	gob.Register(&tasks.SingleSubDocReplace{})
-	gob.Register(&tasks.SingleSubDocDelete{})
-	gob.Register(&tasks.SingleSubDocRead{})
-	gob.Register(&tasks.SingleValidate{})
-	gob.Register(&tasks.BucketWarmUpTask{})
+	gob.Register(&bulk_loading_cb.RetryExceptions{})
+	gob.Register(&bulk_loading_cb.SubDocInsert{})
+	gob.Register(&bulk_loading_cb.SubDocUpsert{})
+	gob.Register(&bulk_loading_cb.SubDocDelete{})
+	gob.Register(&bulk_loading_cb.SubDocRead{})
+	gob.Register(&bulk_loading_cb.SubDocReplace{})
+	gob.Register(&key_based_loading_cb.SingleSubDocInsert{})
+	gob.Register(&key_based_loading_cb.SingleSubDocUpsert{})
+	gob.Register(&key_based_loading_cb.SingleSubDocReplace{})
+	gob.Register(&key_based_loading_cb.SingleSubDocDelete{})
+	gob.Register(&key_based_loading_cb.SingleSubDocRead{})
+	gob.Register(&key_based_loading_cb.SingleValidate{})
+	gob.Register(&util_cb.BucketWarmUpTask{})
 
-	r := generate.Register{}
+	r := sirius_documentation.Register{}
 	for _, i := range r.HelperStruct() {
 		gob.Register(i)
 	}
