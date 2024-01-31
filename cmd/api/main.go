@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/couchbaselabs/sirius/internal/generate"
 	"github.com/couchbaselabs/sirius/internal/server_requests"
+	"github.com/couchbaselabs/sirius/internal/sirius_documentation"
 	"github.com/couchbaselabs/sirius/internal/tasks-manager"
 	"io"
 	"log"
@@ -34,7 +34,7 @@ func main() {
 		taskManager:    tasks_manager.NewTasKManager(TaskQueueSize),
 		serverRequests: server_requests.NewServerRequests(),
 	}
-	go generate.Generate()
+	go sirius_documentation.Generate()
 
 	//define the server
 	log.Printf("Starting Document Loading Service at port %s\n", webPort)

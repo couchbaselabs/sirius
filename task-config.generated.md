@@ -78,7 +78,7 @@ The task will delete documents from [start,end] inclusive.
 
  REST : POST
 
-Description : Read Task get documents from bucket and validate them with the expected ones
+Description : Read BulkTask get documents from bucket and validate them with the expected ones
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
@@ -127,31 +127,6 @@ We need to share the fields we want to update in a json document using SQL++ syn
 | `Collection` | `string` | `json:collection,omitempty`  |
 | `InsertOptions` | `ptr` | `json:insertOptions,omitempty`  |
 | `OperationConfig` | `ptr` | `json:operationConfig,omitempty`  |
-
----
-#### /clear_data
-
- REST : POST
-
-Description : The Task clear operation will remove the metadata from the bucket on the specific Couchbase server where
-the test was executed.
-
-| Name | Type | JSON Tag |
-| ---- | ---- | -------- |
-| `IdentifierToken` | `string` | `json:identifierToken`  |
-
----
-#### /result
-
- REST : POST
-
-Description :  Task Result is retrieved via this endpoint.
-
-
-| Name | Type | JSON Tag |
-| ---- | ---- | -------- |
-| `Seed` | `string` | `json:seed`  |
-| `DeleteRecord` | `bool` | `json:deleteRecord`  |
 
 ---
 #### /retry-exceptions

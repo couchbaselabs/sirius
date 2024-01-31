@@ -190,10 +190,8 @@ func (h *Hotel) GenerateIndexesForSdk() (map[string][]string, error) {
 	panic("implement me")
 }
 
-func (h *Hotel) GenerateSubPathAndValue(fake *faker.Faker) map[string]any {
+func (h *Hotel) GenerateSubPathAndValue(fake *faker.Faker, subDocSize int) map[string]any {
 	return map[string]interface{}{
-		"fullName": fake.Person().FirstName() + " " + fake.Person().LastName(),
-		"sex":      fake.Person().Gender(),
-		"contact":  fake.Person().Contact().Phone,
+		"subDocData": fake.RandomStringWithLength(subDocSize),
 	}
 }

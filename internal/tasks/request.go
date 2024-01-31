@@ -4,11 +4,10 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
-	"github.com/couchbaselabs/sirius/internal/docgenerator"
-	"github.com/couchbaselabs/sirius/internal/sdk"
+	"github.com/couchbase/gocb/v2"
+	"github.com/couchbaselabs/sirius/internal/cb_sdk"
 	"github.com/couchbaselabs/sirius/internal/task_meta_data"
 	"github.com/couchbaselabs/sirius/internal/task_result"
-	"github.com/jaswdr/faker"
 	"log"
 	"os"
 	"path/filepath"
@@ -18,8 +17,8 @@ import (
 const RequestPath = "./internal/tasks/request_logs"
 
 type TaskWithIdentifier struct {
-	Operation string `json:"operation" doc:"true"`
-	Task      Task   `json:"task" doc:"true"`
+	Operation string `json:"operation" doc:"false"`
+	Task      Task   `json:"task" doc:"false"`
 }
 
 type Request struct {
@@ -27,7 +26,7 @@ type Request struct {
 	Tasks             []TaskWithIdentifier              `json:"tasks" doc:"false"`
 	MetaData          *task_meta_data.MetaData          `json:"metaData" doc:"false"`
 	DocumentsMeta     *task_meta_data.DocumentsMetaData `json:"documentMeta" doc:"false"`
-	connectionManager *sdk.ConnectionManager            `json:"-" doc:"false"`
+	connectionManager *cb_sdk.ConnectionManager         `json:"-" doc:"false"`
 	lock              sync.Mutex                        `json:"-" doc:"false"`
 	ctx               context.Context                   `json:"-"`
 	cancel            context.CancelFunc                `json:"-"`
@@ -40,7 +39,7 @@ func NewRequest(identifier string) *Request {
 		Identifier:        identifier,
 		MetaData:          task_meta_data.NewMetaData(),
 		DocumentsMeta:     task_meta_data.NewDocumentsMetaData(),
-		connectionManager: sdk.ConfigConnectionManager(),
+		connectionManager: cb_sdk.ConfigConnectionManager(),
 		lock:              sync.Mutex{},
 		ctx:               ctx,
 		cancel:            cancel,
@@ -60,23 +59,23 @@ func (r *Request) ContextClosed() bool {
 	return false
 }
 
-// InitializeContext is used to generate new contextWithCancel for request upon restart of sirius.
+// InitializeContext is used to sirius_documentation new contextWithCancel for request upon restart of sirius.
 func (r *Request) InitializeContext() {
 	ctx, cancel := context.WithCancel(context.Background())
 	r.ctx = ctx
 	r.cancel = cancel
 }
 
-// ReconnectionManager setups again sdk.ConnectionManager
+// ReconnectionManager setups again cb_sdk.ConnectionManager
 func (r *Request) ReconnectionManager() {
 	defer r.lock.Unlock()
 	r.lock.Lock()
 	if r.connectionManager == nil {
-		r.connectionManager = sdk.ConfigConnectionManager()
+		r.connectionManager = cb_sdk.ConfigConnectionManager()
 	}
 }
 
-// ReconfigureDocumentManager setups again sdk.ConnectionManager
+// ReconfigureDocumentManager setups again cb_sdk.ConnectionManager
 func (r *Request) ReconfigureDocumentManager() {
 	defer r.lock.Unlock()
 	r.lock.Lock()
@@ -100,212 +99,6 @@ func (r *Request) ClearAllTask() {
 	for i := range r.Tasks {
 		r.Tasks[i].Task = nil
 	}
-}
-
-// retracePreviousMutations returns an updated document after mutating the original documents.
-func (r *Request) retracePreviousMutations(collectionIdentifier string, offset int64, doc interface{},
-	gen docgenerator.Generator, fake *faker.Faker, resultSeed int64) (interface{}, error) {
-	defer r.lock.Unlock()
-	r.lock.Lock()
-	for i := range r.Tasks {
-		td := r.Tasks[i]
-		if td.Operation == UpsertOperation {
-			u, ok := td.Task.(*UpsertTask)
-			if ok {
-				if collectionIdentifier != u.CollectionIdentifier() {
-					continue
-				}
-				if offset >= (u.OperationConfig.Start) && (offset < u.OperationConfig.End) && resultSeed != u.
-					ResultSeed {
-					if u.State == nil {
-						return doc, fmt.Errorf("Unable to retrace previous mutations on sirius for " + u.CollectionIdentifier())
-					}
-					errOffset := u.State.ReturnErrOffset()
-					if _, ok := errOffset[offset]; ok {
-						continue
-					} else {
-						doc, _ = gen.Template.UpdateDocument(u.OperationConfig.FieldsToChange, doc,
-							u.OperationConfig.DocSize, fake)
-					}
-				}
-			}
-		}
-	}
-	return doc, nil
-}
-
-func (r *Request) retracePreviousSubDocMutations(collectionIdentifier string, offset int64, gen docgenerator.Generator,
-	fake *faker.Faker, resultSeed int64) map[string]any {
-	defer r.lock.Unlock()
-	r.lock.Lock()
-	var result map[string]any
-	for i := range r.Tasks {
-		td := r.Tasks[i]
-		if td.Operation == SubDocUpsertOperation {
-			u, ok := td.Task.(*SubDocUpsert)
-			if ok {
-				if collectionIdentifier != u.CollectionIdentifier() {
-					continue
-				}
-				if offset >= (u.OperationConfig.Start) && (offset < u.OperationConfig.End) && resultSeed != u.
-					ResultSeed {
-					errOffset := u.State.ReturnErrOffset()
-					if _, ok := errOffset[offset]; ok {
-						continue
-					} else {
-						result = gen.Template.GenerateSubPathAndValue(fake)
-					}
-				}
-			}
-		}
-	}
-	return result
-}
-
-// countMutation return the number of mutation happened on an offset
-func (r *Request) countMutation(collectionIdentifier string, offset int64, resultSeed int64) int {
-	defer r.lock.Unlock()
-	r.lock.Lock()
-	var result int = 0
-	for i := range r.Tasks {
-		td := r.Tasks[i]
-		if td.Operation == SubDocUpsertOperation {
-			u, ok := td.Task.(*SubDocUpsert)
-			if ok {
-				if collectionIdentifier != u.CollectionIdentifier() {
-					continue
-				}
-				if offset >= (u.OperationConfig.Start) && (offset < u.OperationConfig.End) && resultSeed != u.
-					ResultSeed {
-					completeOffset := u.State.ReturnCompletedOffset()
-					if _, ok := completeOffset[offset]; ok {
-						result++
-					}
-				}
-			}
-		} else if td.Operation == SubDocDeleteOperation {
-			u, ok := td.Task.(*SubDocDelete)
-			if ok {
-				if collectionIdentifier != u.CollectionIdentifier() {
-					continue
-				}
-				if offset >= (u.OperationConfig.Start) && (offset < u.OperationConfig.End) && resultSeed != u.
-					ResultSeed {
-					completeOffset := u.State.ReturnCompletedOffset()
-					if _, ok := completeOffset[offset]; ok {
-						result++
-					}
-				}
-			}
-		} else if td.Operation == SubDocReplaceOperation {
-			u, ok := td.Task.(*SubDocReplace)
-			if ok {
-				if collectionIdentifier != u.CollectionIdentifier() {
-					continue
-				}
-				if offset >= (u.OperationConfig.Start) && (offset < u.OperationConfig.End) && resultSeed != u.
-					ResultSeed {
-					completeOffset := u.State.ReturnCompletedOffset()
-					if _, ok := completeOffset[offset]; ok {
-						result++
-					}
-				}
-			}
-		} else if td.Operation == SubDocInsertOperation {
-			u, ok := td.Task.(*SubDocInsert)
-			if ok {
-				if collectionIdentifier != u.CollectionIdentifier() {
-					continue
-				}
-				if offset >= (u.OperationConfig.Start) && (offset < u.OperationConfig.End) && resultSeed != u.
-					ResultSeed {
-					completeOffset := u.State.ReturnCompletedOffset()
-					if _, ok := completeOffset[offset]; ok {
-						result++
-					}
-				}
-			}
-		}
-	}
-	return result
-
-}
-
-// retracePreviousDeletions returns a lookup table representing the offsets which are successfully deleted.
-func (r *Request) retracePreviousDeletions(collectionIdentifier string, resultSeed int64) (map[int64]struct{}, error) {
-	defer r.lock.Unlock()
-	r.lock.Lock()
-	result := make(map[int64]struct{})
-	for i := range r.Tasks {
-		td := r.Tasks[i]
-		if td.Operation == DeleteOperation {
-			u, ok := td.Task.(*DeleteTask)
-			if ok {
-				if collectionIdentifier != u.CollectionIdentifier() {
-					continue
-				}
-				if resultSeed != u.ResultSeed {
-					completedOffSet := u.State.ReturnCompletedOffset()
-					for deletedOffset, _ := range completedOffSet {
-						result[deletedOffset] = struct{}{}
-					}
-				}
-			}
-		}
-	}
-	return result, nil
-}
-
-// retracePreviousDeletions returns a lookup table representing the offsets which are successfully deleted.
-func (r *Request) retracePreviousSubDocDeletions(collectionIdentifier string, resultSeed int64) (map[int64]struct{},
-	error) {
-	defer r.lock.Unlock()
-	r.lock.Lock()
-	result := make(map[int64]struct{})
-	for i := range r.Tasks {
-		td := r.Tasks[i]
-		if td.Operation == SubDocDeleteOperation {
-			u, ok := td.Task.(*SubDocDelete)
-			if ok {
-				if collectionIdentifier != u.CollectionIdentifier() {
-					continue
-				}
-				if resultSeed != u.ResultSeed {
-					completedOffSet := u.State.ReturnCompletedOffset()
-					for deletedOffset, _ := range completedOffSet {
-						result[deletedOffset] = struct{}{}
-					}
-				}
-			}
-		}
-	}
-	return result, nil
-}
-
-// returns a lookup table representing the offsets which are not inserted properly..
-func (r *Request) retracePreviousFailedInsertions(collectionIdentifier string, resultSeed int64) (map[int64]struct{},
-	error) {
-	defer r.lock.Unlock()
-	r.lock.Lock()
-	result := make(map[int64]struct{})
-	for i := range r.Tasks {
-		td := r.Tasks[i]
-		if td.Operation == InsertOperation {
-			u, ok := td.Task.(*InsertTask)
-			if ok {
-				if collectionIdentifier != u.CollectionIdentifier() {
-					continue
-				}
-				if resultSeed != u.ResultSeed {
-					errorOffSet := u.State.ReturnErrOffset()
-					for offSet, _ := range errorOffSet {
-						result[offSet] = struct{}{}
-					}
-				}
-			}
-		}
-	}
-	return result, nil
 }
 
 // AddTask will add tasks.Task with operation type.
@@ -373,6 +166,24 @@ func (r *Request) SaveRequestIntoFile() error {
 	return r.saveRequestIntoFile()
 }
 
+func (r *Request) GetCluster(config *cb_sdk.ClusterConfig) (*gocb.Cluster, error) {
+	return r.connectionManager.GetCluster(config)
+}
+
+func (r *Request) GetBucket(clusterConfig *cb_sdk.ClusterConfig, bucketName string) (*gocb.Bucket,
+	error) {
+	return r.connectionManager.GetBucket(clusterConfig, bucketName)
+}
+
+func (r *Request) GetCollection(config *cb_sdk.ClusterConfig, bucket string, scope string, collection string) (*cb_sdk.CollectionObject, error) {
+	return r.connectionManager.GetCollection(config, bucket, scope, collection)
+}
+
+func (r *Request) GetScope(config *cb_sdk.ClusterConfig, bucket string, scope string) (*gocb.Scope,
+	error) {
+	return r.connectionManager.GetScope(config, bucket, scope)
+}
+
 // ReadRequestFromFile will return Request from the disk.
 func ReadRequestFromFile(identifier string) (*Request, error) {
 	cwd, err := os.Getwd()
@@ -408,4 +219,12 @@ func DeleteResultFile(resultSeed int64) error {
 		return err
 	}
 	return nil
+}
+
+func (r *Request) Lock() {
+	r.lock.Lock()
+}
+
+func (r *Request) Unlock() {
+	r.lock.Unlock()
 }

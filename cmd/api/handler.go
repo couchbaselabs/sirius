@@ -4,6 +4,11 @@ import (
 	"fmt"
 	"github.com/couchbaselabs/sirius/internal/task_result"
 	"github.com/couchbaselabs/sirius/internal/tasks"
+	"github.com/couchbaselabs/sirius/internal/tasks/bulk_loading_cb"
+	"github.com/couchbaselabs/sirius/internal/tasks/bulk_query_cb"
+	"github.com/couchbaselabs/sirius/internal/tasks/key_based_loading_cb"
+	"github.com/couchbaselabs/sirius/internal/tasks/util_cb"
+	"github.com/couchbaselabs/sirius/internal/tasks/util_sirius"
 	"log"
 	"net/http"
 )
@@ -23,7 +28,7 @@ func (app *Config) testServer(w http.ResponseWriter, _ *http.Request) {
 // taskResult is responsible for handling user request to get status of the task
 // scheduled.
 func (app *Config) taskResult(w http.ResponseWriter, r *http.Request) {
-	reqPayload := &tasks.TaskResult{}
+	reqPayload := &util_sirius.TaskResult{}
 	if err := app.readJSON(w, r, reqPayload); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -44,7 +49,7 @@ func (app *Config) taskResult(w http.ResponseWriter, r *http.Request) {
 
 // insertTask is used to bulk loading documents into buckets
 func (app *Config) insertTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.InsertTask{}
+	task := &bulk_loading_cb.InsertTask{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -68,7 +73,7 @@ func (app *Config) insertTask(w http.ResponseWriter, r *http.Request) {
 	if err := app.taskManager.AddTask(task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
-	respPayload := tasks.TaskResponse{
+	respPayload := util_sirius.TaskResponse{
 		Seed: fmt.Sprintf("%d", resultSeed),
 	}
 	resPayload := jsonResponse{
@@ -81,7 +86,7 @@ func (app *Config) insertTask(w http.ResponseWriter, r *http.Request) {
 
 // deleteTask is used to delete documents in bulk of a bucket.
 func (app *Config) deleteTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.DeleteTask{}
+	task := &bulk_loading_cb.DeleteTask{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -105,7 +110,7 @@ func (app *Config) deleteTask(w http.ResponseWriter, r *http.Request) {
 	if err := app.taskManager.AddTask(task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
-	respPayload := tasks.TaskResponse{
+	respPayload := util_sirius.TaskResponse{
 		Seed: fmt.Sprintf("%d", seedResult),
 	}
 	resPayload := jsonResponse{
@@ -118,7 +123,7 @@ func (app *Config) deleteTask(w http.ResponseWriter, r *http.Request) {
 
 // upsertTask is used to bulk loading updated documents into bucket.
 func (app *Config) upsertTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.UpsertTask{}
+	task := &bulk_loading_cb.UpsertTask{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -142,7 +147,7 @@ func (app *Config) upsertTask(w http.ResponseWriter, r *http.Request) {
 	if err := app.taskManager.AddTask(task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
-	respPayload := tasks.TaskResponse{
+	respPayload := util_sirius.TaskResponse{
 		Seed: fmt.Sprintf("%d", resultSeed),
 	}
 	resPayload := jsonResponse{
@@ -155,12 +160,12 @@ func (app *Config) upsertTask(w http.ResponseWriter, r *http.Request) {
 
 // touchTask is used to update the ttl of documents in bulk.
 func (app *Config) touchTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.TouchTask{}
+	task := &bulk_loading_cb.TouchTask{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	log.Print(task, tasks.TouchTask{})
+	log.Print(task, bulk_loading_cb.TouchTask{})
 	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.UpsertOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
@@ -179,7 +184,7 @@ func (app *Config) touchTask(w http.ResponseWriter, r *http.Request) {
 	if err := app.taskManager.AddTask(task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
-	respPayload := tasks.TaskResponse{
+	respPayload := util_sirius.TaskResponse{
 		Seed: fmt.Sprintf("%d", resultSeed),
 	}
 	resPayload := jsonResponse{
@@ -192,7 +197,7 @@ func (app *Config) touchTask(w http.ResponseWriter, r *http.Request) {
 
 // validateTask is validating the cluster's current state.
 func (app *Config) validateTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.ValidateTask{}
+	task := &bulk_loading_cb.ValidateTask{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -216,7 +221,7 @@ func (app *Config) validateTask(w http.ResponseWriter, r *http.Request) {
 	if err := app.taskManager.AddTask(task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
-	respPayload := tasks.TaskResponse{
+	respPayload := util_sirius.TaskResponse{
 		Seed: fmt.Sprintf("%d", seedResult),
 	}
 	resPayload := jsonResponse{
@@ -229,7 +234,7 @@ func (app *Config) validateTask(w http.ResponseWriter, r *http.Request) {
 
 // clearRequestFromServer clears a test's request from the server.
 func (app *Config) clearRequestFromServer(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.ClearTask{}
+	task := &util_sirius.ClearTask{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -249,7 +254,7 @@ func (app *Config) clearRequestFromServer(w http.ResponseWriter, r *http.Request
 
 // readTask is validating the cluster's current state.
 func (app *Config) readTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.ReadTask{}
+	task := &bulk_loading_cb.ReadTask{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -273,7 +278,7 @@ func (app *Config) readTask(w http.ResponseWriter, r *http.Request) {
 	if err := app.taskManager.AddTask(task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
-	respPayload := tasks.TaskResponse{
+	respPayload := util_sirius.TaskResponse{
 		Seed: fmt.Sprintf("%d", seedResult),
 	}
 	resPayload := jsonResponse{
@@ -286,7 +291,7 @@ func (app *Config) readTask(w http.ResponseWriter, r *http.Request) {
 
 // singleInsertTask is used to insert document in a collection
 func (app *Config) singleInsertTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.SingleInsertTask{}
+	task := &key_based_loading_cb.SingleInsertTask{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -310,7 +315,7 @@ func (app *Config) singleInsertTask(w http.ResponseWriter, r *http.Request) {
 	if err := app.taskManager.AddTask(task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
-	respPayload := tasks.TaskResponse{
+	respPayload := util_sirius.TaskResponse{
 		Seed: fmt.Sprintf("%d", seedResult),
 	}
 	resPayload := jsonResponse{
@@ -323,7 +328,7 @@ func (app *Config) singleInsertTask(w http.ResponseWriter, r *http.Request) {
 
 // singleDeleteTask is used to delete documents on a collection
 func (app *Config) singleDeleteTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.SingleDeleteTask{}
+	task := &key_based_loading_cb.SingleDeleteTask{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -347,7 +352,7 @@ func (app *Config) singleDeleteTask(w http.ResponseWriter, r *http.Request) {
 	if err := app.taskManager.AddTask(task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
-	respPayload := tasks.TaskResponse{
+	respPayload := util_sirius.TaskResponse{
 		Seed: fmt.Sprintf("%d", seedResult),
 	}
 	resPayload := jsonResponse{
@@ -360,7 +365,7 @@ func (app *Config) singleDeleteTask(w http.ResponseWriter, r *http.Request) {
 
 // singleUpsertTask is used to update the existing document in a collection
 func (app *Config) singleUpsertTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.SingleUpsertTask{}
+	task := &key_based_loading_cb.SingleUpsertTask{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -384,7 +389,7 @@ func (app *Config) singleUpsertTask(w http.ResponseWriter, r *http.Request) {
 	if err := app.taskManager.AddTask(task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
-	respPayload := tasks.TaskResponse{
+	respPayload := util_sirius.TaskResponse{
 		Seed: fmt.Sprintf("%d", seedResult),
 	}
 	resPayload := jsonResponse{
@@ -397,7 +402,7 @@ func (app *Config) singleUpsertTask(w http.ResponseWriter, r *http.Request) {
 
 // singleReadTask is used read documents and verify from a collection.
 func (app *Config) singleReadTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.SingleReadTask{}
+	task := &key_based_loading_cb.SingleReadTask{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -421,7 +426,7 @@ func (app *Config) singleReadTask(w http.ResponseWriter, r *http.Request) {
 	if err := app.taskManager.AddTask(task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
-	respPayload := tasks.TaskResponse{
+	respPayload := util_sirius.TaskResponse{
 		Seed: fmt.Sprintf("%d", seedResult),
 	}
 	resPayload := jsonResponse{
@@ -434,7 +439,7 @@ func (app *Config) singleReadTask(w http.ResponseWriter, r *http.Request) {
 
 // singleTouchTask is used to update expiry of documents in a collection
 func (app *Config) singleTouchTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.SingleTouchTask{}
+	task := &key_based_loading_cb.SingleTouchTask{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -458,7 +463,7 @@ func (app *Config) singleTouchTask(w http.ResponseWriter, r *http.Request) {
 	if err := app.taskManager.AddTask(task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
-	respPayload := tasks.TaskResponse{
+	respPayload := util_sirius.TaskResponse{
 		Seed: fmt.Sprintf("%d", seedResult),
 	}
 	resPayload := jsonResponse{
@@ -471,7 +476,7 @@ func (app *Config) singleTouchTask(w http.ResponseWriter, r *http.Request) {
 
 // singleReplaceTask is used replace content of document on a collection
 func (app *Config) singleReplaceTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.SingleReplaceTask{}
+	task := &key_based_loading_cb.SingleReplaceTask{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -495,7 +500,7 @@ func (app *Config) singleReplaceTask(w http.ResponseWriter, r *http.Request) {
 	if err := app.taskManager.AddTask(task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
-	respPayload := tasks.TaskResponse{
+	respPayload := util_sirius.TaskResponse{
 		Seed: fmt.Sprintf("%d", seedResult),
 	}
 	resPayload := jsonResponse{
@@ -508,7 +513,7 @@ func (app *Config) singleReplaceTask(w http.ResponseWriter, r *http.Request) {
 
 // runQueryTask runs the query workload for a duration of time
 func (app *Config) runQueryTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.QueryTask{}
+	task := &bulk_query_cb.QueryTask{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -532,7 +537,7 @@ func (app *Config) runQueryTask(w http.ResponseWriter, r *http.Request) {
 	if err := app.taskManager.AddTask(task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
-	respPayload := tasks.TaskResponse{
+	respPayload := util_sirius.TaskResponse{
 		Seed: fmt.Sprintf("%d", seedResult),
 	}
 	resPayload := jsonResponse{
@@ -545,7 +550,7 @@ func (app *Config) runQueryTask(w http.ResponseWriter, r *http.Request) {
 
 // RetryExceptionTask runs the query workload for a duration of time
 func (app *Config) RetryExceptionTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.RetryExceptions{}
+	task := &bulk_loading_cb.RetryExceptions{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -564,7 +569,7 @@ func (app *Config) RetryExceptionTask(w http.ResponseWriter, r *http.Request) {
 	if err := app.taskManager.AddTask(task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
-	respPayload := tasks.TaskResponse{
+	respPayload := util_sirius.TaskResponse{
 		Seed: fmt.Sprintf("%d", seedResult),
 	}
 	resPayload := jsonResponse{
@@ -577,7 +582,7 @@ func (app *Config) RetryExceptionTask(w http.ResponseWriter, r *http.Request) {
 
 // SubDocInsertTask is used to load bulk sub documents into buckets
 func (app *Config) SubDocInsertTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.SubDocInsert{}
+	task := &bulk_loading_cb.SubDocInsert{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -601,7 +606,7 @@ func (app *Config) SubDocInsertTask(w http.ResponseWriter, r *http.Request) {
 	if err := app.taskManager.AddTask(task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
-	respPayload := tasks.TaskResponse{
+	respPayload := util_sirius.TaskResponse{
 		Seed: fmt.Sprintf("%d", resultSeed),
 	}
 	resPayload := jsonResponse{
@@ -614,7 +619,7 @@ func (app *Config) SubDocInsertTask(w http.ResponseWriter, r *http.Request) {
 
 // SubDocUpsertTask is used to bulk updating sub documents into buckets
 func (app *Config) SubDocUpsertTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.SubDocUpsert{}
+	task := &bulk_loading_cb.SubDocUpsert{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -638,7 +643,7 @@ func (app *Config) SubDocUpsertTask(w http.ResponseWriter, r *http.Request) {
 	if err := app.taskManager.AddTask(task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
-	respPayload := tasks.TaskResponse{
+	respPayload := util_sirius.TaskResponse{
 		Seed: fmt.Sprintf("%d", resultSeed),
 	}
 	resPayload := jsonResponse{
@@ -651,7 +656,7 @@ func (app *Config) SubDocUpsertTask(w http.ResponseWriter, r *http.Request) {
 
 // SubDocDeleteTask is used to bulk updating sub documents into buckets
 func (app *Config) SubDocDeleteTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.SubDocDelete{}
+	task := &bulk_loading_cb.SubDocDelete{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -675,7 +680,7 @@ func (app *Config) SubDocDeleteTask(w http.ResponseWriter, r *http.Request) {
 	if err := app.taskManager.AddTask(task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
-	respPayload := tasks.TaskResponse{
+	respPayload := util_sirius.TaskResponse{
 		Seed: fmt.Sprintf("%d", resultSeed),
 	}
 	resPayload := jsonResponse{
@@ -688,7 +693,7 @@ func (app *Config) SubDocDeleteTask(w http.ResponseWriter, r *http.Request) {
 
 // SubDocReadTask is used to bulk updating sub documents into buckets
 func (app *Config) SubDocReadTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.SubDocRead{}
+	task := &bulk_loading_cb.SubDocRead{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -712,7 +717,7 @@ func (app *Config) SubDocReadTask(w http.ResponseWriter, r *http.Request) {
 	if err := app.taskManager.AddTask(task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
-	respPayload := tasks.TaskResponse{
+	respPayload := util_sirius.TaskResponse{
 		Seed: fmt.Sprintf("%d", resultSeed),
 	}
 	resPayload := jsonResponse{
@@ -725,7 +730,7 @@ func (app *Config) SubDocReadTask(w http.ResponseWriter, r *http.Request) {
 
 // SubDocReplaceTask is used to bulk updating sub documents into buckets
 func (app *Config) SubDocReplaceTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.SubDocReplace{}
+	task := &bulk_loading_cb.SubDocReplace{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -749,7 +754,7 @@ func (app *Config) SubDocReplaceTask(w http.ResponseWriter, r *http.Request) {
 	if err := app.taskManager.AddTask(task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
-	respPayload := tasks.TaskResponse{
+	respPayload := util_sirius.TaskResponse{
 		Seed: fmt.Sprintf("%d", resultSeed),
 	}
 	resPayload := jsonResponse{
@@ -762,7 +767,7 @@ func (app *Config) SubDocReplaceTask(w http.ResponseWriter, r *http.Request) {
 
 // SingleSubDocInsert is used to insert user's input value in sub docs
 func (app *Config) SingleSubDocInsert(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.SingleSubDocInsert{}
+	task := &key_based_loading_cb.SingleSubDocInsert{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -786,7 +791,7 @@ func (app *Config) SingleSubDocInsert(w http.ResponseWriter, r *http.Request) {
 	if err := app.taskManager.AddTask(task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
-	respPayload := tasks.TaskResponse{
+	respPayload := util_sirius.TaskResponse{
 		Seed: fmt.Sprintf("%d", resultSeed),
 	}
 	resPayload := jsonResponse{
@@ -799,7 +804,7 @@ func (app *Config) SingleSubDocInsert(w http.ResponseWriter, r *http.Request) {
 
 // SingleSubDocUpsert is used to update user's input value in sub docs
 func (app *Config) SingleSubDocUpsert(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.SingleSubDocUpsert{}
+	task := &key_based_loading_cb.SingleSubDocUpsert{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -823,7 +828,7 @@ func (app *Config) SingleSubDocUpsert(w http.ResponseWriter, r *http.Request) {
 	if err := app.taskManager.AddTask(task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
-	respPayload := tasks.TaskResponse{
+	respPayload := util_sirius.TaskResponse{
 		Seed: fmt.Sprintf("%d", resultSeed),
 	}
 	resPayload := jsonResponse{
@@ -836,7 +841,7 @@ func (app *Config) SingleSubDocUpsert(w http.ResponseWriter, r *http.Request) {
 
 // SingleSubDocReplace is used to replace user's input value in sub docs
 func (app *Config) SingleSubDocReplace(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.SingleSubDocReplace{}
+	task := &key_based_loading_cb.SingleSubDocReplace{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -860,7 +865,7 @@ func (app *Config) SingleSubDocReplace(w http.ResponseWriter, r *http.Request) {
 	if err := app.taskManager.AddTask(task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
-	respPayload := tasks.TaskResponse{
+	respPayload := util_sirius.TaskResponse{
 		Seed: fmt.Sprintf("%d", resultSeed),
 	}
 	resPayload := jsonResponse{
@@ -873,7 +878,7 @@ func (app *Config) SingleSubDocReplace(w http.ResponseWriter, r *http.Request) {
 
 // SingleSubDocDelete is used delete user's sub document
 func (app *Config) SingleSubDocDelete(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.SingleSubDocDelete{}
+	task := &key_based_loading_cb.SingleSubDocDelete{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -897,7 +902,7 @@ func (app *Config) SingleSubDocDelete(w http.ResponseWriter, r *http.Request) {
 	if err := app.taskManager.AddTask(task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
-	respPayload := tasks.TaskResponse{
+	respPayload := util_sirius.TaskResponse{
 		Seed: fmt.Sprintf("%d", resultSeed),
 	}
 	resPayload := jsonResponse{
@@ -910,7 +915,7 @@ func (app *Config) SingleSubDocDelete(w http.ResponseWriter, r *http.Request) {
 
 // SingleSubDocRead is used to read user's sub document
 func (app *Config) SingleSubDocRead(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.SingleSubDocRead{}
+	task := &key_based_loading_cb.SingleSubDocRead{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -934,7 +939,7 @@ func (app *Config) SingleSubDocRead(w http.ResponseWriter, r *http.Request) {
 	if err := app.taskManager.AddTask(task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
-	respPayload := tasks.TaskResponse{
+	respPayload := util_sirius.TaskResponse{
 		Seed: fmt.Sprintf("%d", resultSeed),
 	}
 	resPayload := jsonResponse{
@@ -947,7 +952,7 @@ func (app *Config) SingleSubDocRead(w http.ResponseWriter, r *http.Request) {
 
 // SingleDocValidate is used to read user's sub document
 func (app *Config) SingleDocValidate(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.SingleValidate{}
+	task := &key_based_loading_cb.SingleValidate{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -971,7 +976,7 @@ func (app *Config) SingleDocValidate(w http.ResponseWriter, r *http.Request) {
 	if err := app.taskManager.AddTask(task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
-	respPayload := tasks.TaskResponse{
+	respPayload := util_sirius.TaskResponse{
 		Seed: fmt.Sprintf("%d", resultSeed),
 	}
 	resPayload := jsonResponse{
@@ -984,7 +989,7 @@ func (app *Config) SingleDocValidate(w http.ResponseWriter, r *http.Request) {
 
 // WarmUpBucket establish a connection to bucket
 func (app *Config) WarmUpBucket(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.BucketWarmUpTask{}
+	task := &util_cb.BucketWarmUpTask{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -1008,7 +1013,7 @@ func (app *Config) WarmUpBucket(w http.ResponseWriter, r *http.Request) {
 	if err := app.taskManager.AddTask(task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 	}
-	respPayload := tasks.TaskResponse{
+	respPayload := util_sirius.TaskResponse{
 		Seed: fmt.Sprintf("%d", resultSeed),
 	}
 	resPayload := jsonResponse{

@@ -218,10 +218,8 @@ func (p *Person) Compare(document1 interface{}, document2 interface{}) (bool, er
 	return reflect.DeepEqual(p1, p2), nil
 }
 
-func (p *Person) GenerateSubPathAndValue(fake *faker.Faker) map[string]any {
+func (p *Person) GenerateSubPathAndValue(fake *faker.Faker, subDocSize int) map[string]any {
 	return map[string]interface{}{
-		"fullName": fake.Person().FirstName() + " " + fake.Person().LastName(),
-		"sex":      fake.Person().Gender(),
-		"contact":  fake.Person().Contact().Phone,
+		"subDocData": fake.RandomStringWithLength(subDocSize),
 	}
 }
