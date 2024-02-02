@@ -59,8 +59,8 @@ const (
 	StoreSemanticsReplace                     string = "store"
 )
 
-// getDurability returns gocb.DurabilityLevel required for Doc loading operation
-func getDurability(durability string) gocb.DurabilityLevel {
+// GetDurability returns gocb.DurabilityLevel required for Doc loading operation
+func GetDurability(durability string) gocb.DurabilityLevel {
 	switch durability {
 	case DurabilityLevelMajority:
 		return gocb.DurabilityLevelMajority
@@ -95,7 +95,7 @@ type SingleOperationConfig struct {
 	DocSize  int      `json:"docSize" doc:"true"`
 }
 
-func configSingleOperationConfig(s *SingleOperationConfig) error {
+func ConfigSingleOperationConfig(s *SingleOperationConfig) error {
 	if s == nil {
 		return task_errors.ErrParsingSingleOperationConfig
 	}
@@ -109,7 +109,7 @@ type QueryOperationConfig struct {
 	BuildIndexViaSDK bool   `json:"buildIndexViaSDK" doc:"true"`
 }
 
-func configQueryOperationConfig(s *QueryOperationConfig) error {
+func ConfigQueryOperationConfig(s *QueryOperationConfig) error {
 	if s == nil {
 		return task_errors.ErrParsingQueryConfig
 	}
@@ -120,8 +120,8 @@ func configQueryOperationConfig(s *QueryOperationConfig) error {
 	return nil
 }
 
-// configureOperationConfig configures and validate the OperationConfig
-func configureOperationConfig(o *OperationConfig) error {
+// ConfigureOperationConfig configures and validate the OperationConfig
+func ConfigureOperationConfig(o *OperationConfig) error {
 	if o == nil {
 		return task_errors.ErrParsingOperatingConfig
 	}
@@ -158,8 +158,8 @@ type InsertOptions struct {
 	Timeout     int    `json:"timeout,omitempty" doc:"true"`
 }
 
-// configInsertOptions configures and validate the InsertOptions
-func configInsertOptions(i *InsertOptions) error {
+// ConfigInsertOptions configures and validate the InsertOptions
+func ConfigInsertOptions(i *InsertOptions) error {
 	if i == nil {
 		return task_errors.ErrParsingInsertOptions
 	}
@@ -173,7 +173,7 @@ type TouchOptions struct {
 	Timeout int `json:"timeout,omitempty" doc:"true"`
 }
 
-func configTouchOptions(i *TouchOptions) error {
+func ConfigTouchOptions(i *TouchOptions) error {
 	if i == nil {
 		return task_errors.ErrParsingTouchOptions
 	}
@@ -192,7 +192,7 @@ type RemoveOptions struct {
 	Timeout     int    `json:"timeout,omitempty" doc:"true"`
 }
 
-func configRemoveOptions(r *RemoveOptions) error {
+func ConfigRemoveOptions(r *RemoveOptions) error {
 	if r == nil {
 		return task_errors.ErrParsingRemoveOptions
 	}
@@ -211,7 +211,7 @@ type ReplaceOptions struct {
 	Timeout     int    `json:"timeout,omitempty" doc:"true"`
 }
 
-func configReplaceOptions(r *ReplaceOptions) error {
+func ConfigReplaceOptions(r *ReplaceOptions) error {
 	if r == nil {
 		return task_errors.ErrParsingReplaceOptions
 	}
@@ -234,7 +234,7 @@ type RetriedResult struct {
 	AckTime  string `json:"ackTime" doc:"true"`
 }
 
-func shiftErrToCompletedOnRetrying(exception string, result *task_result.TaskResult,
+func ShiftErrToCompletedOnRetrying(exception string, result *task_result.TaskResult,
 	errorOffsetListMap []map[int64]RetriedResult, errorOffsetMaps, completedOffsetMaps map[int64]struct{}) {
 	if _, ok := result.BulkError[exception]; ok {
 		for _, x := range errorOffsetListMap {
@@ -299,7 +299,7 @@ func shiftErrToCompletedOnRetrying(exception string, result *task_result.TaskRes
 	}
 }
 
-func shiftErrToCompletedOnIgnore(ignoreExceptions []string, result *task_result.TaskResult, errorOffsetMaps,
+func ShiftErrToCompletedOnIgnore(ignoreExceptions []string, result *task_result.TaskResult, errorOffsetMaps,
 	completedOffsetMaps map[int64]struct{}) {
 	for _, exception := range ignoreExceptions {
 		for _, failedDocs := range result.BulkError[exception] {
@@ -312,7 +312,7 @@ func shiftErrToCompletedOnIgnore(ignoreExceptions []string, result *task_result.
 	}
 }
 
-func getExceptions(result *task_result.TaskResult, RetryExceptions []string) []string {
+func GetExceptions(result *task_result.TaskResult, RetryExceptions []string) []string {
 	var exceptionList []string
 	if len(RetryExceptions) == 0 {
 		for exception, _ := range result.BulkError {
@@ -349,7 +349,7 @@ type GetSpecOptions struct {
 	IsXattr bool `json:"isXattr,omitempty" doc:"true"`
 }
 
-func configGetSpecOptions(g *GetSpecOptions) error {
+func ConfigGetSpecOptions(g *GetSpecOptions) error {
 	if g == nil {
 		return task_errors.ErrParsingGetSpecOptions
 	}
@@ -360,7 +360,7 @@ type LookupInOptions struct {
 	Timeout int `json:"timeout,omitempty" doc:"true"`
 }
 
-func configLookupInOptions(l *LookupInOptions) error {
+func ConfigLookupInOptions(l *LookupInOptions) error {
 	if l == nil {
 		return task_errors.ErrParsingLookupInOptions
 	}
@@ -372,7 +372,7 @@ type InsertSpecOptions struct {
 	IsXattr    bool `json:"isXattr,omitempty" doc:"true"`
 }
 
-func configInsertSpecOptions(i *InsertSpecOptions) error {
+func ConfigInsertSpecOptions(i *InsertSpecOptions) error {
 	if i == nil {
 		return task_errors.ErrParsingInsertSpecOptions
 	}
@@ -383,7 +383,7 @@ type RemoveSpecOptions struct {
 	IsXattr bool `json:"isXattr,omitempty" doc:"true"`
 }
 
-func configRemoveSpecOptions(r *RemoveSpecOptions) error {
+func ConfigRemoveSpecOptions(r *RemoveSpecOptions) error {
 	if r == nil {
 		return task_errors.ErrParsingRemoveSpecOptions
 	}
@@ -394,7 +394,7 @@ type ReplaceSpecOptions struct {
 	IsXattr bool `json:"isXattr,omitempty" doc:"true"`
 }
 
-func configReplaceSpecOptions(r *ReplaceSpecOptions) error {
+func ConfigReplaceSpecOptions(r *ReplaceSpecOptions) error {
 	if r == nil {
 		return task_errors.ErrParsingReplaceSpecOptions
 	}
@@ -412,21 +412,21 @@ type MutateInOptions struct {
 	PreserveExpiry bool   `json:"preserveExpiry,omitempty" doc:"true"`
 }
 
-func configMutateInOptions(m *MutateInOptions) error {
+func ConfigMutateInOptions(m *MutateInOptions) error {
 	if m == nil {
 		return task_errors.ErrParsingMutateInOptions
 	}
 	return nil
 }
 
-func getStoreSemantic(storeSemantic int) gocb.StoreSemantics {
+func GetStoreSemantic(storeSemantic int) gocb.StoreSemantics {
 	if storeSemantic >= 3 {
 		return gocb.StoreSemanticsUpsert
 	}
 	return gocb.StoreSemantics(storeSemantic)
 }
 
-func compareDocumentsIsSame(host map[string]any, document1 map[string]any, document2 map[string]any) bool {
+func CompareDocumentsIsSame(host map[string]any, document1 map[string]any, document2 map[string]any) bool {
 
 	hostMap := make(map[string]any)
 	buildKeyAndValues(host, hostMap, "")
@@ -471,26 +471,9 @@ type SingleSubDocOperationConfig struct {
 	DocSize int      `json:"docSize" doc:"true"`
 }
 
-func configSingleSubDocOperationConfig(s *SingleSubDocOperationConfig) error {
+func ConfigSingleSubDocOperationConfig(s *SingleSubDocOperationConfig) error {
 	if s == nil {
 		return task_errors.ErrParsingSingleSubDocOperationConfig
 	}
 	return nil
-}
-
-// retrieveLastConfig retrieves the OperationConfig for the offset for a successful Sirius operation.
-func retrieveLastConfig(req *Request, offset int64) (OperationConfig, error) {
-	for i := range req.Tasks {
-		operationConfig, taskState := req.Tasks[len(req.Tasks)-i-1].Task.GetOperationConfig()
-		if operationConfig == nil {
-			continue
-		} else {
-			if offset >= (operationConfig.Start) && (offset < operationConfig.End) {
-				if _, ok := taskState.ReturnCompletedOffset()[offset]; ok {
-					return *operationConfig, nil
-				}
-			}
-		}
-	}
-	return OperationConfig{}, task_errors.ErrNilOperationConfig
 }

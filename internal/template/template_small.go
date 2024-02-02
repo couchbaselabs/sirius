@@ -7,14 +7,14 @@ import (
 )
 
 type SmallTemplate struct {
-	RandomData string `json:"d,omitempty"`
-	Mutated    int    `json:"mutated,omitempty"`
+	RandomData string  `json:"d,omitempty"`
+	Mutated    float64 `json:"mutated,omitempty"`
 }
 
 func (s *SmallTemplate) GenerateDocument(fake *faker.Faker, documentSize int) (interface{}, error) {
 	return &SmallTemplate{
 		RandomData: fake.RandomStringWithLength(int(documentSize) - 1),
-		Mutated:    0,
+		Mutated:    MutatedPathDefaultValue,
 	}, nil
 }
 
@@ -53,9 +53,9 @@ func (s *SmallTemplate) GenerateIndexesForSdk() (map[string][]string, error) {
 	return map[string][]string{}, nil
 }
 
-func (s *SmallTemplate) GenerateSubPathAndValue(fake *faker.Faker) map[string]any {
+func (s *SmallTemplate) GenerateSubPathAndValue(fake *faker.Faker, subDocSize int) map[string]any {
 
 	return map[string]interface{}{
-		"dataExtra": fake.RandomStringWithLength(fake.RandomDigit()),
+		"subDocData": fake.RandomStringWithLength(subDocSize),
 	}
 }
