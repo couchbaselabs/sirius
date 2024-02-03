@@ -5,8 +5,8 @@ import (
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/cb_sdk"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
+	"github.com/couchbaselabs/sirius/internal/meta_data"
 	"github.com/couchbaselabs/sirius/internal/task_errors"
-	"github.com/couchbaselabs/sirius/internal/task_meta_data"
 	"github.com/couchbaselabs/sirius/internal/task_result"
 	"github.com/couchbaselabs/sirius/internal/task_state"
 	"github.com/couchbaselabs/sirius/internal/tasks"
@@ -22,35 +22,28 @@ import (
 )
 
 type SubDocUpsert struct {
-	IdentifierToken   string                             `json:"identifierToken" doc:"true"`
-	ClusterConfig     *cb_sdk.ClusterConfig              `json:"clusterConfig" doc:"true"`
-	Bucket            string                             `json:"bucket" doc:"true"`
-	Scope             string                             `json:"scope,omitempty" doc:"true"`
-	Collection        string                             `json:"collection,omitempty" doc:"true"`
-	OperationConfig   *tasks.OperationConfig             `json:"operationConfig" doc:"true"`
-	InsertSpecOptions *tasks.InsertSpecOptions           `json:"insertSpecOptions" doc:"true"`
-	MutateInOptions   *tasks.MutateInOptions             `json:"mutateInOptions" doc:"true"`
-	Operation         string                             `json:"operation" doc:"false"`
-	ResultSeed        int64                              `json:"resultSeed" doc:"false"`
-	TaskPending       bool                               `json:"taskPending" doc:"false"`
-	State             *task_state.TaskState              `json:"State" doc:"false"`
-	MetaData          *task_meta_data.CollectionMetaData `json:"metaData" doc:"false"`
-	Result            *task_result.TaskResult            `json:"-" doc:"false"`
-	gen               *docgenerator.Generator            `json:"-" doc:"false"`
-	req               *tasks.Request                     `json:"-" doc:"false"`
-	rerun             bool                               `json:"-" doc:"false"`
-	lock              sync.Mutex                         `json:"-" doc:"false"`
+	IdentifierToken   string                        `json:"identifierToken" doc:"true"`
+	ClusterConfig     *cb_sdk.ClusterConfig         `json:"clusterConfig" doc:"true"`
+	Bucket            string                        `json:"bucket" doc:"true"`
+	Scope             string                        `json:"scope,omitempty" doc:"true"`
+	Collection        string                        `json:"collection,omitempty" doc:"true"`
+	OperationConfig   *OperationConfig              `json:"operationConfig" doc:"true"`
+	InsertSpecOptions *cb_sdk.InsertSpecOptions     `json:"insertSpecOptions" doc:"true"`
+	MutateInOptions   *cb_sdk.MutateInOptions       `json:"mutateInOptions" doc:"true"`
+	Operation         string                        `json:"operation" doc:"false"`
+	ResultSeed        int64                         `json:"resultSeed" doc:"false"`
+	TaskPending       bool                          `json:"taskPending" doc:"false"`
+	State             *task_state.TaskState         `json:"State" doc:"false"`
+	MetaData          *meta_data.CollectionMetaData `json:"metaData" doc:"false"`
+	Result            *task_result.TaskResult       `json:"-" doc:"false"`
+	gen               *docgenerator.Generator       `json:"-" doc:"false"`
+	req               *tasks.Request                `json:"-" doc:"false"`
+	rerun             bool                          `json:"-" doc:"false"`
+	lock              sync.Mutex                    `json:"-" doc:"false"`
 }
 
 func (task *SubDocUpsert) Describe() string {
 	return " SubDocUpsert upserts a Sub-Document"
-}
-
-func (task *SubDocUpsert) BuildIdentifier() string {
-	if task.IdentifierToken == "" {
-		task.IdentifierToken = tasks.DefaultIdentifierToken
-	}
-	return task.IdentifierToken
 }
 
 func (task *SubDocUpsert) CollectionIdentifier() string {
@@ -87,26 +80,26 @@ func (task *SubDocUpsert) Config(req *tasks.Request, reRun bool) (int64, error) 
 		task.Operation = tasks.SubDocUpsertOperation
 
 		if task.Bucket == "" {
-			task.Bucket = tasks.DefaultBucket
+			task.Bucket = cb_sdk.DefaultBucket
 		}
 		if task.Scope == "" {
-			task.Scope = tasks.DefaultScope
+			task.Scope = cb_sdk.DefaultScope
 		}
 		if task.Collection == "" {
-			task.Collection = tasks.DefaultCollection
+			task.Collection = cb_sdk.DefaultCollection
 		}
 
-		if err := tasks.ConfigureOperationConfig(task.OperationConfig); err != nil {
+		if err := ConfigureOperationConfig(task.OperationConfig); err != nil {
 			task.TaskPending = false
 			return 0, err
 		}
 
-		if err := tasks.ConfigInsertSpecOptions(task.InsertSpecOptions); err != nil {
+		if err := cb_sdk.ConfigInsertSpecOptions(task.InsertSpecOptions); err != nil {
 			task.TaskPending = false
 			return 0, err
 		}
 
-		if err := tasks.ConfigMutateInOptions(task.MutateInOptions); err != nil {
+		if err := cb_sdk.ConfigMutateInOptions(task.MutateInOptions); err != nil {
 			task.TaskPending = false
 			return 0, err
 		}
@@ -125,8 +118,8 @@ func (task *SubDocUpsert) Config(req *tasks.Request, reRun bool) (int64, error) 
 			return task.ResultSeed, task_errors.ErrTaskStateIsNil
 		}
 		task.State.SetupStoringKeys()
-		_ = tasks.DeleteResultFile(task.ResultSeed)
-		log.Println("retrying :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
+		_ = task_result.DeleteResultFile(task.ResultSeed)
+		log.Println("retrying :- ", task.Operation, task.IdentifierToken, task.ResultSeed)
 	}
 	return task.ResultSeed, nil
 }
@@ -242,8 +235,8 @@ func upsertSubDocuments(task *SubDocUpsert, collectionObject *cb_sdk.CollectionO
 					Expiry:          time.Duration(task.MutateInOptions.Expiry) * time.Second,
 					PersistTo:       task.MutateInOptions.PersistTo,
 					ReplicateTo:     task.MutateInOptions.ReplicateTo,
-					DurabilityLevel: tasks.GetDurability(task.MutateInOptions.Durability),
-					StoreSemantic:   tasks.GetStoreSemantic(task.MutateInOptions.StoreSemantic),
+					DurabilityLevel: cb_sdk.GetDurability(task.MutateInOptions.Durability),
+					StoreSemantic:   cb_sdk.GetStoreSemantic(task.MutateInOptions.StoreSemantic),
 					Timeout:         time.Duration(task.MutateInOptions.Expiry) * time.Second,
 					PreserveExpiry:  task.MutateInOptions.PreserveExpiry,
 				})
@@ -270,7 +263,7 @@ func upsertSubDocuments(task *SubDocUpsert, collectionObject *cb_sdk.CollectionO
 	close(routineLimiter)
 	close(dataChannel)
 	task.PostTaskExceptionHandling(collectionObject)
-	log.Println("completed :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
+	log.Println("completed :- ", task.Operation, task.IdentifierToken, task.ResultSeed)
 }
 
 func (task *SubDocUpsert) PostTaskExceptionHandling(collectionObject *cb_sdk.CollectionObject) {
@@ -287,24 +280,24 @@ func (task *SubDocUpsert) PostTaskExceptionHandling(collectionObject *cb_sdk.Col
 	completedOffsetMaps := task.State.ReturnCompletedOffset()
 
 	// For the offset in ignore exceptions :-> move them from error to completed
-	tasks.ShiftErrToCompletedOnIgnore(task.OperationConfig.Exceptions.IgnoreExceptions, task.Result, errorOffsetMaps, completedOffsetMaps)
+	shiftErrToCompletedOnIgnore(task.OperationConfig.Exceptions.IgnoreExceptions, task.Result, errorOffsetMaps, completedOffsetMaps)
 
 	if task.OperationConfig.Exceptions.RetryAttempts > 0 {
 
-		exceptionList := tasks.GetExceptions(task.Result, task.OperationConfig.Exceptions.RetryExceptions)
+		exceptionList := GetExceptions(task.Result, task.OperationConfig.Exceptions.RetryExceptions)
 
 		// For the retry exceptions :-> move them on success after retrying from err to completed
 		for _, exception := range exceptionList {
 
-			errorOffsetListMap := make([]map[int64]tasks.RetriedResult, 0)
+			errorOffsetListMap := make([]map[int64]RetriedResult, 0)
 			for _, failedDocs := range task.Result.BulkError[exception] {
-				m := make(map[int64]tasks.RetriedResult)
-				m[failedDocs.Offset] = tasks.RetriedResult{}
+				m := make(map[int64]RetriedResult)
+				m[failedDocs.Offset] = RetriedResult{}
 				errorOffsetListMap = append(errorOffsetListMap, m)
 			}
 
 			routineLimiter := make(chan struct{}, tasks.MaxConcurrentRoutines)
-			dataChannel := make(chan map[int64]tasks.RetriedResult, tasks.MaxConcurrentRoutines)
+			dataChannel := make(chan map[int64]RetriedResult, tasks.MaxConcurrentRoutines)
 			wg := errgroup.Group{}
 			for _, x := range errorOffsetListMap {
 				dataChannel <- x
@@ -350,8 +343,8 @@ func (task *SubDocUpsert) PostTaskExceptionHandling(collectionObject *cb_sdk.Col
 							Expiry:          time.Duration(task.MutateInOptions.Expiry) * time.Second,
 							PersistTo:       task.MutateInOptions.PersistTo,
 							ReplicateTo:     task.MutateInOptions.ReplicateTo,
-							DurabilityLevel: tasks.GetDurability(task.MutateInOptions.Durability),
-							StoreSemantic:   tasks.GetStoreSemantic(task.MutateInOptions.StoreSemantic),
+							DurabilityLevel: cb_sdk.GetDurability(task.MutateInOptions.Durability),
+							StoreSemantic:   cb_sdk.GetStoreSemantic(task.MutateInOptions.StoreSemantic),
 							Timeout:         time.Duration(task.MutateInOptions.Expiry) * time.Second,
 							PreserveExpiry:  task.MutateInOptions.PreserveExpiry,
 						})
@@ -362,12 +355,12 @@ func (task *SubDocUpsert) PostTaskExceptionHandling(collectionObject *cb_sdk.Col
 					}
 
 					if err != nil {
-						m[offset] = tasks.RetriedResult{
+						m[offset] = RetriedResult{
 							Status: true,
 							CAS:    0,
 						}
 					} else {
-						m[offset] = tasks.RetriedResult{
+						m[offset] = RetriedResult{
 							Status: true,
 							CAS:    uint64(result.Cas()),
 						}
@@ -379,14 +372,14 @@ func (task *SubDocUpsert) PostTaskExceptionHandling(collectionObject *cb_sdk.Col
 			}
 			_ = wg.Wait()
 
-			tasks.ShiftErrToCompletedOnRetrying(exception, task.Result, errorOffsetListMap, errorOffsetMaps, completedOffsetMaps)
+			shiftErrToCompletedOnRetrying(exception, task.Result, errorOffsetListMap, errorOffsetMaps, completedOffsetMaps)
 		}
 	}
 
 	task.State.MakeCompleteKeyFromMap(completedOffsetMaps)
 	task.State.MakeErrorKeyFromMap(errorOffsetMaps)
 	task.Result.Failure = int64(len(task.State.KeyStates.Err))
-	log.Println("completed retrying:- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
+	log.Println("completed retrying:- ", task.Operation, task.IdentifierToken, task.ResultSeed)
 
 }
 
@@ -410,10 +403,10 @@ func (task *SubDocUpsert) GetCollectionObject() (*cb_sdk.CollectionObject, error
 		task.Collection)
 }
 
-func (task *SubDocUpsert) SetException(exceptions tasks.Exceptions) {
+func (task *SubDocUpsert) SetException(exceptions Exceptions) {
 	task.OperationConfig.Exceptions = exceptions
 }
 
-func (task *SubDocUpsert) GetOperationConfig() (*tasks.OperationConfig, *task_state.TaskState) {
+func (task *SubDocUpsert) GetOperationConfig() (*OperationConfig, *task_state.TaskState) {
 	return task.OperationConfig, task.State
 }

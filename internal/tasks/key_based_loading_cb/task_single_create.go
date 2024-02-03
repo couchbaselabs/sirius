@@ -1,7 +1,6 @@
 package key_based_loading_cb
 
 import (
-	"fmt"
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/cb_sdk"
 	"github.com/couchbaselabs/sirius/internal/task_errors"
@@ -17,29 +16,22 @@ import (
 )
 
 type SingleInsertTask struct {
-	IdentifierToken       string                       `json:"identifierToken" doc:"true"`
-	ClusterConfig         *cb_sdk.ClusterConfig        `json:"clusterConfig" doc:"true"`
-	Bucket                string                       `json:"bucket" doc:"true"`
-	Scope                 string                       `json:"scope,omitempty" doc:"true"`
-	Collection            string                       `json:"collection,omitempty" doc:"true"`
-	InsertOptions         *tasks.InsertOptions         `json:"insertOptions,omitempty" doc:"true"`
-	SingleOperationConfig *tasks.SingleOperationConfig `json:"singleOperationConfig" doc:"true"`
-	Operation             string                       `json:"operation" doc:"false"`
-	ResultSeed            int64                        `json:"resultSeed" doc:"false"`
-	TaskPending           bool                         `json:"taskPending" doc:"false"`
-	Result                *task_result.TaskResult      `json:"Result" doc:"false"`
-	req                   *tasks.Request               `json:"-" doc:"false"`
+	IdentifierToken       string                  `json:"identifierToken" doc:"true"`
+	ClusterConfig         *cb_sdk.ClusterConfig   `json:"clusterConfig" doc:"true"`
+	Bucket                string                  `json:"bucket" doc:"true"`
+	Scope                 string                  `json:"scope,omitempty" doc:"true"`
+	Collection            string                  `json:"collection,omitempty" doc:"true"`
+	InsertOptions         *cb_sdk.InsertOptions   `json:"insertOptions,omitempty" doc:"true"`
+	SingleOperationConfig *SingleOperationConfig  `json:"singleOperationConfig" doc:"true"`
+	Operation             string                  `json:"operation" doc:"false"`
+	ResultSeed            int64                   `json:"resultSeed" doc:"false"`
+	TaskPending           bool                    `json:"taskPending" doc:"false"`
+	Result                *task_result.TaskResult `json:"Result" doc:"false"`
+	req                   *tasks.Request          `json:"-" doc:"false"`
 }
 
 func (task *SingleInsertTask) Describe() string {
 	return "Single insert task create key value in Couchbase.\n"
-}
-
-func (task *SingleInsertTask) BuildIdentifier() string {
-	if task.IdentifierToken == "" {
-		task.IdentifierToken = tasks.DefaultIdentifierToken
-	}
-	return task.IdentifierToken
 }
 
 func (task *SingleInsertTask) CollectionIdentifier() string {
@@ -75,27 +67,27 @@ func (task *SingleInsertTask) Config(req *tasks.Request, reRun bool) (int64, err
 		task.Operation = tasks.SingleInsertOperation
 
 		if task.Bucket == "" {
-			task.Bucket = tasks.DefaultBucket
+			task.Bucket = cb_sdk.DefaultBucket
 		}
 		if task.Scope == "" {
-			task.Scope = tasks.DefaultScope
+			task.Scope = cb_sdk.DefaultScope
 		}
 		if task.Collection == "" {
-			task.Collection = tasks.DefaultCollection
+			task.Collection = cb_sdk.DefaultCollection
 		}
 
-		if err := tasks.ConfigInsertOptions(task.InsertOptions); err != nil {
+		if err := cb_sdk.ConfigInsertOptions(task.InsertOptions); err != nil {
 			task.TaskPending = false
 			return 0, err
 		}
 
-		if err := tasks.ConfigSingleOperationConfig(task.SingleOperationConfig); err != nil {
+		if err := ConfigSingleOperationConfig(task.SingleOperationConfig); err != nil {
 			task.TaskPending = false
 			return 0, err
 		}
 
 	} else {
-		log.Println("retrying :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
+		log.Println("retrying :- ", task.Operation, task.IdentifierToken, task.ResultSeed)
 	}
 	return task.ResultSeed, nil
 }
@@ -167,7 +159,7 @@ func singleInsertDocuments(task *SingleInsertTask, collectionObject *cb_sdk.Coll
 
 			initTime := time.Now().UTC().Format(time.RFC850)
 			m, err := collectionObject.Collection.Insert(key, doc, &gocb.InsertOptions{
-				DurabilityLevel: tasks.GetDurability(task.InsertOptions.Durability),
+				DurabilityLevel: cb_sdk.GetDurability(task.InsertOptions.Durability),
 				PersistTo:       task.InsertOptions.PersistTo,
 				ReplicateTo:     task.InsertOptions.ReplicateTo,
 				Timeout:         time.Duration(task.InsertOptions.Timeout) * time.Second,
@@ -190,21 +182,5 @@ func singleInsertDocuments(task *SingleInsertTask, collectionObject *cb_sdk.Coll
 	_ = group.Wait()
 	close(routineLimiter)
 	close(dataChannel)
-	log.Println("completed :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
-}
-
-func (task *SingleInsertTask) PostTaskExceptionHandling(_ *cb_sdk.CollectionObject) {
-}
-
-func (task *SingleInsertTask) MatchResultSeed(resultSeed string) (bool, error) {
-	if fmt.Sprintf("%d", task.ResultSeed) == resultSeed {
-		if task.TaskPending {
-			return true, task_errors.ErrTaskInPendingState
-		}
-		if task.Result == nil {
-			task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
-		}
-		return true, nil
-	}
-	return false, nil
+	log.Println("completed :- ", task.Operation, task.IdentifierToken, task.ResultSeed)
 }

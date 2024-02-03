@@ -2,6 +2,7 @@ package template
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/jaswdr/faker"
 	"reflect"
@@ -176,18 +177,15 @@ func (h *Hotel) Compare(document1 interface{}, document2 interface{}) (bool, err
 }
 
 func (h *Hotel) GenerateIndexes(bucketName string, scopeName string, collectionName string) ([]string, error) {
-	//TODO implement me
-	panic("implement me")
+	return []string{}, errors.New("not implemented")
 }
 
 func (h *Hotel) GenerateQueries(bucketName string, scopeName string, collectionName string) ([]string, error) {
-	//TODO implement me
-	panic("implement me")
+	return []string{}, errors.New("not implemented")
 }
 
 func (h *Hotel) GenerateIndexesForSdk() (map[string][]string, error) {
-	//TODO implement me
-	panic("implement me")
+	return map[string][]string{}, errors.New("not implemented")
 }
 
 func (h *Hotel) GenerateSubPathAndValue(fake *faker.Faker, subDocSize int) map[string]any {

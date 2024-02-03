@@ -53,22 +53,15 @@ func (task *BucketWarmUpTask) Config(req *tasks.Request, reRun bool) (int64, err
 	task.Operation = tasks.BucketWarmUpOperation
 
 	if task.Bucket == "" {
-		task.Bucket = tasks.DefaultBucket
+		task.Bucket = cb_sdk.DefaultBucket
 	}
 	if task.Scope == "" {
-		task.Scope = tasks.DefaultScope
+		task.Scope = cb_sdk.DefaultScope
 	}
 	if task.Collection == "" {
-		task.Collection = tasks.DefaultCollection
+		task.Collection = cb_sdk.DefaultCollection
 	}
 	return task.ResultSeed, nil
-}
-
-func (task *BucketWarmUpTask) BuildIdentifier() string {
-	if task.IdentifierToken == "" {
-		task.IdentifierToken = tasks.DefaultIdentifierToken
-	}
-	return task.IdentifierToken
 }
 
 func (task *BucketWarmUpTask) CheckIfPending() bool {

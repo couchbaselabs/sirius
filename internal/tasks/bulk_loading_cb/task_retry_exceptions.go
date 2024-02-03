@@ -10,11 +10,11 @@ import (
 )
 
 type RetryExceptions struct {
-	IdentifierToken string           `json:"identifierToken" doc:"true"`
-	ResultSeed      string           `json:"resultSeed" doc:"true"`
-	Exceptions      tasks.Exceptions `json:"exceptions" doc:"true"`
-	Task            BulkTask         `json:"-" doc:"false"`
-	req             *tasks.Request   `json:"-" doc:"false"`
+	IdentifierToken string         `json:"identifierToken" doc:"true"`
+	ResultSeed      string         `json:"resultSeed" doc:"true"`
+	Exceptions      Exceptions     `json:"exceptions" doc:"true"`
+	Task            BulkTask       `json:"-" doc:"false"`
+	req             *tasks.Request `json:"-" doc:"false"`
 }
 
 func (r *RetryExceptions) Describe() string {
@@ -70,13 +70,6 @@ func (r *RetryExceptions) Config(req *tasks.Request, reRun bool) (int64, error) 
 
 }
 
-func (r *RetryExceptions) BuildIdentifier() string {
-	if r.IdentifierToken == "" {
-		r.IdentifierToken = tasks.DefaultIdentifierToken
-	}
-	return r.IdentifierToken
-}
-
 func (r *RetryExceptions) CollectionIdentifier() string {
 	return r.Task.CollectionIdentifier()
 }
@@ -100,11 +93,11 @@ func (r *RetryExceptions) GetCollectionObject() (*cb_sdk.CollectionObject, error
 	return r.Task.GetCollectionObject()
 }
 
-func (r *RetryExceptions) SetException(exceptions tasks.Exceptions) {
+func (r *RetryExceptions) SetException(exceptions Exceptions) {
 	r.Task.SetException(r.Exceptions)
 }
 
-func (r *RetryExceptions) GetOperationConfig() (*tasks.OperationConfig, *task_state.TaskState) {
+func (r *RetryExceptions) GetOperationConfig() (*OperationConfig, *task_state.TaskState) {
 	if r.Task != nil {
 		return r.Task.GetOperationConfig()
 	}

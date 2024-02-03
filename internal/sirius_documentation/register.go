@@ -3,7 +3,6 @@ package sirius_documentation
 import (
 	"github.com/couchbaselabs/sirius/internal/cb_sdk"
 	"github.com/couchbaselabs/sirius/internal/task_result"
-	"github.com/couchbaselabs/sirius/internal/tasks"
 	"github.com/couchbaselabs/sirius/internal/tasks/bulk_loading_cb"
 	"github.com/couchbaselabs/sirius/internal/tasks/bulk_query_cb"
 	"github.com/couchbaselabs/sirius/internal/tasks/key_based_loading_cb"
@@ -57,25 +56,24 @@ func (r *Register) HelperStruct() map[string]any {
 		"clusterConfig":               &cb_sdk.ClusterConfig{},
 		"compressionConfig":           &cb_sdk.CompressionConfig{},
 		"timeoutsConfig":              &cb_sdk.TimeoutsConfig{},
-		"operationConfig":             &tasks.OperationConfig{},
-		"insertOptions":               &tasks.InsertOptions{},
-		"removeOptions":               &tasks.RemoveOptions{},
-		"replaceOption":               &tasks.ReplaceOptions{},
-		"touchOptions":                &tasks.TouchOptions{},
-		"singleOperationConfig":       &tasks.SingleOperationConfig{},
+		"operationConfig":             &bulk_loading_cb.OperationConfig{},
+		"insertOptions":               &cb_sdk.InsertOptions{},
+		"removeOptions":               &cb_sdk.RemoveOptions{},
+		"replaceOption":               &cb_sdk.ReplaceOptions{},
+		"touchOptions":                &cb_sdk.TouchOptions{},
+		"singleOperationConfig":       &key_based_loading_cb.SingleOperationConfig{},
 		"bulkError":                   &task_result.FailedDocument{},
 		"retriedError":                &task_result.FailedDocument{},
 		"singleResult":                &task_result.SingleOperationResult{},
-		"queryOperationConfig":        &tasks.QueryOperationConfig{},
-		"exceptions":                  &tasks.Exceptions{},
-		"subDocOperationConfig":       &tasks.SubDocOperationConfig{},
-		"mutateInOptions":             &tasks.MutateInOptions{},
-		"insertSpecOptions":           &tasks.InsertSpecOptions{},
-		"removeSpecOptions":           &tasks.RemoveSpecOptions{},
-		"getSpecOptions":              &tasks.GetSpecOptions{},
-		"lookupInOptions":             &tasks.LookupInOptions{},
-		"replaceSpecOptions":          &tasks.ReplaceSpecOptions{},
-		"singleSubDocOperationConfig": &tasks.SingleSubDocOperationConfig{},
+		"queryOperationConfig":        &cb_sdk.QueryOperationConfig{},
+		"exceptions":                  &bulk_loading_cb.Exceptions{},
+		"mutateInOptions":             &cb_sdk.MutateInOptions{},
+		"insertSpecOptions":           &cb_sdk.InsertSpecOptions{},
+		"removeSpecOptions":           &cb_sdk.RemoveSpecOptions{},
+		"getSpecOptions":              &cb_sdk.GetSpecOptions{},
+		"lookupInOptions":             &cb_sdk.LookupInOptions{},
+		"replaceSpecOptions":          &cb_sdk.ReplaceSpecOptions{},
+		"singleSubDocOperationConfig": &key_based_loading_cb.SingleSubDocOperationConfig{},
 		"sdkTimings":                  &task_result.SDKTiming{},
 	}
 

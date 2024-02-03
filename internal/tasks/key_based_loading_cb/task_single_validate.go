@@ -2,7 +2,6 @@ package key_based_loading_cb
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/cb_sdk"
 	"github.com/couchbaselabs/sirius/internal/task_errors"
@@ -18,17 +17,17 @@ import (
 )
 
 type SingleValidate struct {
-	IdentifierToken       string                       `json:"identifierToken" doc:"true"`
-	ClusterConfig         *cb_sdk.ClusterConfig        `json:"clusterConfig" doc:"true"`
-	Bucket                string                       `json:"bucket" doc:"true"`
-	Scope                 string                       `json:"scope,omitempty" doc:"true"`
-	Collection            string                       `json:"collection,omitempty" doc:"true"`
-	SingleOperationConfig *tasks.SingleOperationConfig `json:"singleOperationConfig" doc:"true"`
-	Operation             string                       `json:"operation" doc:"false"`
-	ResultSeed            int64                        `json:"resultSeed" doc:"false"`
-	TaskPending           bool                         `json:"taskPending" doc:"false"`
-	Result                *task_result.TaskResult      `json:"Result" doc:"false"`
-	req                   *tasks.Request               `json:"-" doc:"false"`
+	IdentifierToken       string                  `json:"identifierToken" doc:"true"`
+	ClusterConfig         *cb_sdk.ClusterConfig   `json:"clusterConfig" doc:"true"`
+	Bucket                string                  `json:"bucket" doc:"true"`
+	Scope                 string                  `json:"scope,omitempty" doc:"true"`
+	Collection            string                  `json:"collection,omitempty" doc:"true"`
+	SingleOperationConfig *SingleOperationConfig  `json:"singleOperationConfig" doc:"true"`
+	Operation             string                  `json:"operation" doc:"false"`
+	ResultSeed            int64                   `json:"resultSeed" doc:"false"`
+	TaskPending           bool                    `json:"taskPending" doc:"false"`
+	Result                *task_result.TaskResult `json:"Result" doc:"false"`
+	req                   *tasks.Request          `json:"-" doc:"false"`
 }
 
 func (task *SingleValidate) Describe() string {
@@ -67,31 +66,24 @@ func (task *SingleValidate) Config(req *tasks.Request, reRun bool) (int64, error
 		task.Operation = tasks.SingleDocValidateOperation
 
 		if task.Bucket == "" {
-			task.Bucket = tasks.DefaultBucket
+			task.Bucket = cb_sdk.DefaultBucket
 		}
 		if task.Scope == "" {
-			task.Scope = tasks.DefaultScope
+			task.Scope = cb_sdk.DefaultScope
 		}
 		if task.Collection == "" {
-			task.Collection = tasks.DefaultCollection
+			task.Collection = cb_sdk.DefaultCollection
 		}
 
-		if err := tasks.ConfigSingleOperationConfig(task.SingleOperationConfig); err != nil {
+		if err := ConfigSingleOperationConfig(task.SingleOperationConfig); err != nil {
 			task.TaskPending = false
 			return 0, err
 		}
 
 	} else {
-		log.Println("retrying :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
+		log.Println("retrying :- ", task.Operation, task.IdentifierToken, task.ResultSeed)
 	}
 	return task.ResultSeed, nil
-}
-
-func (task *SingleValidate) BuildIdentifier() string {
-	if task.IdentifierToken == "" {
-		task.IdentifierToken = tasks.DefaultIdentifierToken
-	}
-	return task.IdentifierToken
 }
 
 func (task *SingleValidate) Do() error {
@@ -237,7 +229,7 @@ func validateSingleDocuments(task *SingleValidate, collectionObject *cb_sdk.Coll
 	_ = group.Wait()
 	close(routineLimiter)
 	close(dataChannel)
-	log.Println("completed :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
+	log.Println("completed :- ", task.Operation, task.IdentifierToken, task.ResultSeed)
 }
 
 func (task *SingleValidate) CollectionIdentifier() string {
@@ -248,20 +240,4 @@ func (task *SingleValidate) CollectionIdentifier() string {
 
 func (task *SingleValidate) CheckIfPending() bool {
 	return task.TaskPending
-}
-
-func (task *SingleValidate) PostTaskExceptionHandling(collectionObject *cb_sdk.CollectionObject) {
-}
-
-func (task *SingleValidate) MatchResultSeed(resultSeed string) (bool, error) {
-	if fmt.Sprintf("%d", task.ResultSeed) == resultSeed {
-		if task.TaskPending {
-			return true, task_errors.ErrTaskInPendingState
-		}
-		if task.Result == nil {
-			task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
-		}
-		return true, nil
-	}
-	return false, nil
 }

@@ -516,7 +516,6 @@ Description : This API aids in warming up a Couchbase bucket or establishing con
  * [singleOperationConfig](#singleoperationconfig)
  * [singleResult](#singleresult)
  * [singleSubDocOperationConfig](#singlesubdocoperationconfig)
- * [subDocOperationConfig](#subdocoperationconfig)
  * [timeoutsConfig](#timeoutsconfig)
  * [touchOptions](#touchoptions)
 
@@ -680,13 +679,6 @@ Description : This API aids in warming up a Couchbase bucket or establishing con
 | `Key` | `string` | `json:key`  |
 | `Paths` | `slice` | `json:paths`  |
 | `DocSize` | `int` | `json:docSize`  |
-#### subDocOperationConfig
-
-| Name | Type | JSON Tag |
-| ---- | ---- | -------- |
-| `Start` | `int64` | `json:start`  |
-| `End` | `int64` | `json:end`  |
-| `Exceptions` | `struct` | `json:exceptions,omitempty`  |
 #### timeoutsConfig
 
 | Name | Type | JSON Tag |

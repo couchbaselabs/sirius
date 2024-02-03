@@ -3,9 +3,10 @@ package main
 import (
 	"encoding/gob"
 	"encoding/json"
+	"errors"
+	"github.com/couchbaselabs/sirius/internal/meta_data"
 	"github.com/couchbaselabs/sirius/internal/server_requests"
 	"github.com/couchbaselabs/sirius/internal/sirius_documentation"
-	"github.com/couchbaselabs/sirius/internal/task_meta_data"
 	"github.com/couchbaselabs/sirius/internal/task_result"
 	"github.com/couchbaselabs/sirius/internal/task_state"
 	"github.com/couchbaselabs/sirius/internal/tasks"
@@ -70,13 +71,20 @@ func (app *Config) errorJSON(w http.ResponseWriter, err error, status ...int) er
 	return app.writeJSON(w, statusCode, payload)
 }
 
+func checkIdentifierToken(identifierToken string) error {
+	if identifierToken == "" {
+		return errors.New("invalid Identifier Token")
+	}
+	return nil
+}
+
 func registerInterfaces() {
 	gob.Register(&[]interface{}{})
 	gob.Register(&map[string]interface{}{})
 	gob.Register(&map[string]any{})
 	gob.Register(&tasks.Request{})
-	gob.Register(&task_meta_data.MetaData{})
-	gob.Register(&task_meta_data.DocumentsMetaData{})
+	gob.Register(&meta_data.MetaData{})
+	gob.Register(&meta_data.DocumentsMetaData{})
 	gob.Register(&template.Person{})
 	gob.Register(&template.Hotel{})
 	gob.Register(&template.SmallTemplate{})
@@ -97,8 +105,8 @@ func registerInterfaces() {
 	gob.Register(&key_based_loading_cb.SingleTouchTask{})
 	gob.Register(&key_based_loading_cb.SingleReplaceTask{})
 	gob.Register(&bulk_query_cb.QueryTask{})
-	gob.Register(&task_meta_data.MetaData{})
-	gob.Register(&task_meta_data.CollectionMetaData{})
+	gob.Register(&meta_data.MetaData{})
+	gob.Register(&meta_data.CollectionMetaData{})
 	gob.Register(&bulk_loading_cb.RetryExceptions{})
 	gob.Register(&bulk_loading_cb.SubDocInsert{})
 	gob.Register(&bulk_loading_cb.SubDocUpsert{})
@@ -117,5 +125,4 @@ func registerInterfaces() {
 	for _, i := range r.HelperStruct() {
 		gob.Register(i)
 	}
-
 }
