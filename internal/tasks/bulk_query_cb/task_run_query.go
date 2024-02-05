@@ -21,7 +21,7 @@ type QueryTask struct {
 	Bucket               string                       `json:"bucket" doc:"true"`
 	Scope                string                       `json:"scope,omitempty" doc:"true"`
 	Collection           string                       `json:"collection,omitempty" doc:"true"`
-	QueryOperationConfig *tasks.QueryOperationConfig  `json:"operationConfig,omitempty" doc:"true"`
+	QueryOperationConfig *cb_sdk.QueryOperationConfig `json:"operationConfig,omitempty" doc:"true"`
 	Template             template.Template            `json:"-" doc:"false"`
 	Operation            string                       `json:"operation" doc:"false"`
 	ResultSeed           int64                        `json:"resultSeed" doc:"false"`
@@ -34,13 +34,6 @@ type QueryTask struct {
 
 func (task *QueryTask) Describe() string {
 	return " Query task runs N1QL query over a period of time over a bucket.\n"
-}
-
-func (task *QueryTask) BuildIdentifier() string {
-	if task.IdentifierToken == "" {
-		task.IdentifierToken = tasks.DefaultIdentifierToken
-	}
-	return task.IdentifierToken
 }
 
 func (task *QueryTask) CollectionIdentifier() string {
@@ -75,23 +68,23 @@ func (task *QueryTask) Config(req *tasks.Request, reRun bool) (int64, error) {
 		task.BuildIndex = true
 
 		if task.Bucket == "" {
-			task.Bucket = tasks.DefaultBucket
+			task.Bucket = cb_sdk.DefaultBucket
 		}
 		if task.Scope == "" {
-			task.Scope = tasks.DefaultScope
+			task.Scope = cb_sdk.DefaultScope
 		}
 		if task.Collection == "" {
-			task.Collection = tasks.DefaultCollection
+			task.Collection = cb_sdk.DefaultCollection
 		}
 
-		if err := tasks.ConfigQueryOperationConfig(task.QueryOperationConfig); err != nil {
+		if err := cb_sdk.ConfigQueryOperationConfig(task.QueryOperationConfig); err != nil {
 			task.Result.ErrorOther = err.Error()
 		}
 
 		task.Template = template.InitialiseTemplate(task.QueryOperationConfig.Template)
 
 	} else {
-		log.Println("retrying :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
+		log.Println("retrying :- ", task.Operation, task.IdentifierToken, task.ResultSeed)
 	}
 	return task.ResultSeed, nil
 }
@@ -258,5 +251,5 @@ func runN1qlQuery(task *QueryTask, cluster *gocb.Cluster, scope *gocb.Scope, col
 
 	_ = group.Wait()
 	close(routineLimiter)
-	log.Println("completed :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
+	log.Println("completed :- ", task.Operation, task.IdentifierToken, task.ResultSeed)
 }

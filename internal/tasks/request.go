@@ -6,9 +6,7 @@ import (
 	"fmt"
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/cb_sdk"
-	"github.com/couchbaselabs/sirius/internal/task_meta_data"
-	"github.com/couchbaselabs/sirius/internal/task_result"
-	"log"
+	"github.com/couchbaselabs/sirius/internal/meta_data"
 	"os"
 	"path/filepath"
 	"sync"
@@ -22,14 +20,14 @@ type TaskWithIdentifier struct {
 }
 
 type Request struct {
-	Identifier        string                            `json:"identifier" doc:"false" `
-	Tasks             []TaskWithIdentifier              `json:"tasks" doc:"false"`
-	MetaData          *task_meta_data.MetaData          `json:"metaData" doc:"false"`
-	DocumentsMeta     *task_meta_data.DocumentsMetaData `json:"documentMeta" doc:"false"`
-	connectionManager *cb_sdk.ConnectionManager         `json:"-" doc:"false"`
-	lock              sync.Mutex                        `json:"-" doc:"false"`
-	ctx               context.Context                   `json:"-"`
-	cancel            context.CancelFunc                `json:"-"`
+	Identifier        string                       `json:"identifier" doc:"false" `
+	Tasks             []TaskWithIdentifier         `json:"tasks" doc:"false"`
+	MetaData          *meta_data.MetaData          `json:"metaData" doc:"false"`
+	DocumentsMeta     *meta_data.DocumentsMetaData `json:"documentMeta" doc:"false"`
+	connectionManager *cb_sdk.ConnectionManager    `json:"-" doc:"false"`
+	lock              sync.Mutex                   `json:"-" doc:"false"`
+	ctx               context.Context              `json:"-"`
+	cancel            context.CancelFunc           `json:"-"`
 }
 
 // NewRequest return  an instance of Request
@@ -37,8 +35,8 @@ func NewRequest(identifier string) *Request {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Request{
 		Identifier:        identifier,
-		MetaData:          task_meta_data.NewMetaData(),
-		DocumentsMeta:     task_meta_data.NewDocumentsMetaData(),
+		MetaData:          meta_data.NewMetaData(),
+		DocumentsMeta:     meta_data.NewDocumentsMetaData(),
 		connectionManager: cb_sdk.ConfigConnectionManager(),
 		lock:              sync.Mutex{},
 		ctx:               ctx,
@@ -80,7 +78,7 @@ func (r *Request) ReconfigureDocumentManager() {
 	defer r.lock.Unlock()
 	r.lock.Lock()
 	if r.DocumentsMeta == nil {
-		r.DocumentsMeta = task_meta_data.NewDocumentsMetaData()
+		r.DocumentsMeta = meta_data.NewDocumentsMetaData()
 	}
 }
 
@@ -114,13 +112,13 @@ func (r *Request) AddTask(o string, t Task) error {
 }
 
 // AddToSeedEnd will update the Request.SeedEnd by  adding count into it.
-func (r *Request) AddToSeedEnd(collectionMetaData *task_meta_data.CollectionMetaData, count int64) {
+func (r *Request) AddToSeedEnd(collectionMetaData *meta_data.CollectionMetaData, count int64) {
 	collectionMetaData.SeedEnd += count
 	_ = r.saveRequestIntoFile()
 }
 
 // checkAndUpdateSeedEnd will store the max seed value that may occur in upsert operations.
-func (r *Request) checkAndUpdateSeedEnd(collectionMetaData *task_meta_data.CollectionMetaData, key int64) {
+func (r *Request) checkAndUpdateSeedEnd(collectionMetaData *meta_data.CollectionMetaData, key int64) {
 	defer r.lock.Unlock()
 	r.lock.Lock()
 	if key > collectionMetaData.SeedEnd {
@@ -204,21 +202,6 @@ func ReadRequestFromFile(identifier string) (*Request, error) {
 		return nil, err
 	}
 	return r, nil
-}
-
-// DeleteResultFile deletes the result file
-func DeleteResultFile(resultSeed int64) error {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-	fileName := filepath.Join(cwd, task_result.ResultPath, fmt.Sprintf("%d", resultSeed))
-
-	if err := os.Remove(fileName); err != nil {
-		log.Println("Manually clean " + fileName)
-		return err
-	}
-	return nil
 }
 
 func (r *Request) Lock() {

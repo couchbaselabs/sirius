@@ -5,8 +5,8 @@ import (
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/cb_sdk"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
+	"github.com/couchbaselabs/sirius/internal/meta_data"
 	"github.com/couchbaselabs/sirius/internal/task_errors"
-	"github.com/couchbaselabs/sirius/internal/task_meta_data"
 	"github.com/couchbaselabs/sirius/internal/task_result"
 	"github.com/couchbaselabs/sirius/internal/task_state"
 	"github.com/couchbaselabs/sirius/internal/tasks"
@@ -22,35 +22,28 @@ import (
 )
 
 type SubDocRead struct {
-	IdentifierToken string                             `json:"identifierToken" doc:"true"`
-	ClusterConfig   *cb_sdk.ClusterConfig              `json:"clusterConfig" doc:"true"`
-	Bucket          string                             `json:"bucket" doc:"true"`
-	Scope           string                             `json:"scope,omitempty" doc:"true"`
-	Collection      string                             `json:"collection,omitempty" doc:"true"`
-	OperationConfig *tasks.OperationConfig             `json:"operationConfig" doc:"true"`
-	GetSpecOptions  *tasks.GetSpecOptions              `json:"getSpecOptions" doc:"true"`
-	LookupInOptions *tasks.LookupInOptions             `json:"lookupInOptions" doc:"true"`
-	Operation       string                             `json:"operation" doc:"false"`
-	ResultSeed      int64                              `json:"resultSeed" doc:"false"`
-	TaskPending     bool                               `json:"taskPending" doc:"false"`
-	State           *task_state.TaskState              `json:"State" doc:"false"`
-	MetaData        *task_meta_data.CollectionMetaData `json:"metaData" doc:"false"`
-	Result          *task_result.TaskResult            `json:"-" doc:"false"`
-	gen             *docgenerator.Generator            `json:"-" doc:"false"`
-	req             *tasks.Request                     `json:"-" doc:"false"`
-	rerun           bool                               `json:"-" doc:"false"`
-	lock            sync.Mutex                         `json:"-" doc:"false"`
+	IdentifierToken string                        `json:"identifierToken" doc:"true"`
+	ClusterConfig   *cb_sdk.ClusterConfig         `json:"clusterConfig" doc:"true"`
+	Bucket          string                        `json:"bucket" doc:"true"`
+	Scope           string                        `json:"scope,omitempty" doc:"true"`
+	Collection      string                        `json:"collection,omitempty" doc:"true"`
+	OperationConfig *OperationConfig              `json:"operationConfig" doc:"true"`
+	GetSpecOptions  *cb_sdk.GetSpecOptions        `json:"getSpecOptions" doc:"true"`
+	LookupInOptions *cb_sdk.LookupInOptions       `json:"lookupInOptions" doc:"true"`
+	Operation       string                        `json:"operation" doc:"false"`
+	ResultSeed      int64                         `json:"resultSeed" doc:"false"`
+	TaskPending     bool                          `json:"taskPending" doc:"false"`
+	State           *task_state.TaskState         `json:"State" doc:"false"`
+	MetaData        *meta_data.CollectionMetaData `json:"metaData" doc:"false"`
+	Result          *task_result.TaskResult       `json:"-" doc:"false"`
+	gen             *docgenerator.Generator       `json:"-" doc:"false"`
+	req             *tasks.Request                `json:"-" doc:"false"`
+	rerun           bool                          `json:"-" doc:"false"`
+	lock            sync.Mutex                    `json:"-" doc:"false"`
 }
 
 func (task *SubDocRead) Describe() string {
 	return " SubDocRead reads sub-document in bulk"
-}
-
-func (task *SubDocRead) BuildIdentifier() string {
-	if task.IdentifierToken == "" {
-		task.IdentifierToken = tasks.DefaultIdentifierToken
-	}
-	return task.IdentifierToken
 }
 
 func (task *SubDocRead) CollectionIdentifier() string {
@@ -87,16 +80,16 @@ func (task *SubDocRead) Config(req *tasks.Request, reRun bool) (int64, error) {
 		task.Operation = tasks.SubDocReadOperation
 
 		if task.Bucket == "" {
-			task.Bucket = tasks.DefaultBucket
+			task.Bucket = cb_sdk.DefaultBucket
 		}
 		if task.Scope == "" {
-			task.Scope = tasks.DefaultScope
+			task.Scope = cb_sdk.DefaultScope
 		}
 		if task.Collection == "" {
-			task.Collection = tasks.DefaultCollection
+			task.Collection = cb_sdk.DefaultCollection
 		}
 
-		if err := tasks.ConfigureOperationConfig(task.OperationConfig); err != nil {
+		if err := ConfigureOperationConfig(task.OperationConfig); err != nil {
 			task.TaskPending = false
 			return 0, err
 		}
@@ -112,8 +105,8 @@ func (task *SubDocRead) Config(req *tasks.Request, reRun bool) (int64, error) {
 			return task.ResultSeed, task_errors.ErrTaskStateIsNil
 		}
 		task.State.SetupStoringKeys()
-		_ = tasks.DeleteResultFile(task.ResultSeed)
-		log.Println("retrying :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
+		_ = task_result.DeleteResultFile(task.ResultSeed)
+		log.Println("retrying :- ", task.Operation, task.IdentifierToken, task.ResultSeed)
 	}
 	return task.ResultSeed, nil
 }
@@ -250,7 +243,7 @@ func readSubDocuments(task *SubDocRead, collectionObject *cb_sdk.CollectionObjec
 	close(routineLimiter)
 	close(dataChannel)
 	task.PostTaskExceptionHandling(collectionObject)
-	log.Println("completed :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
+	log.Println("completed :- ", task.Operation, task.IdentifierToken, task.ResultSeed)
 }
 
 func (task *SubDocRead) PostTaskExceptionHandling(collectionObject *cb_sdk.CollectionObject) {
@@ -267,24 +260,24 @@ func (task *SubDocRead) PostTaskExceptionHandling(collectionObject *cb_sdk.Colle
 	completedOffsetMaps := task.State.ReturnCompletedOffset()
 
 	// For the offset in ignore exceptions :-> move them from error to completed
-	tasks.ShiftErrToCompletedOnIgnore(task.OperationConfig.Exceptions.IgnoreExceptions, task.Result, errorOffsetMaps, completedOffsetMaps)
+	shiftErrToCompletedOnIgnore(task.OperationConfig.Exceptions.IgnoreExceptions, task.Result, errorOffsetMaps, completedOffsetMaps)
 
 	if task.OperationConfig.Exceptions.RetryAttempts > 0 {
 
-		exceptionList := tasks.GetExceptions(task.Result, task.OperationConfig.Exceptions.RetryExceptions)
+		exceptionList := GetExceptions(task.Result, task.OperationConfig.Exceptions.RetryExceptions)
 
 		// For the retry exceptions :-> move them on success after retrying from err to completed
 		for _, exception := range exceptionList {
 
-			errorOffsetListMap := make([]map[int64]tasks.RetriedResult, 0)
+			errorOffsetListMap := make([]map[int64]RetriedResult, 0)
 			for _, failedDocs := range task.Result.BulkError[exception] {
-				m := make(map[int64]tasks.RetriedResult)
-				m[failedDocs.Offset] = tasks.RetriedResult{}
+				m := make(map[int64]RetriedResult)
+				m[failedDocs.Offset] = RetriedResult{}
 				errorOffsetListMap = append(errorOffsetListMap, m)
 			}
 
 			routineLimiter := make(chan struct{}, tasks.MaxConcurrentRoutines)
-			dataChannel := make(chan map[int64]tasks.RetriedResult, tasks.MaxConcurrentRoutines)
+			dataChannel := make(chan map[int64]RetriedResult, tasks.MaxConcurrentRoutines)
 			wg := errgroup.Group{}
 			for _, x := range errorOffsetListMap {
 				dataChannel <- x
@@ -327,7 +320,7 @@ func (task *SubDocRead) PostTaskExceptionHandling(collectionObject *cb_sdk.Colle
 					}
 
 					if err != nil {
-						m[offset] = tasks.RetriedResult{
+						m[offset] = RetriedResult{
 							Status: false,
 							CAS:    0,
 						}
@@ -335,7 +328,7 @@ func (task *SubDocRead) PostTaskExceptionHandling(collectionObject *cb_sdk.Colle
 						for index, _ := range paths {
 							var val interface{}
 							if err := result.ContentAt(uint(index), &val); err != nil {
-								m[offset] = tasks.RetriedResult{
+								m[offset] = RetriedResult{
 									Status: false,
 									CAS:    0,
 								}
@@ -344,7 +337,7 @@ func (task *SubDocRead) PostTaskExceptionHandling(collectionObject *cb_sdk.Colle
 							}
 						}
 
-						m[offset] = tasks.RetriedResult{
+						m[offset] = RetriedResult{
 							Status: true,
 							CAS:    uint64(result.Cas()),
 						}
@@ -356,14 +349,14 @@ func (task *SubDocRead) PostTaskExceptionHandling(collectionObject *cb_sdk.Colle
 			}
 			_ = wg.Wait()
 
-			tasks.ShiftErrToCompletedOnRetrying(exception, task.Result, errorOffsetListMap, errorOffsetMaps, completedOffsetMaps)
+			shiftErrToCompletedOnRetrying(exception, task.Result, errorOffsetListMap, errorOffsetMaps, completedOffsetMaps)
 		}
 	}
 
 	task.State.MakeCompleteKeyFromMap(completedOffsetMaps)
 	task.State.MakeErrorKeyFromMap(errorOffsetMaps)
 	task.Result.Failure = int64(len(task.State.KeyStates.Err))
-	log.Println("completed retrying:- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
+	log.Println("completed retrying:- ", task.Operation, task.IdentifierToken, task.ResultSeed)
 
 }
 
@@ -387,10 +380,10 @@ func (task *SubDocRead) GetCollectionObject() (*cb_sdk.CollectionObject, error) 
 		task.Collection)
 }
 
-func (task *SubDocRead) SetException(exceptions tasks.Exceptions) {
+func (task *SubDocRead) SetException(exceptions Exceptions) {
 	task.OperationConfig.Exceptions = exceptions
 }
 
-func (task *SubDocRead) GetOperationConfig() (*tasks.OperationConfig, *task_state.TaskState) {
+func (task *SubDocRead) GetOperationConfig() (*OperationConfig, *task_state.TaskState) {
 	return task.OperationConfig, task.State
 }

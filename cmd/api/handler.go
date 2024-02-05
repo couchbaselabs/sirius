@@ -54,13 +54,17 @@ func (app *Config) insertTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
+	if err := checkIdentifierToken(task.IdentifierToken); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
 	log.Print(task, tasks.InsertOperation)
-	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.InsertOperation, task)
+	err := app.serverRequests.AddTask(task.IdentifierToken, tasks.InsertOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.IdentifierToken)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -91,13 +95,17 @@ func (app *Config) deleteTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
+	if err := checkIdentifierToken(task.IdentifierToken); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
 	log.Print(task, tasks.DeleteOperation)
-	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.DeleteOperation, task)
+	err := app.serverRequests.AddTask(task.IdentifierToken, tasks.DeleteOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.IdentifierToken)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -128,13 +136,17 @@ func (app *Config) upsertTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
+	if err := checkIdentifierToken(task.IdentifierToken); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
 	log.Print(task, tasks.UpsertOperation)
-	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.UpsertOperation, task)
+	err := app.serverRequests.AddTask(task.IdentifierToken, tasks.UpsertOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.IdentifierToken)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -165,13 +177,17 @@ func (app *Config) touchTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
+	if err := checkIdentifierToken(task.IdentifierToken); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
 	log.Print(task, bulk_loading_cb.TouchTask{})
-	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.UpsertOperation, task)
+	err := app.serverRequests.AddTask(task.IdentifierToken, tasks.UpsertOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.IdentifierToken)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -202,13 +218,17 @@ func (app *Config) validateTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
+	if err := checkIdentifierToken(task.IdentifierToken); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
 	log.Print(task, tasks.ValidateOperation)
-	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.ValidateOperation, task)
+	err := app.serverRequests.AddTask(task.IdentifierToken, tasks.ValidateOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.IdentifierToken)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -239,15 +259,20 @@ func (app *Config) clearRequestFromServer(w http.ResponseWriter, r *http.Request
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	log.Print(task, "clear")
-	if err := app.serverRequests.ClearIdentifierAndRequest(task.BuildIdentifier()); err != nil {
+	if err := checkIdentifierToken(task.IdentifierToken); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	log.Print(task, "clear")
+	if err := app.serverRequests.ClearIdentifierAndRequest(task.IdentifierToken); err != nil {
+		_ = app.errorJSON(w, fmt.Errorf("no session for %s", task.IdentifierToken),
+			http.StatusUnprocessableEntity)
 		return
 	}
 	resPayload := jsonResponse{
 		Error:   false,
 		Message: "Successfully cleared the meta-data",
-		Data:    task.BuildIdentifier(),
+		Data:    task.IdentifierToken,
 	}
 	_ = app.writeJSON(w, http.StatusOK, resPayload)
 }
@@ -259,13 +284,17 @@ func (app *Config) readTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
+	if err := checkIdentifierToken(task.IdentifierToken); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
 	log.Print(task, "read")
-	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.ReadOperation, task)
+	err := app.serverRequests.AddTask(task.IdentifierToken, tasks.ReadOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.IdentifierToken)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -296,13 +325,17 @@ func (app *Config) singleInsertTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
+	if err := checkIdentifierToken(task.IdentifierToken); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
 	log.Print(task, tasks.SingleInsertOperation)
-	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SingleInsertOperation, task)
+	err := app.serverRequests.AddTask(task.IdentifierToken, tasks.SingleInsertOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.IdentifierToken)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -333,13 +366,17 @@ func (app *Config) singleDeleteTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
+	if err := checkIdentifierToken(task.IdentifierToken); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
 	log.Print(task, tasks.SingleDeleteOperation)
-	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SingleDeleteOperation, task)
+	err := app.serverRequests.AddTask(task.IdentifierToken, tasks.SingleDeleteOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.IdentifierToken)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -370,13 +407,17 @@ func (app *Config) singleUpsertTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
+	if err := checkIdentifierToken(task.IdentifierToken); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
 	log.Print(task, tasks.SingleUpsertOperation)
-	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SingleUpsertOperation, task)
+	err := app.serverRequests.AddTask(task.IdentifierToken, tasks.SingleUpsertOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.IdentifierToken)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -407,13 +448,17 @@ func (app *Config) singleReadTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
+	if err := checkIdentifierToken(task.IdentifierToken); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
 	log.Print(task, tasks.SingleReadOperation)
-	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SingleReadOperation, task)
+	err := app.serverRequests.AddTask(task.IdentifierToken, tasks.SingleReadOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.IdentifierToken)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -444,13 +489,17 @@ func (app *Config) singleTouchTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
+	if err := checkIdentifierToken(task.IdentifierToken); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
 	log.Print(task, tasks.SingleTouchOperation)
-	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SingleTouchOperation, task)
+	err := app.serverRequests.AddTask(task.IdentifierToken, tasks.SingleTouchOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.IdentifierToken)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -481,13 +530,17 @@ func (app *Config) singleReplaceTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
+	if err := checkIdentifierToken(task.IdentifierToken); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
 	log.Print(task, tasks.SingleReplaceOperation)
-	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SingleReplaceOperation, task)
+	err := app.serverRequests.AddTask(task.IdentifierToken, tasks.SingleReplaceOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.IdentifierToken)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -518,13 +571,17 @@ func (app *Config) runQueryTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
+	if err := checkIdentifierToken(task.IdentifierToken); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
 	log.Print(task, tasks.QueryOperation)
-	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.QueryOperation, task)
+	err := app.serverRequests.AddTask(task.IdentifierToken, tasks.QueryOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.IdentifierToken)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -555,8 +612,12 @@ func (app *Config) RetryExceptionTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
+	if err := checkIdentifierToken(task.IdentifierToken); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
 	log.Print(task, tasks.RetryExceptionOperation)
-	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.IdentifierToken)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -587,13 +648,17 @@ func (app *Config) SubDocInsertTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
+	if err := checkIdentifierToken(task.IdentifierToken); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
 	log.Print(task, tasks.SubDocInsertOperation)
-	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SubDocInsertOperation, task)
+	err := app.serverRequests.AddTask(task.IdentifierToken, tasks.SubDocInsertOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.IdentifierToken)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -624,13 +689,17 @@ func (app *Config) SubDocUpsertTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
+	if err := checkIdentifierToken(task.IdentifierToken); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
 	log.Print(task, tasks.SubDocUpsertOperation)
-	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SubDocUpsertOperation, task)
+	err := app.serverRequests.AddTask(task.IdentifierToken, tasks.SubDocUpsertOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.IdentifierToken)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -661,13 +730,17 @@ func (app *Config) SubDocDeleteTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
+	if err := checkIdentifierToken(task.IdentifierToken); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
 	log.Print(task, tasks.SubDocDeleteOperation)
-	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SubDocDeleteOperation, task)
+	err := app.serverRequests.AddTask(task.IdentifierToken, tasks.SubDocDeleteOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.IdentifierToken)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -698,13 +771,17 @@ func (app *Config) SubDocReadTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
+	if err := checkIdentifierToken(task.IdentifierToken); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
 	log.Print(task, tasks.SubDocReadOperation)
-	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SubDocReadOperation, task)
+	err := app.serverRequests.AddTask(task.IdentifierToken, tasks.SubDocReadOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.IdentifierToken)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -735,13 +812,17 @@ func (app *Config) SubDocReplaceTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
+	if err := checkIdentifierToken(task.IdentifierToken); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
 	log.Print(task, tasks.SubDocReplaceOperation)
-	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SubDocReplaceOperation, task)
+	err := app.serverRequests.AddTask(task.IdentifierToken, tasks.SubDocReplaceOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.IdentifierToken)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -772,13 +853,17 @@ func (app *Config) SingleSubDocInsert(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
+	if err := checkIdentifierToken(task.IdentifierToken); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
 	log.Print(task, tasks.SingleSubDocInsertOperation)
-	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SingleSubDocInsertOperation, task)
+	err := app.serverRequests.AddTask(task.IdentifierToken, tasks.SingleSubDocInsertOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.IdentifierToken)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -809,13 +894,17 @@ func (app *Config) SingleSubDocUpsert(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
+	if err := checkIdentifierToken(task.IdentifierToken); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
 	log.Print(task, tasks.SingleSubDocUpsertOperation)
-	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SingleSubDocUpsertOperation, task)
+	err := app.serverRequests.AddTask(task.IdentifierToken, tasks.SingleSubDocUpsertOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.IdentifierToken)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -846,13 +935,17 @@ func (app *Config) SingleSubDocReplace(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
+	if err := checkIdentifierToken(task.IdentifierToken); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
 	log.Print(task, tasks.SingleSubDocReplaceOperation)
-	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SingleSubDocReplaceOperation, task)
+	err := app.serverRequests.AddTask(task.IdentifierToken, tasks.SingleSubDocReplaceOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.IdentifierToken)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -883,13 +976,17 @@ func (app *Config) SingleSubDocDelete(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
+	if err := checkIdentifierToken(task.IdentifierToken); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
 	log.Print(task, tasks.SingleSubDocDeleteOperation)
-	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SingleSubDocDeleteOperation, task)
+	err := app.serverRequests.AddTask(task.IdentifierToken, tasks.SingleSubDocDeleteOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.IdentifierToken)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -920,13 +1017,17 @@ func (app *Config) SingleSubDocRead(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
+	if err := checkIdentifierToken(task.IdentifierToken); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
 	log.Print(task, tasks.SingleSubDocReadOperation)
-	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SingleSubDocReadOperation, task)
+	err := app.serverRequests.AddTask(task.IdentifierToken, tasks.SingleSubDocReadOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.IdentifierToken)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -957,13 +1058,17 @@ func (app *Config) SingleDocValidate(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
+	if err := checkIdentifierToken(task.IdentifierToken); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
 	log.Print(task, tasks.SingleDocValidateOperation)
-	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.SingleDocValidateOperation, task)
+	err := app.serverRequests.AddTask(task.IdentifierToken, tasks.SingleDocValidateOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.IdentifierToken)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -994,13 +1099,17 @@ func (app *Config) WarmUpBucket(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
+	if err := checkIdentifierToken(task.IdentifierToken); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
 	log.Print(task, tasks.BucketWarmUpOperation)
-	err := app.serverRequests.AddTask(task.BuildIdentifier(), tasks.BucketWarmUpOperation, task)
+	err := app.serverRequests.AddTask(task.IdentifierToken, tasks.BucketWarmUpOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	req, err := app.serverRequests.GetRequestOfIdentifier(task.BuildIdentifier())
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.IdentifierToken)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return

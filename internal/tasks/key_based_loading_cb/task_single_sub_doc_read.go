@@ -1,7 +1,6 @@
 package key_based_loading_cb
 
 import (
-	"fmt"
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/cb_sdk"
 	"github.com/couchbaselabs/sirius/internal/task_errors"
@@ -13,30 +12,23 @@ import (
 )
 
 type SingleSubDocRead struct {
-	IdentifierToken             string                             `json:"identifierToken" doc:"true"`
-	ClusterConfig               *cb_sdk.ClusterConfig              `json:"clusterConfig" doc:"true"`
-	Bucket                      string                             `json:"bucket" doc:"true"`
-	Scope                       string                             `json:"scope,omitempty" doc:"true"`
-	Collection                  string                             `json:"collection,omitempty" doc:"true"`
-	SingleSubDocOperationConfig *tasks.SingleSubDocOperationConfig `json:"singleSubDocOperationConfig" doc:"true"`
-	LookupInOptions             *tasks.LookupInOptions             `json:"lookupInOptions" doc:"true"`
-	GetSpecOptions              *tasks.GetSpecOptions              `json:"getSpecOptions" doc:"true"`
-	Operation                   string                             `json:"operation" doc:"false"`
-	ResultSeed                  int64                              `json:"resultSeed" doc:"false"`
-	TaskPending                 bool                               `json:"taskPending" doc:"false"`
-	Result                      *task_result.TaskResult            `json:"-" doc:"false"`
-	req                         *tasks.Request                     `json:"-" doc:"false"`
+	IdentifierToken             string                       `json:"identifierToken" doc:"true"`
+	ClusterConfig               *cb_sdk.ClusterConfig        `json:"clusterConfig" doc:"true"`
+	Bucket                      string                       `json:"bucket" doc:"true"`
+	Scope                       string                       `json:"scope,omitempty" doc:"true"`
+	Collection                  string                       `json:"collection,omitempty" doc:"true"`
+	SingleSubDocOperationConfig *SingleSubDocOperationConfig `json:"singleSubDocOperationConfig" doc:"true"`
+	LookupInOptions             *cb_sdk.LookupInOptions      `json:"lookupInOptions" doc:"true"`
+	GetSpecOptions              *cb_sdk.GetSpecOptions       `json:"getSpecOptions" doc:"true"`
+	Operation                   string                       `json:"operation" doc:"false"`
+	ResultSeed                  int64                        `json:"resultSeed" doc:"false"`
+	TaskPending                 bool                         `json:"taskPending" doc:"false"`
+	Result                      *task_result.TaskResult      `json:"-" doc:"false"`
+	req                         *tasks.Request               `json:"-" doc:"false"`
 }
 
 func (task *SingleSubDocRead) Describe() string {
 	return "SingleSingleSubDocRead inserts a Sub-Document as per user's input [No Random data]"
-}
-
-func (task *SingleSubDocRead) BuildIdentifier() string {
-	if task.IdentifierToken == "" {
-		task.IdentifierToken = tasks.DefaultIdentifierToken
-	}
-	return task.IdentifierToken
 }
 
 func (task *SingleSubDocRead) CollectionIdentifier() string {
@@ -70,32 +62,32 @@ func (task *SingleSubDocRead) Config(req *tasks.Request, reRun bool) (int64, err
 		task.Operation = tasks.SingleSubDocReadOperation
 
 		if task.Bucket == "" {
-			task.Bucket = tasks.DefaultBucket
+			task.Bucket = cb_sdk.DefaultBucket
 		}
 		if task.Scope == "" {
-			task.Scope = tasks.DefaultScope
+			task.Scope = cb_sdk.DefaultScope
 		}
 		if task.Collection == "" {
-			task.Collection = tasks.DefaultCollection
+			task.Collection = cb_sdk.DefaultCollection
 		}
 
-		if err := tasks.ConfigSingleSubDocOperationConfig(task.SingleSubDocOperationConfig); err != nil {
+		if err := ConfigSingleSubDocOperationConfig(task.SingleSubDocOperationConfig); err != nil {
 			task.TaskPending = false
 			return 0, err
 		}
 
-		if err := tasks.ConfigGetSpecOptions(task.GetSpecOptions); err != nil {
+		if err := cb_sdk.ConfigGetSpecOptions(task.GetSpecOptions); err != nil {
 			task.TaskPending = false
 			return 0, err
 		}
 
-		if err := tasks.ConfigLookupInOptions(task.LookupInOptions); err != nil {
+		if err := cb_sdk.ConfigLookupInOptions(task.LookupInOptions); err != nil {
 			task.TaskPending = false
 			return 0, err
 		}
 
 	} else {
-		log.Println("retrying :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
+		log.Println("retrying :- ", task.Operation, task.IdentifierToken, task.ResultSeed)
 	}
 	return task.ResultSeed, nil
 }
@@ -171,22 +163,5 @@ func singleReadSubDocuments(task *SingleSubDocRead, collectionObject *cb_sdk.Col
 			task.Result.CreateSingleErrorResult(initTime, key, "", true, uint64(result.Cas()))
 		}
 	}
-
-	log.Println("completed :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
-}
-
-func (task *SingleSubDocRead) PostTaskExceptionHandling(collectionObject *cb_sdk.CollectionObject) {
-}
-
-func (task *SingleSubDocRead) MatchResultSeed(resultSeed string) (bool, error) {
-	if fmt.Sprintf("%d", task.ResultSeed) == resultSeed {
-		if task.TaskPending {
-			return true, task_errors.ErrTaskInPendingState
-		}
-		if task.Result == nil {
-			task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
-		}
-		return true, nil
-	}
-	return false, nil
+	log.Println("completed :- ", task.Operation, task.IdentifierToken, task.ResultSeed)
 }

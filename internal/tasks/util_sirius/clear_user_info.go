@@ -26,10 +26,3 @@ func (task *ClearTask) Config(_ *tasks.Request, _ bool) (int64, error) {
 	task.TaskPending = false
 	return 0, nil
 }
-
-func (task *ClearTask) BuildIdentifier() string {
-	if task.IdentifierToken == "" {
-		task.IdentifierToken = tasks.DefaultIdentifierToken
-	}
-	return task.IdentifierToken
-}

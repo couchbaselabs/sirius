@@ -5,7 +5,7 @@ import (
 	"github.com/couchbase/gocb/v2"
 )
 
-func RegisteredErrors() map[error]struct{} {
+func registeredErrors() map[error]struct{} {
 	return map[error]struct{}{
 		gocb.ErrCasMismatch:                    {},
 		gocb.ErrCollectionNotFound:             {},
@@ -46,7 +46,7 @@ func RegisteredErrors() map[error]struct{} {
 // CheckSDKException returns SDK Exception on possible match.
 func CheckSDKException(err error) (string, string) {
 
-	for e, _ := range RegisteredErrors() {
+	for e, _ := range registeredErrors() {
 		if errors.Is(err, e) {
 			return e.Error(), err.Error()
 		}

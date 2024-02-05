@@ -11,7 +11,7 @@ type BulkTask interface {
 	PostTaskExceptionHandling(collectionObject *cb_sdk.CollectionObject)
 	MatchResultSeed(resultSeed string) (bool, error)
 	GetCollectionObject() (*cb_sdk.CollectionObject, error)
-	SetException(exceptions tasks.Exceptions)
-	GetOperationConfig() (*tasks.OperationConfig, *task_state.TaskState)
+	SetException(exceptions Exceptions)
+	GetOperationConfig() (*OperationConfig, *task_state.TaskState)
 	CollectionIdentifier() string
 }

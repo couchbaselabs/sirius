@@ -1,4 +1,4 @@
-package task_meta_data
+package meta_data
 
 import (
 	"sync"

@@ -5,8 +5,8 @@ import (
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/cb_sdk"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
+	"github.com/couchbaselabs/sirius/internal/meta_data"
 	"github.com/couchbaselabs/sirius/internal/task_errors"
-	"github.com/couchbaselabs/sirius/internal/task_meta_data"
 	"github.com/couchbaselabs/sirius/internal/task_result"
 	"github.com/couchbaselabs/sirius/internal/task_state"
 	"github.com/couchbaselabs/sirius/internal/tasks"
@@ -22,30 +22,23 @@ import (
 )
 
 type UpsertTask struct {
-	IdentifierToken string                             `json:"identifierToken" doc:"true"`
-	ClusterConfig   *cb_sdk.ClusterConfig              `json:"clusterConfig" doc:"true"`
-	Bucket          string                             `json:"bucket" doc:"true"`
-	Scope           string                             `json:"scope,omitempty" doc:"true"`
-	Collection      string                             `json:"collection,omitempty" doc:"true"`
-	InsertOptions   *tasks.InsertOptions               `json:"insertOptions,omitempty" doc:"true"`
-	OperationConfig *tasks.OperationConfig             `json:"operationConfig,omitempty" doc:"true"`
-	Operation       string                             `json:"operation" doc:"false"`
-	ResultSeed      int64                              `json:"resultSeed" doc:"false"`
-	TaskPending     bool                               `json:"taskPending" doc:"false"`
-	State           *task_state.TaskState              `json:"State" doc:"false"`
-	MetaData        *task_meta_data.CollectionMetaData `json:"metaData" doc:"false"`
-	Result          *task_result.TaskResult            `json:"-" doc:"false"`
-	gen             *docgenerator.Generator            `json:"-" doc:"false"`
-	req             *tasks.Request                     `json:"-" doc:"false"`
-	rerun           bool                               `json:"-" doc:"false"`
-	lock            sync.Mutex                         `json:"-" doc:"false" `
-}
-
-func (task *UpsertTask) BuildIdentifier() string {
-	if task.IdentifierToken == "" {
-		task.IdentifierToken = tasks.DefaultIdentifierToken
-	}
-	return task.IdentifierToken
+	IdentifierToken string                        `json:"identifierToken" doc:"true"`
+	ClusterConfig   *cb_sdk.ClusterConfig         `json:"clusterConfig" doc:"true"`
+	Bucket          string                        `json:"bucket" doc:"true"`
+	Scope           string                        `json:"scope,omitempty" doc:"true"`
+	Collection      string                        `json:"collection,omitempty" doc:"true"`
+	InsertOptions   *cb_sdk.InsertOptions         `json:"insertOptions,omitempty" doc:"true"`
+	OperationConfig *OperationConfig              `json:"operationConfig,omitempty" doc:"true"`
+	Operation       string                        `json:"operation" doc:"false"`
+	ResultSeed      int64                         `json:"resultSeed" doc:"false"`
+	TaskPending     bool                          `json:"taskPending" doc:"false"`
+	State           *task_state.TaskState         `json:"State" doc:"false"`
+	MetaData        *meta_data.CollectionMetaData `json:"metaData" doc:"false"`
+	Result          *task_result.TaskResult       `json:"-" doc:"false"`
+	gen             *docgenerator.Generator       `json:"-" doc:"false"`
+	req             *tasks.Request                `json:"-" doc:"false"`
+	rerun           bool                          `json:"-" doc:"false"`
+	lock            sync.Mutex                    `json:"-" doc:"false" `
 }
 
 func (task *UpsertTask) CollectionIdentifier() string {
@@ -87,21 +80,21 @@ func (task *UpsertTask) Config(req *tasks.Request, reRun bool) (int64, error) {
 		task.Operation = tasks.UpsertOperation
 
 		if task.Bucket == "" {
-			task.Bucket = tasks.DefaultBucket
+			task.Bucket = cb_sdk.DefaultBucket
 		}
 		if task.Scope == "" {
-			task.Scope = tasks.DefaultScope
+			task.Scope = cb_sdk.DefaultScope
 		}
 		if task.Collection == "" {
-			task.Collection = tasks.DefaultCollection
+			task.Collection = cb_sdk.DefaultCollection
 		}
 
-		if err := tasks.ConfigInsertOptions(task.InsertOptions); err != nil {
+		if err := cb_sdk.ConfigInsertOptions(task.InsertOptions); err != nil {
 			task.TaskPending = false
 			return 0, err
 		}
 
-		if err := tasks.ConfigureOperationConfig(task.OperationConfig); err != nil {
+		if err := ConfigureOperationConfig(task.OperationConfig); err != nil {
 			task.TaskPending = false
 			return 0, err
 		}
@@ -121,8 +114,8 @@ func (task *UpsertTask) Config(req *tasks.Request, reRun bool) (int64, error) {
 		}
 
 		task.State.SetupStoringKeys()
-		_ = tasks.DeleteResultFile(task.ResultSeed)
-		log.Println("retrying :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
+		_ = task_result.DeleteResultFile(task.ResultSeed)
+		log.Println("retrying :- ", task.Operation, task.IdentifierToken, task.ResultSeed)
 	}
 	return task.ResultSeed, nil
 }
@@ -224,7 +217,7 @@ func upsertDocuments(task *UpsertTask, collectionObject *cb_sdk.CollectionObject
 				RetryAttempts))); retry++ {
 				initTime = time.Now().UTC().Format(time.RFC850)
 				_, err = collectionObject.Collection.Upsert(docId, docUpdated, &gocb.UpsertOptions{
-					DurabilityLevel: tasks.GetDurability(task.InsertOptions.Durability),
+					DurabilityLevel: cb_sdk.GetDurability(task.InsertOptions.Durability),
 					PersistTo:       task.InsertOptions.PersistTo,
 					ReplicateTo:     task.InsertOptions.ReplicateTo,
 					Timeout:         time.Duration(task.InsertOptions.Timeout) * time.Second,
@@ -253,7 +246,7 @@ func upsertDocuments(task *UpsertTask, collectionObject *cb_sdk.CollectionObject
 	close(routineLimiter)
 	close(dataChannel)
 	task.PostTaskExceptionHandling(collectionObject)
-	log.Println("completed :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
+	log.Println("completed :- ", task.Operation, task.IdentifierToken, task.ResultSeed)
 }
 
 func (task *UpsertTask) PostTaskExceptionHandling(collectionObject *cb_sdk.CollectionObject) {
@@ -269,25 +262,25 @@ func (task *UpsertTask) PostTaskExceptionHandling(collectionObject *cb_sdk.Colle
 	completedOffsetMaps := task.State.ReturnCompletedOffset()
 
 	// For the offset in ignore exceptions :-> move them from error to completed
-	tasks.ShiftErrToCompletedOnIgnore(task.OperationConfig.Exceptions.IgnoreExceptions, task.Result, errorOffsetMaps,
+	shiftErrToCompletedOnIgnore(task.OperationConfig.Exceptions.IgnoreExceptions, task.Result, errorOffsetMaps,
 		completedOffsetMaps)
 
 	if task.OperationConfig.Exceptions.RetryAttempts > 0 {
 
-		exceptionList := tasks.GetExceptions(task.Result, task.OperationConfig.Exceptions.RetryExceptions)
+		exceptionList := GetExceptions(task.Result, task.OperationConfig.Exceptions.RetryExceptions)
 
 		// For the retry exceptions :-> move them on success after retrying from err to completed
 		for _, exception := range exceptionList {
 
-			errorOffsetListMap := make([]map[int64]tasks.RetriedResult, 0)
+			errorOffsetListMap := make([]map[int64]RetriedResult, 0)
 			for _, failedDocs := range task.Result.BulkError[exception] {
-				m := make(map[int64]tasks.RetriedResult)
-				m[failedDocs.Offset] = tasks.RetriedResult{}
+				m := make(map[int64]RetriedResult)
+				m[failedDocs.Offset] = RetriedResult{}
 				errorOffsetListMap = append(errorOffsetListMap, m)
 			}
 
 			routineLimiter := make(chan struct{}, tasks.MaxConcurrentRoutines)
-			dataChannel := make(chan map[int64]tasks.RetriedResult, tasks.MaxConcurrentRoutines)
+			dataChannel := make(chan map[int64]RetriedResult, tasks.MaxConcurrentRoutines)
 			wg := errgroup.Group{}
 			for _, x := range errorOffsetListMap {
 				dataChannel <- x
@@ -327,7 +320,7 @@ func (task *UpsertTask) PostTaskExceptionHandling(collectionObject *cb_sdk.Colle
 					initTime := time.Now().UTC().Format(time.RFC850)
 					for retry = 0; retry <= task.OperationConfig.Exceptions.RetryAttempts; retry++ {
 						result, err = collectionObject.Collection.Upsert(docId, docUpdated, &gocb.UpsertOptions{
-							DurabilityLevel: tasks.GetDurability(task.InsertOptions.Durability),
+							DurabilityLevel: cb_sdk.GetDurability(task.InsertOptions.Durability),
 							PersistTo:       task.InsertOptions.PersistTo,
 							ReplicateTo:     task.InsertOptions.ReplicateTo,
 							Timeout:         time.Duration(task.InsertOptions.Timeout) * time.Second,
@@ -340,14 +333,14 @@ func (task *UpsertTask) PostTaskExceptionHandling(collectionObject *cb_sdk.Colle
 					}
 
 					if err == nil {
-						m[offset] = tasks.RetriedResult{
+						m[offset] = RetriedResult{
 							Status:   true,
 							CAS:      uint64(result.Cas()),
 							InitTime: initTime,
 							AckTime:  time.Now().UTC().Format(time.RFC850),
 						}
 					} else {
-						m[offset] = tasks.RetriedResult{
+						m[offset] = RetriedResult{
 							InitTime: initTime,
 							AckTime:  time.Now().UTC().Format(time.RFC850),
 						}
@@ -359,7 +352,7 @@ func (task *UpsertTask) PostTaskExceptionHandling(collectionObject *cb_sdk.Colle
 			}
 			_ = wg.Wait()
 
-			tasks.ShiftErrToCompletedOnRetrying(exception, task.Result, errorOffsetListMap, errorOffsetMaps,
+			shiftErrToCompletedOnRetrying(exception, task.Result, errorOffsetListMap, errorOffsetMaps,
 				completedOffsetMaps)
 		}
 	}
@@ -368,7 +361,7 @@ func (task *UpsertTask) PostTaskExceptionHandling(collectionObject *cb_sdk.Colle
 	task.State.MakeErrorKeyFromMap(errorOffsetMaps)
 	task.Result.Failure = int64(len(task.State.KeyStates.Err))
 	task.Result.Success = task.OperationConfig.End - task.OperationConfig.Start - task.Result.Failure
-	log.Println("completed retrying:- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
+	log.Println("completed retrying:- ", task.Operation, task.IdentifierToken, task.ResultSeed)
 }
 
 func (task *UpsertTask) MatchResultSeed(resultSeed string) (bool, error) {
@@ -391,10 +384,10 @@ func (task *UpsertTask) GetCollectionObject() (*cb_sdk.CollectionObject, error) 
 		task.Collection)
 }
 
-func (task *UpsertTask) SetException(exceptions tasks.Exceptions) {
+func (task *UpsertTask) SetException(exceptions Exceptions) {
 	task.OperationConfig.Exceptions = exceptions
 }
 
-func (task *UpsertTask) GetOperationConfig() (*tasks.OperationConfig, *task_state.TaskState) {
+func (task *UpsertTask) GetOperationConfig() (*OperationConfig, *task_state.TaskState) {
 	return task.OperationConfig, task.State
 }

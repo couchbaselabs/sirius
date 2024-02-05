@@ -296,3 +296,18 @@ func (t *TaskResult) StopStoringResult() {
 	t.cancel()
 	time.Sleep(1 * time.Second)
 }
+
+// DeleteResultFile deletes the result file
+func DeleteResultFile(resultSeed int64) error {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	fileName := filepath.Join(cwd, ResultPath, fmt.Sprintf("%d", resultSeed))
+
+	if err := os.Remove(fileName); err != nil {
+		log.Println("Manually clean " + fileName)
+		return err
+	}
+	return nil
+}

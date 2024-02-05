@@ -1,7 +1,6 @@
 package key_based_loading_cb
 
 import (
-	"fmt"
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/cb_sdk"
 	"github.com/couchbaselabs/sirius/internal/task_errors"
@@ -16,30 +15,23 @@ import (
 )
 
 type SingleSubDocInsert struct {
-	IdentifierToken             string                             `json:"identifierToken" doc:"true"`
-	ClusterConfig               *cb_sdk.ClusterConfig              `json:"clusterConfig" doc:"true"`
-	Bucket                      string                             `json:"bucket" doc:"true"`
-	Scope                       string                             `json:"scope,omitempty" doc:"true"`
-	Collection                  string                             `json:"collection,omitempty" doc:"true"`
-	SingleSubDocOperationConfig *tasks.SingleSubDocOperationConfig `json:"singleSubDocOperationConfig" doc:"true"`
-	InsertSpecOptions           *tasks.InsertSpecOptions           `json:"insertSpecOptions" doc:"true"`
-	MutateInOptions             *tasks.MutateInOptions             `json:"mutateInOptions" doc:"true"`
-	Operation                   string                             `json:"operation" doc:"false"`
-	ResultSeed                  int64                              `json:"resultSeed" doc:"false"`
-	TaskPending                 bool                               `json:"taskPending" doc:"false"`
-	Result                      *task_result.TaskResult            `json:"-" doc:"false"`
-	req                         *tasks.Request                     `json:"-" doc:"false"`
+	IdentifierToken             string                       `json:"identifierToken" doc:"true"`
+	ClusterConfig               *cb_sdk.ClusterConfig        `json:"clusterConfig" doc:"true"`
+	Bucket                      string                       `json:"bucket" doc:"true"`
+	Scope                       string                       `json:"scope,omitempty" doc:"true"`
+	Collection                  string                       `json:"collection,omitempty" doc:"true"`
+	SingleSubDocOperationConfig *SingleSubDocOperationConfig `json:"singleSubDocOperationConfig" doc:"true"`
+	InsertSpecOptions           *cb_sdk.InsertSpecOptions    `json:"insertSpecOptions" doc:"true"`
+	MutateInOptions             *cb_sdk.MutateInOptions      `json:"mutateInOptions" doc:"true"`
+	Operation                   string                       `json:"operation" doc:"false"`
+	ResultSeed                  int64                        `json:"resultSeed" doc:"false"`
+	TaskPending                 bool                         `json:"taskPending" doc:"false"`
+	Result                      *task_result.TaskResult      `json:"-" doc:"false"`
+	req                         *tasks.Request               `json:"-" doc:"false"`
 }
 
 func (task *SingleSubDocInsert) Describe() string {
 	return "SingleSingleSubDocInsert inserts a Sub-Document as per user's input [No Random data]"
-}
-
-func (task *SingleSubDocInsert) BuildIdentifier() string {
-	if task.IdentifierToken == "" {
-		task.IdentifierToken = tasks.DefaultIdentifierToken
-	}
-	return task.IdentifierToken
 }
 
 func (task *SingleSubDocInsert) CollectionIdentifier() string {
@@ -75,31 +67,31 @@ func (task *SingleSubDocInsert) Config(req *tasks.Request, reRun bool) (int64, e
 		task.Operation = tasks.SingleSubDocInsertOperation
 
 		if task.Bucket == "" {
-			task.Bucket = tasks.DefaultBucket
+			task.Bucket = cb_sdk.DefaultBucket
 		}
 		if task.Scope == "" {
-			task.Scope = tasks.DefaultScope
+			task.Scope = cb_sdk.DefaultScope
 		}
 		if task.Collection == "" {
-			task.Collection = tasks.DefaultCollection
+			task.Collection = cb_sdk.DefaultCollection
 		}
 
-		if err := tasks.ConfigSingleSubDocOperationConfig(task.SingleSubDocOperationConfig); err != nil {
+		if err := ConfigSingleSubDocOperationConfig(task.SingleSubDocOperationConfig); err != nil {
 			task.TaskPending = false
 			return 0, err
 		}
 
-		if err := tasks.ConfigInsertSpecOptions(task.InsertSpecOptions); err != nil {
+		if err := cb_sdk.ConfigInsertSpecOptions(task.InsertSpecOptions); err != nil {
 			task.TaskPending = false
 			return 0, err
 		}
 
-		if err := tasks.ConfigMutateInOptions(task.MutateInOptions); err != nil {
+		if err := cb_sdk.ConfigMutateInOptions(task.MutateInOptions); err != nil {
 			task.TaskPending = false
 			return 0, err
 		}
 	} else {
-		log.Println("retrying :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
+		log.Println("retrying :- ", task.Operation, task.IdentifierToken, task.ResultSeed)
 	}
 	return task.ResultSeed, nil
 }
@@ -172,8 +164,8 @@ func singleInsertSubDocuments(task *SingleSubDocInsert, collectionObject *cb_sdk
 		Cas:             gocb.Cas(task.MutateInOptions.Cas),
 		PersistTo:       task.MutateInOptions.PersistTo,
 		ReplicateTo:     task.MutateInOptions.ReplicateTo,
-		DurabilityLevel: tasks.GetDurability(task.MutateInOptions.Durability),
-		StoreSemantic:   tasks.GetStoreSemantic(task.MutateInOptions.StoreSemantic),
+		DurabilityLevel: cb_sdk.GetDurability(task.MutateInOptions.Durability),
+		StoreSemantic:   cb_sdk.GetStoreSemantic(task.MutateInOptions.StoreSemantic),
 		Timeout:         time.Duration(task.MutateInOptions.Timeout) * time.Second,
 		PreserveExpiry:  task.MutateInOptions.PreserveExpiry,
 	})
@@ -187,22 +179,5 @@ func singleInsertSubDocuments(task *SingleSubDocInsert, collectionObject *cb_sdk
 		task.Result.CreateSingleErrorResult(initTime, key, "", true, uint64(result.Cas()))
 	}
 
-	task.PostTaskExceptionHandling(collectionObject)
-	log.Println("completed :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
-}
-
-func (task *SingleSubDocInsert) PostTaskExceptionHandling(collectionObject *cb_sdk.CollectionObject) {
-}
-
-func (task *SingleSubDocInsert) MatchResultSeed(resultSeed string) (bool, error) {
-	if fmt.Sprintf("%d", task.ResultSeed) == resultSeed {
-		if task.TaskPending {
-			return true, task_errors.ErrTaskInPendingState
-		}
-		if task.Result == nil {
-			task.Result = task_result.ConfigTaskResult(task.Operation, task.ResultSeed)
-		}
-		return true, nil
-	}
-	return false, nil
+	log.Println("completed :- ", task.Operation, task.IdentifierToken, task.ResultSeed)
 }

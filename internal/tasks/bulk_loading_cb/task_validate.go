@@ -7,8 +7,8 @@ import (
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/cb_sdk"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
+	"github.com/couchbaselabs/sirius/internal/meta_data"
 	"github.com/couchbaselabs/sirius/internal/task_errors"
-	"github.com/couchbaselabs/sirius/internal/task_meta_data"
 	"github.com/couchbaselabs/sirius/internal/task_result"
 	"github.com/couchbaselabs/sirius/internal/task_state"
 	"github.com/couchbaselabs/sirius/internal/tasks"
@@ -24,28 +24,21 @@ import (
 )
 
 type ValidateTask struct {
-	IdentifierToken string                             `json:"identifierToken" doc:"true"`
-	ClusterConfig   *cb_sdk.ClusterConfig              `json:"clusterConfig" doc:"true"`
-	Bucket          string                             `json:"bucket" doc:"true"`
-	Scope           string                             `json:"scope,omitempty" doc:"true"`
-	Collection      string                             `json:"collection,omitempty" doc:"true"`
-	Operation       string                             `json:"operation" doc:"false"`
-	ResultSeed      int64                              `json:"resultSeed" doc:"false"`
-	TaskPending     bool                               `json:"taskPending" doc:"false"`
-	MetaData        *task_meta_data.CollectionMetaData `json:"metaData" doc:"false"`
-	State           *task_state.TaskState              `json:"State" doc:"false"`
-	Result          *task_result.TaskResult            `json:"-" doc:"false"`
-	gen             *docgenerator.Generator            `json:"-" doc:"false"`
-	req             *tasks.Request                     `json:"-" doc:"false"`
-	rerun           bool                               `json:"-" doc:"false"`
-	lock            sync.Mutex                         `json:"–" doc:"false"`
-}
-
-func (task *ValidateTask) BuildIdentifier() string {
-	if task.IdentifierToken == "" {
-		task.IdentifierToken = tasks.DefaultIdentifierToken
-	}
-	return task.IdentifierToken
+	IdentifierToken string                        `json:"identifierToken" doc:"true"`
+	ClusterConfig   *cb_sdk.ClusterConfig         `json:"clusterConfig" doc:"true"`
+	Bucket          string                        `json:"bucket" doc:"true"`
+	Scope           string                        `json:"scope,omitempty" doc:"true"`
+	Collection      string                        `json:"collection,omitempty" doc:"true"`
+	Operation       string                        `json:"operation" doc:"false"`
+	ResultSeed      int64                         `json:"resultSeed" doc:"false"`
+	TaskPending     bool                          `json:"taskPending" doc:"false"`
+	MetaData        *meta_data.CollectionMetaData `json:"metaData" doc:"false"`
+	State           *task_state.TaskState         `json:"State" doc:"false"`
+	Result          *task_result.TaskResult       `json:"-" doc:"false"`
+	gen             *docgenerator.Generator       `json:"-" doc:"false"`
+	req             *tasks.Request                `json:"-" doc:"false"`
+	rerun           bool                          `json:"-" doc:"false"`
+	lock            sync.Mutex                    `json:"–" doc:"false"`
 }
 
 func (task *ValidateTask) CollectionIdentifier() string {
@@ -96,13 +89,13 @@ func (task *ValidateTask) Config(req *tasks.Request, reRun bool) (int64, error) 
 		task.Operation = tasks.ValidateOperation
 
 		if task.Bucket == "" {
-			task.Bucket = tasks.DefaultBucket
+			task.Bucket = cb_sdk.DefaultBucket
 		}
 		if task.Scope == "" {
-			task.Scope = tasks.DefaultScope
+			task.Scope = cb_sdk.DefaultScope
 		}
 		if task.Collection == "" {
-			task.Collection = tasks.DefaultCollection
+			task.Collection = cb_sdk.DefaultCollection
 		}
 
 		task.MetaData = task.req.MetaData.GetCollectionMetadata(task.CollectionIdentifier())
@@ -116,7 +109,7 @@ func (task *ValidateTask) Config(req *tasks.Request, reRun bool) (int64, error) 
 			return task.ResultSeed, task_errors.ErrTaskStateIsNil
 		}
 		task.State.SetupStoringKeys()
-		log.Println("retrying :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
+		log.Println("retrying :- ", task.Operation, task.IdentifierToken, task.ResultSeed)
 	}
 	return task.ResultSeed, nil
 }
@@ -344,7 +337,7 @@ func validateDocuments(task *ValidateTask, collectionObject *cb_sdk.CollectionOb
 	close(routineLimiter)
 	close(dataChannel)
 	task.PostTaskExceptionHandling(collectionObject)
-	log.Println("completed :- ", task.Operation, task.BuildIdentifier(), task.ResultSeed)
+	log.Println("completed :- ", task.Operation, task.IdentifierToken, task.ResultSeed)
 
 }
 
@@ -373,9 +366,9 @@ func (task *ValidateTask) GetCollectionObject() (*cb_sdk.CollectionObject, error
 		task.Collection)
 }
 
-func (task *ValidateTask) SetException(exceptions tasks.Exceptions) {
+func (task *ValidateTask) SetException(exceptions Exceptions) {
 }
 
-func (task *ValidateTask) GetOperationConfig() (*tasks.OperationConfig, *task_state.TaskState) {
+func (task *ValidateTask) GetOperationConfig() (*OperationConfig, *task_state.TaskState) {
 	return nil, task.State
 }

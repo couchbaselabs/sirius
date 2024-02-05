@@ -1,4 +1,4 @@
-package task_meta_data
+package meta_data
 
 import (
 	"github.com/couchbaselabs/sirius/internal/docgenerator"

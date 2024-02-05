@@ -4,7 +4,7 @@ import (
 	"errors"
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
-	"github.com/couchbaselabs/sirius/internal/task_meta_data"
+	"github.com/couchbaselabs/sirius/internal/meta_data"
 	"github.com/couchbaselabs/sirius/internal/template"
 	"github.com/jaswdr/faker"
 	"log"
@@ -43,7 +43,7 @@ func TestConfigConnectionManager(t *testing.T) {
 		t.Error(err)
 	} else {
 
-		m := task_meta_data.NewMetaData()
+		m := meta_data.NewMetaData()
 		cm1 := m.GetCollectionMetadata("x")
 
 		cm2 := m.GetCollectionMetadata("x")
