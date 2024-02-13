@@ -5,7 +5,8 @@ import "github.com/couchbaselabs/sirius/internal/tasks"
 // ClearTask represents a request structure for clearing everything.
 type ClearTask struct {
 	IdentifierToken string `json:"identifierToken" doc:"true"`
-	TaskPending     bool   `json:"-" doc:"false"`
+	tasks.DatabaseInformation
+	TaskPending bool `json:"-" doc:"false"`
 }
 
 func (task *ClearTask) Describe() string {

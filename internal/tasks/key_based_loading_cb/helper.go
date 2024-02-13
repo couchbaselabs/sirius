@@ -1,6 +1,6 @@
 package key_based_loading_cb
 
-import "github.com/couchbaselabs/sirius/internal/task_errors"
+import "github.com/couchbaselabs/sirius/internal/err_sirius"
 
 type SingleOperationConfig struct {
 	Keys     []string `json:"keys" doc:"true"`
@@ -10,7 +10,7 @@ type SingleOperationConfig struct {
 
 func ConfigSingleOperationConfig(s *SingleOperationConfig) error {
 	if s == nil {
-		return task_errors.ErrParsingSingleOperationConfig
+		return err_sirius.ParsingSingleOperationConfig
 	}
 	return nil
 }
@@ -23,7 +23,7 @@ type SingleSubDocOperationConfig struct {
 
 func ConfigSingleSubDocOperationConfig(s *SingleSubDocOperationConfig) error {
 	if s == nil {
-		return task_errors.ErrParsingSingleSubDocOperationConfig
+		return err_sirius.ParsingSingleSubDocOperationConfig
 	}
 	return nil
 }

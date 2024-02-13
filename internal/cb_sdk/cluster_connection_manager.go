@@ -1,10 +1,8 @@
 package cb_sdk
 
 import (
-	"errors"
-	"fmt"
 	"github.com/couchbase/gocb/v2"
-	"github.com/couchbaselabs/sirius/internal/task_errors"
+	"github.com/couchbaselabs/sirius/internal/err_sirius"
 	"strings"
 	"sync"
 	"time"
@@ -32,6 +30,19 @@ func addKVPoolSize(connStr string) string {
 		}
 	}
 	return connStr
+}
+
+// Disconnect disconnect a particular Clusters
+func (cm *ConnectionManager) Disconnect(connstr string) error {
+	clusterIdentifier, err := GetClusterIdentifier(connstr)
+	if err != nil {
+		return err
+	}
+	clusterObj, ok := cm.Clusters[clusterIdentifier]
+	if ok {
+		return clusterObj.Cluster.Close(nil)
+	}
+	return nil
 }
 
 // DisconnectAll disconnect all the Clusters used in a tasks.Request
@@ -70,37 +81,34 @@ func GetClusterIdentifier(connStr string) (string, error) {
 	} else if strings.Contains(connStr, "couchbase://") {
 		return getClusterIdentifierHelper(connStr, "couchbase://"), nil
 	} else {
-		return "", task_errors.ErrInvalidConnectionString
+		return "", err_sirius.InvalidConnectionString
 	}
 }
 
 // getClusterObject returns ClusterObject if cluster is already setup.
 // If not, then set up a ClusterObject using ClusterConfig.
-func (cm *ConnectionManager) getClusterObject(clusterConfig *ClusterConfig) (*ClusterObject, error) {
+func (cm *ConnectionManager) getClusterObject(connStr, username, password string,
+	clusterConfig *ClusterConfig) (*ClusterObject, error) {
 
-	if clusterConfig == nil {
-		return nil, fmt.Errorf("unable to parse clusterConfig | %w", errors.New("clusterConfig is nil"))
-	}
-
-	clusterIdentifier, err := GetClusterIdentifier(clusterConfig.ConnectionString)
+	clusterIdentifier, err := GetClusterIdentifier(connStr)
 	if err != nil {
 		return nil, err
 	}
 
-	clusterConfig.ConnectionString = addKVPoolSize(clusterConfig.ConnectionString)
+	connStr = addKVPoolSize(connStr)
 
 	_, ok := cm.Clusters[clusterIdentifier]
 	if !ok {
-		if err := ValidateClusterConfig(clusterConfig); err != nil {
+		if err := ValidateClusterConfig(connStr, username, password, clusterConfig); err != nil {
 			return nil, err
 		}
-		cluster, err := gocb.Connect(clusterConfig.ConnectionString, gocb.ClusterOptions{
+		cluster, err := gocb.Connect(connStr, gocb.ClusterOptions{
 			Authenticator: gocb.PasswordAuthenticator{
-				Username: clusterConfig.Username,
-				Password: clusterConfig.Password,
+				Username: username,
+				Password: password,
 			},
-			Username: clusterConfig.Username,
-			Password: clusterConfig.Password,
+			Username: username,
+			Password: password,
 			TimeoutsConfig: gocb.TimeoutsConfig{
 				ConnectTimeout:   time.Duration(clusterConfig.TimeoutsConfig.ConnectTimeout) * time.Second,
 				KVTimeout:        time.Duration(clusterConfig.TimeoutsConfig.KVTimeout) * time.Second,
@@ -136,12 +144,12 @@ func (cm *ConnectionManager) getClusterObject(clusterConfig *ClusterConfig) (*Cl
 }
 
 // GetCollection return a *gocb.Collection which represents a single Collection.
-func (cm *ConnectionManager) GetCollection(clusterConfig *ClusterConfig, bucketName, scopeName,
-	collectionName string) (*CollectionObject,
+func (cm *ConnectionManager) GetCollection(connStr, username, password string, clusterConfig *ClusterConfig,
+	bucketName, scopeName, collectionName string) (*CollectionObject,
 	error) {
 	defer cm.lock.Unlock()
 	cm.lock.Lock()
-	cObj, err1 := cm.getClusterObject(clusterConfig)
+	cObj, err1 := cm.getClusterObject(connStr, username, password, clusterConfig)
 	if err1 != nil {
 		return nil, err1
 	}
@@ -161,11 +169,11 @@ func (cm *ConnectionManager) GetCollection(clusterConfig *ClusterConfig, bucketN
 }
 
 // GetScope return a *gocb.Scope which represents  a single scope within a bucket.
-func (cm *ConnectionManager) GetScope(clusterConfig *ClusterConfig, bucketName, scopeName string) (*gocb.Scope,
-	error) {
+func (cm *ConnectionManager) GetScope(connStr, username, password string, clusterConfig *ClusterConfig, bucketName,
+	scopeName string) (*gocb.Scope, error) {
 	defer cm.lock.Unlock()
 	cm.lock.Lock()
-	cObj, err1 := cm.getClusterObject(clusterConfig)
+	cObj, err1 := cm.getClusterObject(connStr, username, password, clusterConfig)
 	if err1 != nil {
 		return nil, err1
 	}
@@ -181,11 +189,12 @@ func (cm *ConnectionManager) GetScope(clusterConfig *ClusterConfig, bucketName, 
 }
 
 // GetBucket return a *gocb.Bucket which represents a single bucket within a Cluster.
-func (cm *ConnectionManager) GetBucket(clusterConfig *ClusterConfig, bucketName string) (*gocb.Bucket,
+func (cm *ConnectionManager) GetBucket(connStr, username, password string, clusterConfig *ClusterConfig,
+	bucketName string) (*gocb.Bucket,
 	error) {
 	defer cm.lock.Unlock()
 	cm.lock.Lock()
-	cObj, err1 := cm.getClusterObject(clusterConfig)
+	cObj, err1 := cm.getClusterObject(connStr, username, password, clusterConfig)
 	if err1 != nil {
 		return nil, err1
 	}
@@ -197,11 +206,11 @@ func (cm *ConnectionManager) GetBucket(clusterConfig *ClusterConfig, bucketName 
 }
 
 // GetCluster return a *gocb.Cluster which represents connection to a specific Couchbase Cluster.
-func (cm *ConnectionManager) GetCluster(clusterConfig *ClusterConfig) (*gocb.Cluster,
+func (cm *ConnectionManager) GetCluster(connStr, username, password string, clusterConfig *ClusterConfig) (*gocb.Cluster,
 	error) {
 	defer cm.lock.Unlock()
 	cm.lock.Lock()
-	cObj, err1 := cm.getClusterObject(clusterConfig)
+	cObj, err1 := cm.getClusterObject(connStr, username, password, clusterConfig)
 	if err1 != nil {
 		return nil, err1
 	}

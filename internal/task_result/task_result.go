@@ -26,12 +26,12 @@ type SDKTiming struct {
 }
 
 type FailedDocument struct {
-	SDKTiming   SDKTiming `json:"sdkTimings" doc:"true"`
-	DocId       string    `json:"key" doc:"true"`
-	Status      bool      `json:"status"  doc:"true"`
-	Cas         uint64    `json:"cas"  doc:"true"`
-	ErrorString string    `json:"errorString"  doc:"true"`
-	Offset      int64     `json:"Offset" doc:"false"`
+	SDKTiming   SDKTiming      `json:"sdkTimings" doc:"true"`
+	DocId       string         `json:"key" doc:"true"`
+	Status      bool           `json:"status"  doc:"true"`
+	Extra       map[string]any `json:"extra" doc:"true""`
+	ErrorString string         `json:"errorString"  doc:"true"`
+	Offset      int64          `json:"Offset" doc:"false"`
 }
 
 type SingleOperationResult struct {
@@ -51,7 +51,7 @@ type ResultHelper struct {
 	docId    string
 	err      error
 	status   bool
-	cas      uint64
+	extra    map[string]any
 	offset   int64
 }
 
@@ -106,7 +106,7 @@ func ConfigTaskResult(operation string, resultSeed int64) *TaskResult {
 }
 
 // IncrementFailure saves the failure count of doc loading operation.
-func (t *TaskResult) IncrementFailure(initTime, docId string, err error, status bool, cas uint64,
+func (t *TaskResult) IncrementFailure(initTime, docId string, err error, status bool, extra map[string]any,
 	offset int64) {
 
 	t.ResultChannel <- ResultHelper{
@@ -114,7 +114,7 @@ func (t *TaskResult) IncrementFailure(initTime, docId string, err error, status 
 		docId:    docId,
 		err:      err,
 		status:   status,
-		cas:      cas,
+		extra:    extra,
 		offset:   offset,
 	}
 }
@@ -206,7 +206,7 @@ func (t *TaskResult) FailWholeBulkOperation(start, end int64, err error, state *
 		wg.Go(func() error {
 			offset := <-dataChannel
 			docId := gen.BuildKey(offset + seed)
-			t.IncrementFailure(initTime, docId, err, false, 0, offset)
+			t.IncrementFailure(initTime, docId, err, false, nil, offset)
 			state.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 			<-routineLimiter
 			return nil
@@ -281,7 +281,7 @@ func (t *TaskResult) StoreResultList(resultList []ResultHelper) {
 			},
 			DocId:       x.docId,
 			Status:      x.status,
-			Cas:         x.cas,
+			Extra:       x.extra,
 			ErrorString: errorString,
 			Offset:      x.offset,
 		})

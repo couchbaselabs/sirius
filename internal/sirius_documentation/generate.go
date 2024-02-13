@@ -2,6 +2,7 @@ package sirius_documentation
 
 import (
 	"fmt"
+	"github.com/couchbaselabs/sirius/internal/db"
 	"github.com/couchbaselabs/sirius/internal/task_result"
 	"github.com/couchbaselabs/sirius/internal/tasks"
 	"github.com/couchbaselabs/sirius/internal/tasks/util_sirius"
@@ -42,13 +43,13 @@ configuration that is also available on a per-task basis:
 
 	for _, k := range keys {
 		entry := tk[k]
-		x, ok := entry.config.(tasks.Task)
+		x, ok := entry.Config.(tasks.Task)
 		if !ok {
 			continue
 		}
 		val := reflect.ValueOf(x)
 		output += fmt.Sprintf("#### %s\n\n", k)
-		output += fmt.Sprintf(" REST : %s\n\n", entry.httpMethod)
+		output += fmt.Sprintf(" REST : %s\n\n", entry.HttpMethod)
 		output += fmt.Sprintf("Description : %s\n\n", x.Describe())
 
 		if !val.IsValid() {
@@ -101,10 +102,95 @@ configuration that is also available on a per-task basis:
 			// Close last table column
 			output += " |\n"
 		}
+		s := tasks.DatabaseInformation{}
+		hVal := reflect.ValueOf(&s)
+		for i := 0; i < hVal.Elem().NumField(); i++ {
+			f := hVal.Elem().Type().Field(i)
+			if _, ok := f.Tag.Lookup("json"); !ok {
+				continue
+			}
+
+			// doc
+			if tagContent, ok := f.Tag.Lookup("doc"); !ok {
+				continue
+			} else {
+				if tagContent == "false" {
+					continue
+				}
+			}
+
+			// Name
+			output += "| `" + f.Name + "` "
+
+			// Type
+			n := f.Type.Name()
+			k := f.Type.Kind().String()
+			if n == k {
+				output += "| `" + n + "` "
+			} else {
+				output += "| `" + k + "` "
+			}
+
+			for _, tagName := range []string{"json"} {
+				if tagContents, ok := f.Tag.Lookup(tagName); ok {
+					output += "| `" + tagName + ":" + tagContents + "` "
+					continue
+				}
+				output += "| "
+			}
+			// Close last table column
+			output += " |\n"
+		}
 		output += "\n---\n"
 	}
 
-	output += "**Description of JSON tags used in routes**.\n\n"
+	// END - API ends here
+
+	output += "**Description of Extra Parameters**.\n\n"
+	s := db.Extras{}
+	hVal := reflect.ValueOf(&s)
+	output += "| Name | Type | JSON Tag |\n"
+	output += "| ---- | ---- | -------- |\n"
+	for i := 0; i < hVal.Elem().NumField(); i++ {
+		f := hVal.Elem().Type().Field(i)
+		if _, ok := f.Tag.Lookup("json"); !ok {
+			continue
+		}
+
+		// doc
+		if tagContent, ok := f.Tag.Lookup("doc"); !ok {
+			continue
+		} else {
+			if tagContent == "false" {
+				continue
+			}
+		}
+
+		// Name
+		output += "| `" + f.Name + "` "
+
+		// Type
+		n := f.Type.Name()
+		k := f.Type.Kind().String()
+		if n == k {
+			output += "| `" + n + "` "
+		} else {
+			output += "| `" + k + "` "
+		}
+
+		for _, tagName := range []string{"json"} {
+			if tagContents, ok := f.Tag.Lookup(tagName); ok {
+				output += "| `" + tagName + ":" + tagContents + "` "
+				continue
+			}
+			output += "| "
+		}
+		// Close last table column
+		output += " |\n"
+	}
+
+	output += "\n---\n"
+	// End - Extra Parameter ends here
 
 	tt := t.HelperStruct()
 	tagKeys := make([]string, 0, len(t.HelperStruct()))

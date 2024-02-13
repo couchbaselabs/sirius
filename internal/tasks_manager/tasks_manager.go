@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/couchbaselabs/sirius/internal/tasks"
-	"log"
 )
 
 // TaskManager will act as queue which will be responsible for handling
@@ -56,10 +55,7 @@ func (tm *TaskManager) StartTaskManager() {
 				if ok {
 					if t, ok := task.(tasks.Task); ok {
 						go func() {
-							err := t.Do()
-							if err != nil {
-								log.Println(err)
-							}
+							t.Do()
 						}()
 					}
 				} else {

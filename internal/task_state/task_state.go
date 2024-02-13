@@ -25,12 +25,11 @@ type StateHelper struct {
 
 type KeyStates struct {
 	Completed []int64 `json:"completed"`
-	Err       []int64 `json:"err"`
+	Err       []int64 `json:"err_sirius"`
 }
 
 type TaskState struct {
 	SeedStart    int64              `json:"seedStart"`
-	SeedEnd      int64              `json:"seedEnd"`
 	ResultSeed   int64              `json:"resultSeed"`
 	KeyStates    KeyStates          `json:"keyStates"`
 	StateChannel chan StateHelper   `json:"-"`
@@ -40,17 +39,27 @@ type TaskState struct {
 }
 
 // ConfigTaskState returns an instance of TaskState
-func ConfigTaskState(seed, seedEnd int64, resultSeed int64) *TaskState {
+func ConfigTaskState(seed, resultSeed int64) *TaskState {
 	ctx, cancel := context.WithCancel(context.Background())
-	ts := &TaskState{
-		SeedStart:    seed,
-		SeedEnd:      seedEnd,
-		ResultSeed:   resultSeed,
-		StateChannel: make(chan StateHelper, StateChannelLimit),
-		ctx:          ctx,
-		cancel:       cancel,
-		lock:         sync.Mutex{},
+	ts := &TaskState{}
+
+	if state, err := ReadStateFromFile(fmt.Sprintf("%d", resultSeed)); err == nil {
+		ts = state
+		ts.ctx = ctx
+		ts.cancel = cancel
+		ts.StateChannel = make(chan StateHelper, StateChannelLimit)
+		ts.lock = sync.Mutex{}
+	} else {
+		ts = &TaskState{
+			SeedStart:    seed,
+			ResultSeed:   resultSeed,
+			StateChannel: make(chan StateHelper, StateChannelLimit),
+			ctx:          ctx,
+			cancel:       cancel,
+			lock:         sync.Mutex{},
+		}
 	}
+
 	defer func() {
 		ts.StoreState()
 	}()
@@ -135,6 +144,7 @@ func (t *TaskState) StoreState() {
 					err = err[:0]
 					completed = completed[:0]
 					close(t.StateChannel)
+					t.SaveTaskSateOnDisk()
 					return
 				}
 			case s := <-t.StateChannel:
@@ -152,6 +162,7 @@ func (t *TaskState) StoreState() {
 					t.StoreError(err)
 					err = err[:0]
 					completed = completed[:0]
+					t.SaveTaskSateOnDisk()
 				}
 			}
 		}
@@ -198,8 +209,6 @@ func (t *TaskState) ClearErrorKeyStates() {
 }
 
 func (t *TaskState) SaveTaskSateOnDisk() error {
-	t.cancel()
-	time.Sleep(time.Second * 2)
 	cwd, err := os.Getwd()
 	if err != nil {
 		return err
@@ -232,4 +241,22 @@ func (t *TaskState) MakeErrorKeyFromMap(maps map[int64]struct{}) {
 	for offset, _ := range maps {
 		t.KeyStates.Err = append(t.KeyStates.Err, offset)
 	}
+}
+
+// ReadStateFromFile reads the task state stored on a file.
+func ReadStateFromFile(seed string) (*TaskState, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+	fileName := filepath.Join(cwd, TASKSTATELOGS, seed)
+	state := &TaskState{}
+	content, err := os.ReadFile(fileName)
+	if err != nil {
+		return nil, fmt.Errorf("no such result found, reasons:[No such Task, In process, Record Deleted]")
+	}
+	if err := json.Unmarshal(content, state); err != nil {
+		return nil, err
+	}
+	return state, nil
 }

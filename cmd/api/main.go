@@ -20,8 +20,13 @@ type Config struct {
 }
 
 func main() {
+	// Generate Sirius Documentation
+	go sirius_documentation.Generate()
+
+	// registers structures which will store and load from disk
 	registerInterfaces()
 
+	// setting up the log file.
 	logFile, err := os.OpenFile(getFileName(), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		log.Fatalf("error opening file: %v", err)
@@ -30,13 +35,12 @@ func main() {
 	mw := io.MultiWriter(os.Stdout, logFile)
 	log.SetOutput(mw)
 
+	// app will contain entities which are required at top most level of sirius.
 	app := Config{
 		taskManager:    tasks_manager.NewTasKManager(TaskQueueSize),
 		serverRequests: server_requests.NewServerRequests(),
 	}
-	go sirius_documentation.Generate()
 
-	//define the server
 	log.Printf("Starting Document Loading Service at port %s\n", webPort)
 	srv := http.Server{
 		Addr:    fmt.Sprintf(":%s", webPort),
