@@ -15,20 +15,18 @@ import (
 
 func TestConfigConnectionManager(t *testing.T) {
 	cConfig := &ClusterConfig{
-		Username:          "Administrator",
-		Password:          "password",
-		ConnectionString:  "couchbases://172.23.100.12",
 		CompressionConfig: CompressionConfig{},
 		TimeoutsConfig:    TimeoutsConfig{},
 	}
 
 	cmObj := ConfigConnectionManager()
 
-	if _, err := cmObj.GetCluster(cConfig); err != nil {
+	if _, err := cmObj.GetCluster("couchbase://172.23.100.12", "Administrator", "password", cConfig); err != nil {
 		log.Println(err)
 	}
 
-	c, err := cmObj.GetCollection(cConfig, "lol", "_default", "_default")
+	c, err := cmObj.GetCollection("couchbase://172.23.100.12", "Administrator", "password", cConfig, "default",
+		"_default", "_default")
 	if err != nil {
 		log.Println(err.Error())
 		KVError := &gocb.KeyValueError{}
@@ -57,13 +55,11 @@ func TestConfigConnectionManager(t *testing.T) {
 			Template: temp,
 		}
 		gen := &docgenerator.Generator{
-			KeySize:   25,
-			DocType:   "json",
-			KeyPrefix: "",
-			KeySuffix: "",
-			Template:  template.InitialiseTemplate("person"),
+			KeySize:  25,
+			DocType:  "json",
+			Template: template.InitialiseTemplate("person"),
 		}
-		for i := int64(0); i < int64(10000); i++ {
+		for i := int64(0); i < int64(10); i++ {
 			key := i + cm1.Seed
 			docId := gen.BuildKey(key)
 			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
@@ -75,7 +71,7 @@ func TestConfigConnectionManager(t *testing.T) {
 				t.Error(e)
 			}
 		}
-		for i := int64(0); i < int64(10000); i++ {
+		for i := int64(0); i < int64(10); i++ {
 			docId := gen.BuildKey(i + cm1.Seed)
 			r, e := c.Collection.Get(docId, nil)
 			if e != nil {

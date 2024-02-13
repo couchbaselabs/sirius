@@ -2,7 +2,7 @@ package cb_sdk
 
 import (
 	"github.com/couchbase/gocb/v2"
-	"github.com/couchbaselabs/sirius/internal/task_errors"
+	"github.com/couchbaselabs/sirius/internal/err_sirius"
 )
 
 const (
@@ -56,7 +56,7 @@ type InsertOptions struct {
 // ConfigInsertOptions configures and validate the InsertOptions
 func ConfigInsertOptions(i *InsertOptions) error {
 	if i == nil {
-		return task_errors.ErrParsingInsertOptions
+		return err_sirius.ParsingInsertOptions
 	}
 	if i.Timeout == 0 {
 		i.Timeout = 10
@@ -70,7 +70,7 @@ type TouchOptions struct {
 
 func ConfigTouchOptions(i *TouchOptions) error {
 	if i == nil {
-		return task_errors.ErrParsingTouchOptions
+		return err_sirius.ParsingTouchOptions
 	}
 	if i.Timeout == 0 {
 		i.Timeout = 10
@@ -89,7 +89,7 @@ type RemoveOptions struct {
 
 func ConfigRemoveOptions(r *RemoveOptions) error {
 	if r == nil {
-		return task_errors.ErrParsingRemoveOptions
+		return err_sirius.ParsingRemoveOptions
 	}
 	if r.Timeout == 0 {
 		r.Timeout = 10
@@ -108,7 +108,7 @@ type ReplaceOptions struct {
 
 func ConfigReplaceOptions(r *ReplaceOptions) error {
 	if r == nil {
-		return task_errors.ErrParsingReplaceOptions
+		return err_sirius.ParsingReplaceOptions
 	}
 	if r.Timeout == 0 {
 		r.Timeout = 10
@@ -125,7 +125,7 @@ type QueryOperationConfig struct {
 
 func ConfigQueryOperationConfig(s *QueryOperationConfig) error {
 	if s == nil {
-		return task_errors.ErrParsingQueryConfig
+		return err_sirius.ParsingQueryConfig
 	}
 
 	if s.Duration == 0 || s.Duration > MaxQueryRuntime {
@@ -140,7 +140,7 @@ type GetSpecOptions struct {
 
 func ConfigGetSpecOptions(g *GetSpecOptions) error {
 	if g == nil {
-		return task_errors.ErrParsingGetSpecOptions
+		return err_sirius.ParsingGetSpecOptions
 	}
 	return nil
 }
@@ -151,7 +151,7 @@ type LookupInOptions struct {
 
 func ConfigLookupInOptions(l *LookupInOptions) error {
 	if l == nil {
-		return task_errors.ErrParsingLookupInOptions
+		return err_sirius.ParsingLookupInOptions
 	}
 	return nil
 }
@@ -163,7 +163,7 @@ type InsertSpecOptions struct {
 
 func ConfigInsertSpecOptions(i *InsertSpecOptions) error {
 	if i == nil {
-		return task_errors.ErrParsingInsertSpecOptions
+		return err_sirius.ParsingInsertSpecOptions
 	}
 	return nil
 }
@@ -174,7 +174,7 @@ type RemoveSpecOptions struct {
 
 func ConfigRemoveSpecOptions(r *RemoveSpecOptions) error {
 	if r == nil {
-		return task_errors.ErrParsingRemoveSpecOptions
+		return err_sirius.ParsingRemoveSpecOptions
 	}
 	return nil
 }
@@ -185,7 +185,7 @@ type ReplaceSpecOptions struct {
 
 func ConfigReplaceSpecOptions(r *ReplaceSpecOptions) error {
 	if r == nil {
-		return task_errors.ErrParsingReplaceSpecOptions
+		return err_sirius.ParsingReplaceSpecOptions
 	}
 	return nil
 }
@@ -203,7 +203,7 @@ type MutateInOptions struct {
 
 func ConfigMutateInOptions(m *MutateInOptions) error {
 	if m == nil {
-		return task_errors.ErrParsingMutateInOptions
+		return err_sirius.ParsingMutateInOptions
 	}
 	return nil
 }
@@ -213,4 +213,8 @@ func GetStoreSemantic(storeSemantic int) gocb.StoreSemantics {
 		return gocb.StoreSemanticsUpsert
 	}
 	return gocb.StoreSemantics(storeSemantic)
+}
+
+func FillClusterConfig(clusteConfig *ClusterConfig, options map[string]any) {
+
 }

@@ -5,7 +5,6 @@ import (
 )
 
 const (
-	MaxConcurrentRoutines               = 128
 	DefaultIdentifierToken              = "default"
 	WatchIndexDuration           int    = 120
 	InsertOperation              string = "insert"

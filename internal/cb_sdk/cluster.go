@@ -3,13 +3,21 @@ package cb_sdk
 import (
 	"fmt"
 	"github.com/couchbase/gocb/v2"
-	"github.com/couchbaselabs/sirius/internal/task_errors"
+	"github.com/couchbaselabs/sirius/internal/err_sirius"
 	"log"
 	"time"
 )
 
 const WaitUnityReadyTime = 10
 const WaitUntilReadyTimeRetries = 5
+const (
+	ConnectTimeout      = "connectTimeout"
+	KVTimeout           = "kvTimeout"
+	KVDurableTimeout    = "kvDurableTimeout"
+	CompressionDisabled = "compressionDisabled"
+	CompressionMinSize  = "compressionMinSize"
+	CompressionMaxSize  = "compressionMinSize"
+)
 
 type TimeoutsConfig struct {
 	ConnectTimeout   int `json:"connectTimeout,omitempty" doc:"true"`
@@ -26,22 +34,22 @@ type CompressionConfig struct {
 }
 
 type ClusterConfig struct {
-	Username          string            `json:"username" doc:"true"`
-	Password          string            `json:"password" doc:"true"`
-	ConnectionString  string            `json:"connectionString" doc:"true"`
 	CompressionConfig CompressionConfig `json:"compressionConfig,omitempty" doc:"true"`
 	TimeoutsConfig    TimeoutsConfig    `json:"timeoutsConfig,omitempty" doc:"true"`
+	ConnectionString  string            `json:"connectionString,omitempty"`
+	Username          string            `json:"username,omitempty"`
+	Password          string            `json:"password,omitempty"`
 }
 
-func ValidateClusterConfig(c *ClusterConfig) error {
+func ValidateClusterConfig(connStr, username, password string, c *ClusterConfig) error {
 	if c == nil {
-		return task_errors.ErrParsingClusterConfig
+		c = &ClusterConfig{}
 	}
-	if c.ConnectionString == "" {
-		return task_errors.ErrInvalidConnectionString
+	if connStr == "" {
+		return err_sirius.InvalidConnectionString
 	}
-	if c.Username == "" || c.Password == "" {
-		return fmt.Errorf("connection string : %s | %w", c.ConnectionString, task_errors.ErrCredentialMissing)
+	if username == "" || password == "" {
+		return fmt.Errorf("connection string : %s | %w", connStr, err_sirius.CredentialMissing)
 	}
 	return nil
 }

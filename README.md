@@ -3,7 +3,7 @@
 This Readme file provides instructions for building and running a Go application named **Sirius**. A distributed testing framework designed for Couchbase,
 serving as a REST-based loading service for system, functional, performance and volume testing.
 
-Doc loader different capabilities are described using  [**Rest Endpoints**](task-config.generated.md).
+Doc loader different capabilities are described using  [**Rest Endpoints**](t-config.generated.md).
 
 [Sirius APIs Demo](https://documenter.getpostman.com/view/25450208/2s93sdXWeB)
 ## Requirements
@@ -79,7 +79,7 @@ make down
 
 ## Cleaning
 
-To clean up the task metadata and results directories, use the following command:
+To clean up the t metadata and results directories, use the following command:
 
 ```shell
 make clean
@@ -99,7 +99,7 @@ make clean_deploy
 
 ## Conclusion
 
-Sirius is a simple but powerful Go application for loading Data into a server and storing task metadata and results. By
+Sirius is a simple but powerful Go application for loading Data into a server and storing t metadata and results. By
 following the instructions in this Readme, you can quickly build and run the application locally, or deploy it to a
 Docker environment for production use.
 

@@ -38,10 +38,10 @@ func TestGenerateHotel(t *testing.T) {
 	template.UpdateDocument([]string{}, document1, 0, &fake1)
 
 	//// test to update the document1 and comparing it with original document
-	//document3, err := template.UpdateDocument([]string{}, document1, &fake1)
+	//document3, err_sirius := template.UpdateDocument([]string{}, document1, &fake1)
 	//log.Println(document3)
-	//if err != nil {
-	//	log.Println(err)
+	//if err_sirius != nil {
+	//	log.Println(err_sirius)
 	//	t.Fail()
 	//}
 	//
@@ -52,10 +52,10 @@ func TestGenerateHotel(t *testing.T) {
 	//}
 	//log.Println(document1Updated, document1)
 	//
-	//ok, err = template.Compare(document1Updated, document1)
+	//ok, err_sirius = template.Compare(document1Updated, document1)
 	//
-	//if err != nil {
-	//	fmt.Println(err)
+	//if err_sirius != nil {
+	//	fmt.Println(err_sirius)
 	//	t.Fail()
 	//}
 	//

@@ -214,7 +214,6 @@ func (sr *ServerRequests) ClearIdentifierAndRequest(identifier string) error {
 		req, ok := r.(*tasks.Request)
 		if ok && req != nil {
 			req.Cancel()
-			req.DisconnectConnectionManager()
 			req.ClearAllTask()
 		}
 		req = nil

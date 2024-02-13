@@ -15,4 +15,5 @@ require (
 	github.com/couchbase/gocbcore/v10 v10.2.1 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/uuid v1.3.0 // indirect
+	github.com/shettyh/threadpool v0.0.0-20200323115144-b99fd8aaa945 // indirect
 )
