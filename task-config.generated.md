@@ -5,8 +5,17 @@ Each task can be executed using REST endpoints. All tasks tags to provide additi
 configuration that is also available on a per-task basis:
 
  * [/bulk-create](#bulk-create)
+ * [/bulk-delete](#bulk-delete)
+ * [/bulk-read](#bulk-read)
+ * [/bulk-touch](#bulk-touch)
+ * [/bulk-upsert](#bulk-upsert)
  * [/clear_data](#clear_data)
  * [/result](#result)
+ * [/sub-doc-bulk-delete](#sub-doc-bulk-delete)
+ * [/sub-doc-bulk-insert](#sub-doc-bulk-insert)
+ * [/sub-doc-bulk-read](#sub-doc-bulk-read)
+ * [/sub-doc-bulk-replace](#sub-doc-bulk-replace)
+ * [/sub-doc-bulk-upsert](#sub-doc-bulk-upsert)
  * [/warmup-bucket](#warmup-bucket)
 
 ---
@@ -14,12 +23,160 @@ configuration that is also available on a per-task basis:
 
  REST : POST
 
-Description :  Insert t uploads documents in bulk into a bucket.
-The durability while inserting a document can be set using following values in the 'durability' JSON tag :-
-1. MAJORITY
-2. MAJORITY_AND_PERSIST_TO_ACTIVE
-3. PERSIST_TO_MAJORITY
+Description : Do operation between range from [start,end)
 
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `OperationConfig` | `ptr` | `json:operationConfig`  |
+| `DBType` | `string` | `json:dbType`  |
+| `ConnStr` | `string` | `json:connectionString`  |
+| `Username` | `string` | `json:username`  |
+| `Password` | `string` | `json:password`  |
+| `Extra` | `struct` | `json:extra`  |
+
+---
+#### /bulk-delete
+
+ REST : POST
+
+Description : Do operation between range from [start,end)
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `OperationConfig` | `ptr` | `json:operationConfig`  |
+| `DBType` | `string` | `json:dbType`  |
+| `ConnStr` | `string` | `json:connectionString`  |
+| `Username` | `string` | `json:username`  |
+| `Password` | `string` | `json:password`  |
+| `Extra` | `struct` | `json:extra`  |
+
+---
+#### /bulk-read
+
+ REST : POST
+
+Description : Do operation between range from [start,end)
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `OperationConfig` | `ptr` | `json:operationConfig`  |
+| `DBType` | `string` | `json:dbType`  |
+| `ConnStr` | `string` | `json:connectionString`  |
+| `Username` | `string` | `json:username`  |
+| `Password` | `string` | `json:password`  |
+| `Extra` | `struct` | `json:extra`  |
+
+---
+#### /bulk-touch
+
+ REST : POST
+
+Description : Do operation between range from [start,end)
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `OperationConfig` | `ptr` | `json:operationConfig`  |
+| `DBType` | `string` | `json:dbType`  |
+| `ConnStr` | `string` | `json:connectionString`  |
+| `Username` | `string` | `json:username`  |
+| `Password` | `string` | `json:password`  |
+| `Extra` | `struct` | `json:extra`  |
+
+---
+#### /bulk-upsert
+
+ REST : POST
+
+Description : Do operation between range from [start,end)
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `OperationConfig` | `ptr` | `json:operationConfig`  |
+| `DBType` | `string` | `json:dbType`  |
+| `ConnStr` | `string` | `json:connectionString`  |
+| `Username` | `string` | `json:username`  |
+| `Password` | `string` | `json:password`  |
+| `Extra` | `struct` | `json:extra`  |
+
+---
+#### /sub-doc-bulk-delete
+
+ REST : POST
+
+Description : Do operation between range from [start,end)
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `OperationConfig` | `ptr` | `json:operationConfig`  |
+| `DBType` | `string` | `json:dbType`  |
+| `ConnStr` | `string` | `json:connectionString`  |
+| `Username` | `string` | `json:username`  |
+| `Password` | `string` | `json:password`  |
+| `Extra` | `struct` | `json:extra`  |
+
+---
+#### /sub-doc-bulk-insert
+
+ REST : POST
+
+Description : Do operation between range from [start,end)
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `OperationConfig` | `ptr` | `json:operationConfig`  |
+| `DBType` | `string` | `json:dbType`  |
+| `ConnStr` | `string` | `json:connectionString`  |
+| `Username` | `string` | `json:username`  |
+| `Password` | `string` | `json:password`  |
+| `Extra` | `struct` | `json:extra`  |
+
+---
+#### /sub-doc-bulk-read
+
+ REST : POST
+
+Description : Do operation between range from [start,end)
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `OperationConfig` | `ptr` | `json:operationConfig`  |
+| `DBType` | `string` | `json:dbType`  |
+| `ConnStr` | `string` | `json:connectionString`  |
+| `Username` | `string` | `json:username`  |
+| `Password` | `string` | `json:password`  |
+| `Extra` | `struct` | `json:extra`  |
+
+---
+#### /sub-doc-bulk-replace
+
+ REST : POST
+
+Description : Do operation between range from [start,end)
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `OperationConfig` | `ptr` | `json:operationConfig`  |
+| `DBType` | `string` | `json:dbType`  |
+| `ConnStr` | `string` | `json:connectionString`  |
+| `Username` | `string` | `json:username`  |
+| `Password` | `string` | `json:password`  |
+| `Extra` | `struct` | `json:extra`  |
+
+---
+#### /sub-doc-bulk-upsert
+
+ REST : POST
+
+Description : Do operation between range from [start,end)
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
@@ -36,7 +193,7 @@ The durability while inserting a document can be set using following values in t
 
  REST : POST
 
-Description : This API aids in warming up a Couchbase bucket or establishing connections to KV services.
+Description : Warming up a connection to database.
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
@@ -73,6 +230,40 @@ Description : This API aids in warming up a Couchbase bucket or establishing con
 | `CreatePath` | `bool` | `json:createPath,omitempty`  |
 
 ---
+Possible values for durability :-
+1. NONE
+2. MAJORITY
+3. MAJORITY_AND_PERSIST_TO_ACTIVE
+4. PERSIST_TO_MAJORITY
+
+
+---
+**APIs Response Description**.
+
+1. Response after initiating a TASK.
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `Seed` | `string` | `json:seed`  |
+
+---
+2. Response which contains the TASK's result.
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `ResultSeed` | `int64` | `json:resultSeed`  |
+| `Operation` | `string` | `json:operation`  |
+| `ErrorOther` | `string` | `json:otherErrors`  |
+| `Success` | `int64` | `json:success`  |
+| `Failure` | `int64` | `json:failure`  |
+| `BulkError` | `map` | `json:bulkErrors`  |
+| `RetriedError` | `map` | `json:retriedError`  |
+| `QueryError` | `map` | `json:queryErrors`  |
+| `SingleResult` | `map` | `json:singleResult`  |
+
+---
+**Helping nested json values n**.
+
  * [bulkError](#bulkerror)
  * [exceptions](#exceptions)
  * [operationConfig](#operationconfig)
@@ -132,29 +323,5 @@ Description : This API aids in warming up a Couchbase bucket or establishing con
 | `ErrorString` | `string` | `json:errorString`  |
 | `Status` | `bool` | `json:status`  |
 | `Cas` | `uint64` | `json:cas`  |
-
----
-**APIs Response Description**.
-
-1. Response after initiating a TASK.
-
-| Name | Type | JSON Tag |
-| ---- | ---- | -------- |
-| `Seed` | `string` | `json:seed`  |
-
----
-2. Response which contains the TASK's result.
-
-| Name | Type | JSON Tag |
-| ---- | ---- | -------- |
-| `ResultSeed` | `int64` | `json:resultSeed`  |
-| `Operation` | `string` | `json:operation`  |
-| `ErrorOther` | `string` | `json:otherErrors`  |
-| `Success` | `int64` | `json:success`  |
-| `Failure` | `int64` | `json:failure`  |
-| `BulkError` | `map` | `json:bulkErrors`  |
-| `RetriedError` | `map` | `json:retriedError`  |
-| `QueryError` | `map` | `json:queryErrors`  |
-| `SingleResult` | `map` | `json:singleResult`  |
 
 ---

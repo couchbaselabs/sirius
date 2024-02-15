@@ -27,6 +27,7 @@ func main() {
 	registerInterfaces()
 
 	// setting up the log file.
+	//gocb.SetLogger(gocb.VerboseStdioLogger())
 	logFile, err := os.OpenFile(getFileName(), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		log.Fatalf("error opening file: %v", err)

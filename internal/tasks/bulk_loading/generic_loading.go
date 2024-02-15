@@ -35,18 +35,14 @@ type GenericLoadingTask struct {
 }
 
 func (t *GenericLoadingTask) Describe() string {
-	return " Insert t uploads documents in bulk into a bucket.\n" +
-		"The durability while inserting a document can be set using following values in the 'durability' JSON tag :-\n" +
-		"1. MAJORITY\n" +
-		"2. MAJORITY_AND_PERSIST_TO_ACTIVE\n" +
-		"3. PERSIST_TO_MAJORITY\n"
+	return "Do operation between range from [start,end)"
 }
 
 func (t *GenericLoadingTask) MetaDataIdentifier() string {
-	if t.DBType == db.COUCHBASE_DB {
+	if t.DBType == db.CouchbaseDb {
 		return strings.Join([]string{t.IdentifierToken, t.ConnStr, t.Extra.Bucket, t.Extra.Scope,
 			t.Extra.Collection}, ":")
-	} else if t.DBType == db.MONGO_DB {
+	} else if t.DBType == db.MongoDb {
 		return strings.Join([]string{t.IdentifierToken, t.ConnStr, t.Extra.Collection}, ":")
 	} else {
 		return strings.Join([]string{t.IdentifierToken, t.ConnStr}, ":")
@@ -94,21 +90,14 @@ func (t *GenericLoadingTask) Config(req *tasks.Request, reRun bool) (int64, erro
 			return 0, err
 		}
 
-		t.MetaData = t.req.MetaData.GetCollectionMetadata(t.MetaDataIdentifier())
-
 		t.req.Lock()
+		t.MetaData = t.req.MetaData.GetCollectionMetadata(t.MetaDataIdentifier())
 		if t.OperationConfig.End+t.MetaData.Seed > t.MetaData.SeedEnd {
 			t.req.AddToSeedEnd(t.MetaData, (t.OperationConfig.End+t.MetaData.Seed)-(t.MetaData.SeedEnd))
 		}
 		t.req.Unlock()
-		t.State = task_state.ConfigTaskState(t.MetaData.Seed, t.ResultSeed)
 
 	} else {
-		//if t.State == nil {
-		//	return t.ResultSeed, err_sirius.TaskStateIsNil
-		//}
-		//t.State.SetupStoringKeys()
-		t.State = task_state.ConfigTaskState(t.MetaData.Seed, t.ResultSeed)
 		_ = task_result.DeleteResultFile(t.ResultSeed)
 		log.Println("retrying :- ", t.Operation, t.IdentifierToken, t.ResultSeed)
 	}
@@ -127,7 +116,6 @@ func (t *GenericLoadingTask) TearUp() error {
 	if err := t.State.SaveTaskSateOnDisk(); err != nil {
 		log.Println("Error in storing TASK State on DISK")
 	}
-	t.State = nil
 
 	t.TaskPending = false
 	return t.req.SaveRequestIntoFile()
@@ -135,6 +123,7 @@ func (t *GenericLoadingTask) TearUp() error {
 
 func (t *GenericLoadingTask) Do() {
 
+	t.State = task_state.ConfigTaskState(t.ResultSeed)
 	t.Result = task_result.ConfigTaskResult(t.Operation, t.ResultSeed)
 	t.gen = docgenerator.ConfigGenerator(
 		t.OperationConfig.KeySize,
@@ -166,21 +155,31 @@ func (t *GenericLoadingTask) Do() {
 // loadDocumentsInBatches divides the load into batches and will allocate to one of go routine.
 func loadDocumentsInBatches(task *GenericLoadingTask) {
 
+	fmt.Println()
+	log.Println("identifier : ", task.MetaDataIdentifier())
+	log.Println("operation :", task.Operation)
+	log.Println("result ", task.ResultSeed)
+	log.Print(task.OperationConfig)
+
 	// This is stop processing loading operation if user has already cancelled all the tasks from sirius
 	if task.req.ContextClosed() {
 		return
 	}
 
-	batchSize := (task.OperationConfig.End - task.OperationConfig.Start) / int64(tasks.MaxThreads)
-	numOfBatches := (task.OperationConfig.End - task.OperationConfig.Start) / batchSize
-
 	wg := &sync.WaitGroup{}
+	numOfBatches := int64(0)
+	batchSize := (task.OperationConfig.End - task.OperationConfig.Start) / int64(tasks.MaxThreads)
+
+	if batchSize > 0 {
+		numOfBatches = (task.OperationConfig.End - task.OperationConfig.Start) / batchSize
+	}
+	remainingItems := (task.OperationConfig.End - task.OperationConfig.Start) - (numOfBatches * batchSize)
 
 	for i := int64(0); i < numOfBatches; i++ {
 		batchStart := i * batchSize
 		batchEnd := (i + 1) * batchSize
-		t := newLoadingTask(batchStart,
-			batchEnd,
+		t := newLoadingTask(batchStart+task.OperationConfig.Start,
+			batchEnd+task.OperationConfig.Start,
 			task.MetaData.Seed,
 			task.OperationConfig,
 			task.Operation,
@@ -197,10 +196,9 @@ func loadDocumentsInBatches(task *GenericLoadingTask) {
 		wg.Add(1)
 	}
 
-	remainingItems := (task.OperationConfig.End - task.OperationConfig.Start) - (numOfBatches * batchSize)
 	if remainingItems > 0 {
 		t := newLoadingTask(
-			numOfBatches*batchSize,
+			numOfBatches*batchSize+task.OperationConfig.Start,
 			task.OperationConfig.End,
 			task.MetaData.Seed,
 			task.OperationConfig,

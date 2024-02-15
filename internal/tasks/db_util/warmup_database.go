@@ -20,7 +20,7 @@ type BucketWarmUpTask struct {
 }
 
 func (t *BucketWarmUpTask) Describe() string {
-	return "This API aids in warming up a Couchbase bucket or establishing connections to KV services."
+	return "Warming up a connection to database."
 }
 
 func (t *BucketWarmUpTask) Do() {

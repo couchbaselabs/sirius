@@ -192,64 +192,13 @@ configuration that is also available on a per-task basis:
 	output += "\n---\n"
 	// End - Extra Parameter ends here
 
-	tt := t.HelperStruct()
-	tagKeys := make([]string, 0, len(t.HelperStruct()))
-	for k := range tt {
-		tagKeys = append(tagKeys, k)
-	}
-	sort.Strings(tagKeys)
-
-	for _, k := range tagKeys {
-		a := strings.Replace(strings.ToLower(k), "/", "", 1)
-		output += fmt.Sprintf(" * [%s](#%s)\n", k, a)
-	}
+	output += "Possible values for durability :-\n" +
+		"1. NONE\n" +
+		"2. MAJORITY\n" +
+		"3. MAJORITY_AND_PERSIST_TO_ACTIVE\n" +
+		"4. PERSIST_TO_MAJORITY\n\n"
 	output += "\n---\n"
-
-	for _, k := range tagKeys {
-		output += fmt.Sprintf("#### %s\n\n", k)
-		s := tt[k]
-		hVal := reflect.ValueOf(s)
-		output += "| Name | Type | JSON Tag |\n"
-		output += "| ---- | ---- | -------- |\n"
-		for i := 0; i < hVal.Elem().NumField(); i++ {
-			f := hVal.Elem().Type().Field(i)
-			if _, ok := f.Tag.Lookup("json"); !ok {
-				continue
-			}
-
-			// doc
-			if tagContent, ok := f.Tag.Lookup("doc"); !ok {
-				continue
-			} else {
-				if tagContent == "false" {
-					continue
-				}
-			}
-
-			// Name
-			output += "| `" + f.Name + "` "
-
-			// Type
-			n := f.Type.Name()
-			k := f.Type.Kind().String()
-			if n == k {
-				output += "| `" + n + "` "
-			} else {
-				output += "| `" + k + "` "
-			}
-
-			for _, tagName := range []string{"json"} {
-				if tagContents, ok := f.Tag.Lookup(tagName); ok {
-					output += "| `" + tagName + ":" + tagContents + "` "
-					continue
-				}
-				output += "| "
-			}
-			// Close last table column
-			output += " |\n"
-		}
-	}
-	output += "\n---\n"
+	// End - Durability helper
 
 	output += "**APIs Response Description**.\n\n" +
 		"1. Response after initiating a TASK.\n\n"
@@ -322,6 +271,66 @@ configuration that is also available on a per-task basis:
 		}
 		// Close last table column
 		output += " |\n"
+	}
+	output += "\n---\n"
+
+	output += "**Helping nested json values n**.\n\n"
+	tt := t.HelperStruct()
+	tagKeys := make([]string, 0, len(t.HelperStruct()))
+	for k := range tt {
+		tagKeys = append(tagKeys, k)
+	}
+	sort.Strings(tagKeys)
+
+	for _, k := range tagKeys {
+		a := strings.Replace(strings.ToLower(k), "/", "", 1)
+		output += fmt.Sprintf(" * [%s](#%s)\n", k, a)
+	}
+	output += "\n---\n"
+
+	for _, k := range tagKeys {
+		output += fmt.Sprintf("#### %s\n\n", k)
+		s := tt[k]
+		hVal := reflect.ValueOf(s)
+		output += "| Name | Type | JSON Tag |\n"
+		output += "| ---- | ---- | -------- |\n"
+		for i := 0; i < hVal.Elem().NumField(); i++ {
+			f := hVal.Elem().Type().Field(i)
+			if _, ok := f.Tag.Lookup("json"); !ok {
+				continue
+			}
+
+			// doc
+			if tagContent, ok := f.Tag.Lookup("doc"); !ok {
+				continue
+			} else {
+				if tagContent == "false" {
+					continue
+				}
+			}
+
+			// Name
+			output += "| `" + f.Name + "` "
+
+			// Type
+			n := f.Type.Name()
+			k := f.Type.Kind().String()
+			if n == k {
+				output += "| `" + n + "` "
+			} else {
+				output += "| `" + k + "` "
+			}
+
+			for _, tagName := range []string{"json"} {
+				if tagContents, ok := f.Tag.Lookup(tagName); ok {
+					output += "| `" + tagName + ":" + tagContents + "` "
+					continue
+				}
+				output += "| "
+			}
+			// Close last table column
+			output += " |\n"
+		}
 	}
 	output += "\n---\n"
 

@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/couchbaselabs/sirius/internal/cb_sdk"
+	"github.com/couchbaselabs/sirius/internal/db"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
 	"github.com/couchbaselabs/sirius/internal/task_state"
 	"golang.org/x/sync/errgroup"
@@ -123,7 +123,7 @@ func (t *TaskResult) IncrementFailure(initTime, docId string, err error, status 
 func (t *TaskResult) IncrementQueryFailure(query string, err error) {
 	t.lock.Lock()
 	t.Failure++
-	v, errorString := cb_sdk.CheckSDKException(err)
+	v, errorString := db.CheckSDKException(err)
 	t.QueryError[v] = append(t.QueryError[v], FailedQuery{
 		Query:       query,
 		ErrorString: errorString,
@@ -273,7 +273,7 @@ func (t *TaskResult) StoreResultList(resultList []ResultHelper) {
 	t.lock.Lock()
 	for _, x := range resultList {
 		t.Failure++
-		v, errorString := cb_sdk.CheckSDKException(x.err)
+		v, errorString := db.CheckSDKException(x.err)
 		t.BulkError[v] = append(t.BulkError[v], FailedDocument{
 			SDKTiming: SDKTiming{
 				SendTime: x.initTime,

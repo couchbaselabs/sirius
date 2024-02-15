@@ -71,35 +71,43 @@ func (l *loadingTask) Run() {
 		}
 	case tasks.DeleteOperation:
 		{
-
+			deleteDocuments(l.start, l.end, l.seed, l.rerun, l.gen, l.state, l.result,
+				l.databaseInfo, l.extra, l.wg)
 		}
 	case tasks.ReadOperation:
 		{
-
+			readDocuments(l.start, l.end, l.seed, l.rerun, l.gen, l.state, l.result,
+				l.databaseInfo, l.extra, l.wg)
 		}
 	case tasks.TouchOperation:
 		{
-
+			touchDocuments(l.start, l.end, l.seed, l.rerun, l.gen, l.state, l.result,
+				l.databaseInfo, l.extra, l.wg)
 		}
 	case tasks.SubDocInsertOperation:
 		{
-
+			subDocInsertDocuments(l.start, l.end, l.seed, l.operationConfig, l.rerun, l.gen, l.state, l.result,
+				l.databaseInfo, l.extra, l.wg)
 		}
 	case tasks.SubDocDeleteOperation:
 		{
-
+			subDocDeleteDocuments(l.start, l.end, l.seed, l.operationConfig, l.rerun, l.gen, l.state, l.result,
+				l.databaseInfo, l.extra, l.wg)
 		}
 	case tasks.SubDocReadOperation:
 		{
-
+			subDocReadDocuments(l.start, l.end, l.seed, l.operationConfig, l.rerun, l.gen, l.state, l.result,
+				l.databaseInfo, l.extra, l.wg)
 		}
 	case tasks.SubDocReplaceOperation:
 		{
-
+			subDocReplaceDocuments(l.start, l.end, l.seed, l.operationConfig, l.rerun, l.gen, l.state, l.result,
+				l.databaseInfo, l.extra, l.req, l.identifier, l.wg)
 		}
 	case tasks.SubDocUpsertOperation:
 		{
-
+			subDocUpsertDocuments(l.start, l.end, l.seed, l.operationConfig, l.rerun, l.gen, l.state, l.result,
+				l.databaseInfo, l.extra, l.req, l.identifier, l.wg)
 		}
 	}
 }
