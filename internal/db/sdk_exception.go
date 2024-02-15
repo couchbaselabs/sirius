@@ -1,4 +1,4 @@
-package cb_sdk
+package db
 
 import (
 	"errors"
@@ -51,5 +51,19 @@ func CheckSDKException(err error) (string, string) {
 			return e.Error(), err.Error()
 		}
 	}
-	return "Unknown Exception", err.Error()
+	return "unknown exception", err.Error()
+}
+
+func CheckAllowedInsertError(err error) bool {
+	if errors.Is(err, gocb.ErrDocumentExists) {
+		return true
+	}
+	return false
+}
+
+func CheckAllowedDeletetError(err error) bool {
+	if errors.Is(err, gocb.ErrDocumentNotFound) {
+		return true
+	}
+	return false
 }

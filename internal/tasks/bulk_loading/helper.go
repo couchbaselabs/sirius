@@ -1,17 +1,17 @@
 package bulk_loading
 
 import (
-	"errors"
-	"fmt"
-	"github.com/couchbase/gocb/v2"
+	"encoding/json"
 	"github.com/couchbaselabs/sirius/internal/cb_sdk"
 	"github.com/couchbaselabs/sirius/internal/db"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
 	"github.com/couchbaselabs/sirius/internal/err_sirius"
 	"github.com/couchbaselabs/sirius/internal/task_result"
+	"github.com/couchbaselabs/sirius/internal/task_state"
 	"github.com/couchbaselabs/sirius/internal/tasks"
 	"github.com/jaswdr/faker"
 	"golang.org/x/exp/slices"
+	"log"
 )
 
 // OperationConfig contains all the configuration for document operation.
@@ -24,6 +24,18 @@ type OperationConfig struct {
 	End            int64      `json:"end" doc:"true"`
 	FieldsToChange []string   `json:"fieldsToChange" doc:"true"`
 	Exceptions     Exceptions `json:"exceptions,omitempty" doc:"true"`
+}
+
+func (o *OperationConfig) String() string {
+	if o == nil {
+		return "nil config"
+	}
+	b, err := json.Marshal(&o)
+	log.Println(string(b))
+	if err != nil {
+		return ""
+	}
+	return ""
 }
 
 // ConfigureOperationConfig configures and validate the OperationConfig
@@ -217,12 +229,10 @@ func retracePreviousMutations(r *tasks.Request, collectionIdentifier string, off
 					if offset >= (u.OperationConfig.Start) && (offset < u.OperationConfig.End) && resultSeed != u.
 						ResultSeed {
 						if u.State == nil {
-							return doc, fmt.Errorf("Unable to retrace previous mutations on sirius for " + u.MetaDataIdentifier())
+							u.State = task_state.ConfigTaskState(resultSeed)
 						}
-						errOffset := u.State.ReturnErrOffset()
-						if _, ok := errOffset[offset]; ok {
-							continue
-						} else {
+						comOffset := u.State.ReturnCompletedOffset()
+						if _, ok := comOffset[offset]; ok {
 							doc, _ = gen.Template.UpdateDocument(u.OperationConfig.FieldsToChange, doc,
 								u.OperationConfig.DocSize, fake)
 						}
@@ -235,40 +245,44 @@ func retracePreviousMutations(r *tasks.Request, collectionIdentifier string, off
 	return doc, nil
 }
 
-//func retracePreviousSubDocMutations(r *tasks.Request, collectionIdentifier string, offset int64,
-//	gen docgenerator.Generator,
-//	fake *faker.Faker, resultSeed int64,
-//	subDocumentMap map[string]any) (map[string]any, error) {
-//	if r == nil {
-//		return map[string]any{}, err_sirius.RequestIsNil
-//	}
-//	defer r.Unlock()
-//	r.Lock()
-//	var result map[string]any = subDocumentMap
-//	for i := range r.Tasks {
-//		td := r.Tasks[i]
-//		if td.Operation == tasks.SubDocUpsertOperation {
-//			if task, ok := td.Task.(BulkTask); ok {
-//				u, ok1 := task.(*SubDocUpsert)
-//				if ok1 {
-//					if collectionIdentifier != u.MetaDataIdentifier() {
-//						continue
-//					}
-//					if offset >= (u.OperationConfig.Start) && (offset < u.OperationConfig.End) && resultSeed != u.
-//						ResultSeed {
-//						errOffset := u.State.ReturnErrOffset()
-//						if _, ok := errOffset[offset]; ok {
-//							continue
-//						} else {
-//							result = gen.Template.GenerateSubPathAndValue(fake, u.OperationConfig.DocSize)
-//						}
-//					}
-//				}
-//			}
-//		}
-//	}
-//	return result, nil
-//}
+// retracePreviousSubDocMutations retraces mutation in sub documents.
+func retracePreviousSubDocMutations(r *tasks.Request, collectionIdentifier string, offset int64,
+	gen *docgenerator.Generator, fake *faker.Faker, resultSeed int64, subDocumentMap map[string]any) (map[string]any,
+	error) {
+	if r == nil {
+		return map[string]any{}, err_sirius.RequestIsNil
+	}
+	defer r.Unlock()
+	r.Lock()
+	var result map[string]any = subDocumentMap
+	for i := range r.Tasks {
+		td := r.Tasks[i]
+		if td.Operation == tasks.SubDocUpsertOperation {
+			if task, ok := td.Task.(BulkTask); ok {
+				u, ok1 := task.(*GenericLoadingTask)
+				if ok1 {
+					if collectionIdentifier != u.MetaDataIdentifier() {
+						continue
+					}
+					if offset >= (u.OperationConfig.Start) && (offset < u.OperationConfig.End) && resultSeed != u.
+						ResultSeed {
+						if u.State == nil {
+							u.State = task_state.ConfigTaskState(resultSeed)
+						}
+						errOffset := u.State.ReturnErrOffset()
+						if _, ok := errOffset[offset]; ok {
+							continue
+						} else {
+							result = gen.Template.GenerateSubPathAndValue(fake, u.OperationConfig.DocSize)
+						}
+					}
+				}
+			}
+		}
+	}
+	return result, nil
+}
+
 //
 //// countMutation return the number of mutation happened on an offset
 //func countMutation(r *tasks.Request, collectionIdentifier string, offset int64, resultSeed int64) (int, error) {
@@ -457,7 +471,7 @@ func shiftErrToCompletedOnIgnore(ignoreExceptions []string, result *task_result.
 }
 
 func configExtraParameters(dbType string, d *db.Extras) error {
-	if dbType == db.COUCHBASE_DB {
+	if dbType == db.CouchbaseDb {
 		if d.Bucket == "" {
 			return err_sirius.BucketIsMisssing
 		}
@@ -468,17 +482,10 @@ func configExtraParameters(dbType string, d *db.Extras) error {
 			d.Collection = cb_sdk.DefaultCollection
 		}
 	}
-	if dbType == db.MONGO_DB {
+	if dbType == db.MongoDb {
 		if d.Collection == "" {
 			return err_sirius.CollectionIsMissing
 		}
 	}
 	return nil
-}
-
-func checkInsertAllowedError(err error) bool {
-	if errors.Is(err, gocb.ErrDocumentExists) {
-		return true
-	}
-	return false
 }

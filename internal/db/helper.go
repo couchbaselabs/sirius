@@ -5,41 +5,11 @@ import (
 	"github.com/couchbaselabs/sirius/internal/err_sirius"
 )
 
-//const (
-//	couchbaseClusterConfig = "couchbaseClusterConfig"
-//	couchbaseInsertOptions = "couchbaseInsertOptions"
-//)
-//
-//type RegisterDatabaseHelper struct {
-//}
-//
-//func (r RegisterDatabaseHelper) Helper() map[string]any {
-//	return map[string]any{
-//		couchbaseClusterConfig:           &cb_sdk.ClusterConfig{},
-//		"couchbaseCompressionConfig":     &cb_sdk.CompressionConfig{},
-//		"couchbaseClusterTimeoutsConfig": &cb_sdk.TimeoutsConfig{},
-//		"operationConfig":                &bulk_loading.OperationConfig{},
-//		couchbaseInsertOptions:           &cb_sdk.InsertOptions{},
-//		"couchbaseRemoveOptions":         &cb_sdk.RemoveOptions{},
-//		"couchbaseReplaceOption":         &cb_sdk.ReplaceOptions{},
-//		"couchbaseTouchOptions":          &cb_sdk.TouchOptions{},
-//		"couchbaseSingleOperationConfig": &key_based_loading_cb.SingleOperationConfig{},
-//		"bulkError":                      &task_result.FailedDocument{},
-//		"retriedError":                   &task_result.FailedDocument{},
-//		"singleResult":                   &task_result.SingleOperationResult{},
-//		"couchbaseQueryOperationConfig":  &cb_sdk.QueryOperationConfig{},
-//		"exceptions":                     &bulk_loading.Exceptions{},
-//		"couchbaseMutateInOptions":       &cb_sdk.MutateInOptions{},
-//		"couchbaseInsertSpecOptions":     &cb_sdk.InsertSpecOptions{},
-//		"couchbaseRemoveSpecOptions":     &cb_sdk.RemoveSpecOptions{},
-//		"couchbaseGetSpecOptions":        &cb_sdk.GetSpecOptions{},
-//		"couchbaseLookupInOptions":       &cb_sdk.LookupInOptions{},
-//		"couchbaseReplaceSpecOptions":    &cb_sdk.ReplaceSpecOptions{},
-//		"singleSubDocOperationConfig":    &key_based_loading_cb.SingleSubDocOperationConfig{},
-//		"sdkTimings":                     &task_result.SDKTiming{},
-//	}
-//
-//}
+type KeyValue struct {
+	Key    string
+	Doc    interface{}
+	Offset int64
+}
 
 type Extras struct {
 	CompressionDisabled bool    `json:"compressionDisabled,omitempty" doc:"true"`

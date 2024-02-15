@@ -29,7 +29,6 @@ type KeyStates struct {
 }
 
 type TaskState struct {
-	SeedStart    int64              `json:"seedStart"`
 	ResultSeed   int64              `json:"resultSeed"`
 	KeyStates    KeyStates          `json:"keyStates"`
 	StateChannel chan StateHelper   `json:"-"`
@@ -39,7 +38,7 @@ type TaskState struct {
 }
 
 // ConfigTaskState returns an instance of TaskState
-func ConfigTaskState(seed, resultSeed int64) *TaskState {
+func ConfigTaskState(resultSeed int64) *TaskState {
 	ctx, cancel := context.WithCancel(context.Background())
 	ts := &TaskState{}
 
@@ -51,7 +50,6 @@ func ConfigTaskState(seed, resultSeed int64) *TaskState {
 		ts.lock = sync.Mutex{}
 	} else {
 		ts = &TaskState{
-			SeedStart:    seed,
 			ResultSeed:   resultSeed,
 			StateChannel: make(chan StateHelper, StateChannelLimit),
 			ctx:          ctx,
@@ -63,6 +61,14 @@ func ConfigTaskState(seed, resultSeed int64) *TaskState {
 	defer func() {
 		ts.StoreState()
 	}()
+
+	defer func() {
+		go func() {
+			time.Sleep(24 * time.Hour)
+			ts = nil
+		}()
+	}()
+
 	return ts
 }
 
