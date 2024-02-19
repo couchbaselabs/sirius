@@ -10,12 +10,17 @@ configuration that is also available on a per-task basis:
  * [/bulk-touch](#bulk-touch)
  * [/bulk-upsert](#bulk-upsert)
  * [/clear_data](#clear_data)
+ * [/create](#create)
+ * [/delete](#delete)
+ * [/read](#read)
  * [/result](#result)
- * [/sub-doc-bulk-delete](#sub-doc-bulk-delete)
- * [/sub-doc-bulk-insert](#sub-doc-bulk-insert)
- * [/sub-doc-bulk-read](#sub-doc-bulk-read)
- * [/sub-doc-bulk-replace](#sub-doc-bulk-replace)
- * [/sub-doc-bulk-upsert](#sub-doc-bulk-upsert)
+ * [/sub-doc-delete](#sub-doc-delete)
+ * [/sub-doc-insert](#sub-doc-insert)
+ * [/sub-doc-read](#sub-doc-read)
+ * [/sub-doc-replace](#sub-doc-replace)
+ * [/sub-doc-upsert](#sub-doc-upsert)
+ * [/touch](#touch)
+ * [/upsert](#upsert)
  * [/warmup-bucket](#warmup-bucket)
 
 ---
@@ -104,7 +109,7 @@ Description : Do operation between range from [start,end)
 | `Extra` | `struct` | `json:extra`  |
 
 ---
-#### /sub-doc-bulk-delete
+#### /create
 
  REST : POST
 
@@ -121,7 +126,7 @@ Description : Do operation between range from [start,end)
 | `Extra` | `struct` | `json:extra`  |
 
 ---
-#### /sub-doc-bulk-insert
+#### /delete
 
  REST : POST
 
@@ -138,7 +143,7 @@ Description : Do operation between range from [start,end)
 | `Extra` | `struct` | `json:extra`  |
 
 ---
-#### /sub-doc-bulk-read
+#### /read
 
  REST : POST
 
@@ -155,7 +160,7 @@ Description : Do operation between range from [start,end)
 | `Extra` | `struct` | `json:extra`  |
 
 ---
-#### /sub-doc-bulk-replace
+#### /sub-doc-delete
 
  REST : POST
 
@@ -172,7 +177,92 @@ Description : Do operation between range from [start,end)
 | `Extra` | `struct` | `json:extra`  |
 
 ---
-#### /sub-doc-bulk-upsert
+#### /sub-doc-insert
+
+ REST : POST
+
+Description : Do operation between range from [start,end)
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `OperationConfig` | `ptr` | `json:operationConfig`  |
+| `DBType` | `string` | `json:dbType`  |
+| `ConnStr` | `string` | `json:connectionString`  |
+| `Username` | `string` | `json:username`  |
+| `Password` | `string` | `json:password`  |
+| `Extra` | `struct` | `json:extra`  |
+
+---
+#### /sub-doc-read
+
+ REST : POST
+
+Description : Do operation between range from [start,end)
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `OperationConfig` | `ptr` | `json:operationConfig`  |
+| `DBType` | `string` | `json:dbType`  |
+| `ConnStr` | `string` | `json:connectionString`  |
+| `Username` | `string` | `json:username`  |
+| `Password` | `string` | `json:password`  |
+| `Extra` | `struct` | `json:extra`  |
+
+---
+#### /sub-doc-replace
+
+ REST : POST
+
+Description : Do operation between range from [start,end)
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `OperationConfig` | `ptr` | `json:operationConfig`  |
+| `DBType` | `string` | `json:dbType`  |
+| `ConnStr` | `string` | `json:connectionString`  |
+| `Username` | `string` | `json:username`  |
+| `Password` | `string` | `json:password`  |
+| `Extra` | `struct` | `json:extra`  |
+
+---
+#### /sub-doc-upsert
+
+ REST : POST
+
+Description : Do operation between range from [start,end)
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `OperationConfig` | `ptr` | `json:operationConfig`  |
+| `DBType` | `string` | `json:dbType`  |
+| `ConnStr` | `string` | `json:connectionString`  |
+| `Username` | `string` | `json:username`  |
+| `Password` | `string` | `json:password`  |
+| `Extra` | `struct` | `json:extra`  |
+
+---
+#### /touch
+
+ REST : POST
+
+Description : Do operation between range from [start,end)
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `OperationConfig` | `ptr` | `json:operationConfig`  |
+| `DBType` | `string` | `json:dbType`  |
+| `ConnStr` | `string` | `json:connectionString`  |
+| `Username` | `string` | `json:username`  |
+| `Password` | `string` | `json:password`  |
+| `Extra` | `struct` | `json:extra`  |
+
+---
+#### /upsert
 
  REST : POST
 
@@ -228,6 +318,7 @@ Description : Warming up a connection to database.
 | `StoreSemantic` | `int` | `json:storeSemantic,omitempty`  |
 | `PreserveExpiry` | `bool` | `json:preserveExpiry,omitempty`  |
 | `CreatePath` | `bool` | `json:createPath,omitempty`  |
+| `SDKBatchSize` | `int` | `json:SDKBatchSize,omitempty`  |
 
 ---
 Possible values for durability :-

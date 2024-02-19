@@ -6,7 +6,6 @@ import (
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/cb_sdk"
 	"github.com/couchbaselabs/sirius/internal/template"
-	"log"
 	"time"
 )
 
@@ -24,11 +23,6 @@ type perSubDocResult struct {
 	status   bool
 	cas      uint64
 	offset   int64
-}
-
-type bulkMutationResult struct {
-	result *gocb.MutationResult
-	err    error
 }
 
 type couchbaseBulkOperationResult struct {
@@ -909,20 +903,13 @@ func (c *Couchbase) CreateBulk(connStr, username, password string, keyValue []Ke
 	}
 
 	var bulkOp []gocb.BulkOp
-	mutationResults := make(map[string]bulkMutationResult)
 
 	for _, x := range keyValue {
-		mutationResults[x.Key] = bulkMutationResult{
-			result: &gocb.MutationResult{},
-			err:    nil,
-		}
 
 		bulkOp = append(bulkOp, &gocb.InsertOp{
 			ID:     x.Key,
 			Value:  x.Doc,
 			Expiry: time.Duration(extra.Expiry) * time.Minute,
-			//Result: mutationResults[x.Key].result,
-			//Err:    mutationResults[x.Key].err,
 		})
 	}
 
@@ -939,30 +926,32 @@ func (c *Couchbase) CreateBulk(connStr, username, password string, keyValue []Ke
 	for _, x := range bulkOp {
 		insertOp, ok := x.(*gocb.InsertOp)
 		if !ok {
-			log.Println("decoding eror in CreateBulk gocb.Insert")
-			continue
-		} else if insertOp == nil {
-			log.Println("insertOp is nil")
-		} else if insertOp.Err != nil {
-			if insertOp.Result == nil {
-				log.Println("insertOp.Result is nil and err is nil")
-			} else {
-				result.AddResult(insertOp.ID, insertOp.Value, insertOp.Err, false, uint64(insertOp.Result.Cas()))
-			}
+			result.AddResult(insertOp.ID, insertOp.Value, errors.New("decoding error InsertOp"), false, 0)
+		} else if insertOp.Err == nil {
+			result.AddResult(insertOp.ID, insertOp.Value, nil, true, uint64(insertOp.Result.Cas()))
 		} else {
-			if insertOp.Result == nil {
-				log.Println("insertOp.Result is nil and err is not nil")
-			} else {
-				result.AddResult(insertOp.ID, insertOp.Value, nil, true, uint64(insertOp.Result.Cas()))
-			}
+			result.AddResult(insertOp.ID, insertOp.Value, insertOp.Err, false, 0)
 		}
-		//if mutationResults[x.Key].err != nil {
-		//	result.AddResult(x.Key, x.Doc, mutationResults[x.Key].err, false,
-		//		uint64(mutationResults[x.Key].result.Cas()))
-		//} else {
-		//	result.AddResult(x.Key, x.Doc, nil, true, uint64(mutationResults[x.Key].result.Cas()))
-		//}
-
 	}
 	return result
+}
+
+func (c *Couchbase) UpdateBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *Couchbase) ReadBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *Couchbase) DeleteBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *Couchbase) TouchBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult {
+	//TODO implement me
+	panic("implement me")
 }

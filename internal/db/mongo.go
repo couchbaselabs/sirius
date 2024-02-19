@@ -288,3 +288,23 @@ func (m Mongo) Close(connStr string) error {
 	}
 	return nil
 }
+
+func (m Mongo) UpdateBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (m Mongo) ReadBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (m Mongo) DeleteBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (m Mongo) TouchBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult {
+	//TODO implement me
+	panic("implement me")
+}
