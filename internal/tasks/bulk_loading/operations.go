@@ -1,15 +1,16 @@
 package bulk_loading
 
 import (
+	"math/rand"
+	"sync"
+	"time"
+
 	"github.com/couchbaselabs/sirius/internal/db"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
 	"github.com/couchbaselabs/sirius/internal/task_result"
 	"github.com/couchbaselabs/sirius/internal/task_state"
 	"github.com/couchbaselabs/sirius/internal/tasks"
 	"github.com/jaswdr/faker"
-	"math/rand"
-	"sync"
-	"time"
 )
 
 func insertDocuments(start, end, seed int64, operationConfig *OperationConfig,
@@ -63,9 +64,122 @@ func insertDocuments(start, end, seed int64, operationConfig *OperationConfig,
 		} else {
 			state.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
 		}
+	}
+}
+
+func bulkInsertDocuments(start, end, seed int64, operationConfig *OperationConfig,
+	rerun bool, gen *docgenerator.Generator, state *task_state.TaskState, result *task_result.TaskResult,
+	databaseInfo tasks.DatabaseInformation, extra db.Extras, wg *sync.WaitGroup) {
+
+	defer wg.Done()
+
+	skip := make(map[int64]struct{})
+	for _, offset := range state.KeyStates.Completed {
+		skip[offset] = struct{}{}
+	}
+	for _, offset := range state.KeyStates.Err {
+		skip[offset] = struct{}{}
+	}
+
+	database, dbErr := db.ConfigDatabase(databaseInfo.DBType)
+	if dbErr != nil {
+		result.FailWholeBulkOperation(start, end, dbErr, state, gen, seed)
+		return
+	}
+
+	batchSize := int64(100)
+	totalNumOfDocs := end - start
+	numBatches := int64(totalNumOfDocs / batchSize)
+	remNumOfDocs := totalNumOfDocs - (numBatches * batchSize)
+	offset := start
+
+	for i := int64(0); i < numBatches; i++ {
+		var keyValues []db.KeyValue
+		initTime := time.Now().UTC().Format(time.RFC850)
+		for j := int64(0); j < batchSize; j++ {
+			if _, ok := skip[offset]; ok {
+				continue
+			}
+
+			key := offset + seed
+			docId := gen.BuildKey(key)
+			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
+			doc, err1 := gen.Template.GenerateDocument(&fake, operationConfig.DocSize)
+
+			if err1 != nil {
+				result.IncrementFailure(initTime, docId, err1, false, nil, offset)
+				continue
+			}
+			keyVal := db.KeyValue{
+				Key:    docId,
+				Doc:    doc,
+				Offset: offset,
+			}
+			keyValues = append(keyValues, keyVal)
+			offset++
+		}
+
+		bulkOperationResult := database.CreateBulk(databaseInfo.ConnStr, databaseInfo.Username, databaseInfo.Password, keyValues, extra)
+
+		for j := range keyValues {
+			if bulkOperationResult.GetError(keyValues[j].Key) != nil {
+				if db.CheckAllowedInsertError(bulkOperationResult.GetError(keyValues[j].Key)) && rerun {
+					state.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
+					continue
+				} else {
+					result.IncrementFailure(initTime, keyValues[j].Key, bulkOperationResult.GetError(keyValues[j].Key), false, bulkOperationResult.GetExtra(keyValues[j].Key), offset)
+					state.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
+				}
+			} else {
+				state.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
+			}
+		}
 
 	}
 
+	// Inserting the remaining documents
+	if remNumOfDocs > 0 {
+		var keyValues []db.KeyValue
+		initTime := time.Now().UTC().Format(time.RFC850)
+		for i := int64(0); i < remNumOfDocs; i++ {
+			if _, ok := skip[offset]; ok {
+				continue
+			}
+
+			key := offset + seed
+			docId := gen.BuildKey(key)
+			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
+			doc, err1 := gen.Template.GenerateDocument(&fake, operationConfig.DocSize)
+
+			if err1 != nil {
+				result.IncrementFailure(initTime, docId, err1, false, nil, offset)
+				continue
+			}
+			keyVal := db.KeyValue{
+				Key:    docId,
+				Doc:    doc,
+				Offset: offset,
+			}
+			keyValues = append(keyValues, keyVal)
+			offset++
+		}
+
+		bulkOperationResult := database.CreateBulk(databaseInfo.ConnStr, databaseInfo.Username, databaseInfo.Password, keyValues, extra)
+
+		for j := range keyValues {
+			if bulkOperationResult.GetError(keyValues[j].Key) != nil {
+				if db.CheckAllowedInsertError(bulkOperationResult.GetError(keyValues[j].Key)) && rerun {
+					state.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
+					continue
+				} else {
+					result.IncrementFailure(initTime, keyValues[j].Key, bulkOperationResult.GetError(keyValues[j].Key), false, bulkOperationResult.GetExtra(keyValues[j].Key), offset)
+					state.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
+				}
+			} else {
+				state.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
+			}
+		}
+	}
 }
 
 func upsertDocuments(start, end, seed int64, operationConfig *OperationConfig,

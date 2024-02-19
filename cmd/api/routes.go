@@ -37,6 +37,7 @@ func (app *Config) routes() http.Handler {
 	mux.Post("/create", app.insertTask)
 	mux.Post("/bulk-create", app.bulkInsertTask)
 	mux.Post("/delete", app.deleteTask)
+
 	mux.Post("/bulk-delete", app.bulkDeleteTask)
 	mux.Post("/upsert", app.upsertTask)
 	mux.Post("/bulk-upsert", app.bulkUpsertTask)
@@ -44,6 +45,7 @@ func (app *Config) routes() http.Handler {
 	mux.Post("/bulk-touch", app.bulkTouchTask)
 	mux.Post("/read", app.readTask)
 	mux.Post("/bulk-read", app.bulkReadTask)
+
 	mux.Post("/sub-doc-insert", app.SubDocInsertTask)
 	mux.Post("/sub-doc-upsert", app.SubDocUpsertTask)
 	mux.Post("/sub-doc-delete", app.SubDocDeleteTask)

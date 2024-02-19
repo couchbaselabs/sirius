@@ -1,8 +1,9 @@
 package db
 
 import (
-	"github.com/couchbaselabs/sirius/internal/err_sirius"
 	"sync"
+
+	"github.com/couchbaselabs/sirius/internal/err_sirius"
 )
 
 const (
