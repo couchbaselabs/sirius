@@ -246,7 +246,7 @@ func (m Mongo) CreateBulk(connStr, username, password string, keyValues []KeyVal
 	}
 
 	mongoClient := m.connectionManager.Clusters[connStr].MongoClusterClient
-	fmt.Println("In CreateBulk(), Mongo Client:", mongoClient)
+	//fmt.Println("In CreateBulk(), Mongo Client:", mongoClient)
 
 	if err := validateStrings(extra.Bucket); err != nil {
 		result.failBulk(keyValues, errors.New("database name is missing"))
