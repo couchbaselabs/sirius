@@ -541,3 +541,264 @@ func subDocReplaceDocuments(start, end, seed int64, operationConfig *OperationCo
 		}
 	}
 }
+
+func bulkInsertDocuments(start, end, seed int64, operationConfig *OperationConfig,
+	rerun bool, gen *docgenerator.Generator, state *task_state.TaskState, result *task_result.TaskResult,
+	databaseInfo tasks.DatabaseInformation, extra db.Extras, wg *sync.WaitGroup) {
+
+	defer wg.Done()
+
+	skip := make(map[int64]struct{})
+	for _, offset := range state.KeyStates.Completed {
+		skip[offset] = struct{}{}
+	}
+	for _, offset := range state.KeyStates.Err {
+		skip[offset] = struct{}{}
+	}
+
+	database, dbErr := db.ConfigDatabase(databaseInfo.DBType)
+	if dbErr != nil {
+		result.FailWholeBulkOperation(start, end, dbErr, state, gen, seed)
+		return
+	}
+
+	var keyValues []db.KeyValue
+	for offset := start; offset < end; offset++ {
+		if _, ok := skip[offset]; ok {
+			continue
+		}
+
+		key := offset + seed
+		docId := gen.BuildKey(key)
+		fake := faker.NewWithSeed(rand.NewSource(int64(key)))
+		doc, _ := gen.Template.GenerateDocument(&fake, operationConfig.DocSize)
+		keyValues = append(keyValues, db.KeyValue{
+			Key:    docId,
+			Doc:    doc,
+			Offset: offset,
+		})
+	}
+
+	initTime := time.Now().UTC().Format(time.RFC850)
+	bulkResult := database.CreateBulk(databaseInfo.ConnStr, databaseInfo.Username, databaseInfo.Password, keyValues,
+		extra)
+
+	for _, x := range keyValues {
+		if bulkResult.GetError(x.Key) != nil {
+			if db.CheckAllowedInsertError(bulkResult.GetError(x.Key)) && rerun {
+				state.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: x.Offset}
+			} else {
+				result.IncrementFailure(initTime, x.Key, bulkResult.GetError(x.Key), false, bulkResult.GetExtra(x.Key),
+					x.Offset)
+				state.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: x.Offset}
+			}
+		} else {
+			state.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: x.Offset}
+		}
+
+	}
+}
+
+func bulkUpsertDocuments(start, end, seed int64, operationConfig *OperationConfig,
+	rerun bool, gen *docgenerator.Generator, state *task_state.TaskState, result *task_result.TaskResult,
+	databaseInfo tasks.DatabaseInformation, extra db.Extras, wg *sync.WaitGroup) {
+
+	defer wg.Done()
+
+	skip := make(map[int64]struct{})
+	for _, offset := range state.KeyStates.Completed {
+		skip[offset] = struct{}{}
+	}
+	for _, offset := range state.KeyStates.Err {
+		skip[offset] = struct{}{}
+	}
+
+	database, dbErr := db.ConfigDatabase(databaseInfo.DBType)
+	if dbErr != nil {
+		result.FailWholeBulkOperation(start, end, dbErr, state, gen, seed)
+		return
+	}
+
+	var keyValues []db.KeyValue
+	for offset := start; offset < end; offset++ {
+		if _, ok := skip[offset]; ok {
+			continue
+		}
+
+		key := offset + seed
+		docId := gen.BuildKey(key)
+		fake := faker.NewWithSeed(rand.NewSource(int64(key)))
+		doc, _ := gen.Template.GenerateDocument(&fake, operationConfig.DocSize)
+		keyValues = append(keyValues, db.KeyValue{
+			Key:    docId,
+			Doc:    doc,
+			Offset: offset,
+		})
+	}
+
+	initTime := time.Now().UTC().Format(time.RFC850)
+	bulkResult := database.UpdateBulk(databaseInfo.ConnStr, databaseInfo.Username, databaseInfo.Password, keyValues,
+		extra)
+
+	for _, x := range keyValues {
+		if bulkResult.GetError(x.Key) != nil {
+			result.IncrementFailure(initTime, x.Key, bulkResult.GetError(x.Key), false, bulkResult.GetExtra(x.Key),
+				x.Offset)
+			state.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: x.Offset}
+
+		} else {
+			state.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: x.Offset}
+		}
+
+	}
+}
+
+func bulkDeleteDocuments(start, end, seed int64, operationConfig *OperationConfig,
+	rerun bool, gen *docgenerator.Generator, state *task_state.TaskState, result *task_result.TaskResult,
+	databaseInfo tasks.DatabaseInformation, extra db.Extras, wg *sync.WaitGroup) {
+
+	defer wg.Done()
+
+	skip := make(map[int64]struct{})
+	for _, offset := range state.KeyStates.Completed {
+		skip[offset] = struct{}{}
+	}
+	for _, offset := range state.KeyStates.Err {
+		skip[offset] = struct{}{}
+	}
+
+	database, dbErr := db.ConfigDatabase(databaseInfo.DBType)
+	if dbErr != nil {
+		result.FailWholeBulkOperation(start, end, dbErr, state, gen, seed)
+		return
+	}
+
+	var keyValues []db.KeyValue
+	for offset := start; offset < end; offset++ {
+		if _, ok := skip[offset]; ok {
+			continue
+		}
+
+		key := offset + seed
+		docId := gen.BuildKey(key)
+		keyValues = append(keyValues, db.KeyValue{
+			Key: docId,
+		})
+	}
+
+	initTime := time.Now().UTC().Format(time.RFC850)
+	bulkResult := database.DeleteBulk(databaseInfo.ConnStr, databaseInfo.Username, databaseInfo.Password, keyValues,
+		extra)
+
+	for _, x := range keyValues {
+		if bulkResult.GetError(x.Key) != nil {
+			if db.CheckAllowedDeletetError(bulkResult.GetError(x.Key)) && rerun {
+				state.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: x.Offset}
+			} else {
+				result.IncrementFailure(initTime, x.Key, bulkResult.GetError(x.Key), false, bulkResult.GetExtra(x.Key),
+					x.Offset)
+				state.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: x.Offset}
+			}
+		} else {
+			state.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: x.Offset}
+		}
+	}
+}
+
+func bulkReadDocuments(start, end, seed int64, operationConfig *OperationConfig,
+	rerun bool, gen *docgenerator.Generator, state *task_state.TaskState, result *task_result.TaskResult,
+	databaseInfo tasks.DatabaseInformation, extra db.Extras, wg *sync.WaitGroup) {
+
+	defer wg.Done()
+
+	skip := make(map[int64]struct{})
+	for _, offset := range state.KeyStates.Completed {
+		skip[offset] = struct{}{}
+	}
+	for _, offset := range state.KeyStates.Err {
+		skip[offset] = struct{}{}
+	}
+
+	database, dbErr := db.ConfigDatabase(databaseInfo.DBType)
+	if dbErr != nil {
+		result.FailWholeBulkOperation(start, end, dbErr, state, gen, seed)
+		return
+	}
+
+	var keyValues []db.KeyValue
+	for offset := start; offset < end; offset++ {
+		if _, ok := skip[offset]; ok {
+			continue
+		}
+
+		key := offset + seed
+		docId := gen.BuildKey(key)
+		keyValues = append(keyValues, db.KeyValue{
+			Key: docId,
+		})
+	}
+
+	initTime := time.Now().UTC().Format(time.RFC850)
+	bulkResult := database.ReadBulk(databaseInfo.ConnStr, databaseInfo.Username, databaseInfo.Password, keyValues,
+		extra)
+
+	for _, x := range keyValues {
+		if bulkResult.GetError(x.Key) != nil {
+			result.IncrementFailure(initTime, x.Key, bulkResult.GetError(x.Key), false, bulkResult.GetExtra(x.Key),
+				x.Offset)
+			state.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: x.Offset}
+
+		} else {
+			state.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: x.Offset}
+		}
+	}
+}
+
+func bulkTouchDocuments(start, end, seed int64, operationConfig *OperationConfig,
+	rerun bool, gen *docgenerator.Generator, state *task_state.TaskState, result *task_result.TaskResult,
+	databaseInfo tasks.DatabaseInformation, extra db.Extras, wg *sync.WaitGroup) {
+
+	defer wg.Done()
+
+	skip := make(map[int64]struct{})
+	for _, offset := range state.KeyStates.Completed {
+		skip[offset] = struct{}{}
+	}
+	for _, offset := range state.KeyStates.Err {
+		skip[offset] = struct{}{}
+	}
+
+	database, dbErr := db.ConfigDatabase(databaseInfo.DBType)
+	if dbErr != nil {
+		result.FailWholeBulkOperation(start, end, dbErr, state, gen, seed)
+		return
+	}
+
+	var keyValues []db.KeyValue
+	for offset := start; offset < end; offset++ {
+		if _, ok := skip[offset]; ok {
+			continue
+		}
+
+		key := offset + seed
+		docId := gen.BuildKey(key)
+		keyValues = append(keyValues, db.KeyValue{
+			Key: docId,
+		})
+	}
+
+	initTime := time.Now().UTC().Format(time.RFC850)
+	bulkResult := database.TouchBulk(databaseInfo.ConnStr, databaseInfo.Username, databaseInfo.Password, keyValues,
+		extra)
+
+	for _, x := range keyValues {
+		if bulkResult.GetError(x.Key) != nil {
+			result.IncrementFailure(initTime, x.Key, bulkResult.GetError(x.Key), false, bulkResult.GetExtra(x.Key),
+				x.Offset)
+			state.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: x.Offset}
+
+		} else {
+			state.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: x.Offset}
+		}
+	}
+}

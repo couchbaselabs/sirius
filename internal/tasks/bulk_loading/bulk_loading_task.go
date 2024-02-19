@@ -109,5 +109,27 @@ func (l *loadingTask) Run() {
 			subDocUpsertDocuments(l.start, l.end, l.seed, l.operationConfig, l.rerun, l.gen, l.state, l.result,
 				l.databaseInfo, l.extra, l.req, l.identifier, l.wg)
 		}
+
+	case tasks.BulkInsertOperation:
+		{
+			bulkInsertDocuments(l.start, l.end, l.seed, l.operationConfig, l.rerun, l.gen, l.state, l.result,
+				l.databaseInfo, l.extra, l.wg)
+		}
+	case tasks.BulkUpsertOperation:
+		{
+			bulkUpsertDocuments(l.start, l.end, l.seed, l.operationConfig, l.rerun, l.gen, l.state, l.result,
+				l.databaseInfo, l.extra, l.wg)
+		}
+	case tasks.BulkDeleteOperation:
+		{
+			bulkDeleteDocuments(l.start, l.end, l.seed, l.operationConfig, l.rerun, l.gen, l.state, l.result,
+				l.databaseInfo, l.extra, l.wg)
+		}
+	case tasks.BulkReadOperation:
+		{
+			bulkReadDocuments(l.start, l.end, l.seed, l.operationConfig, l.rerun, l.gen, l.state, l.result,
+				l.databaseInfo, l.extra, l.wg)
+		}
+
 	}
 }
