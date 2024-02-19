@@ -31,6 +31,7 @@ type Extras struct {
 	StoreSemantic       int     `json:"storeSemantic,omitempty" doc:"true"`
 	PreserveExpiry      bool    `json:"preserveExpiry,omitempty" doc:"true"`
 	CreatePath          bool    `json:"createPath,omitempty" doc:"true"`
+	SDKBatchSize        int     `json:"SDKBatchSize,omitempty" doc:"true"`
 }
 
 func validateStrings(values ...string) error {

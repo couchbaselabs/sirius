@@ -44,13 +44,17 @@ type Database interface {
 	Read(connStr, username, password, key string, offset int64, extra Extras) OperationResult
 	Delete(connStr, username, password, key string, offset int64, extra Extras) OperationResult
 	Touch(connStr, username, password, key string, offset int64, extra Extras) OperationResult
-	InsertSubDoc(connStr, username, password, key string, keyValue []KeyValue, offset int64, extra Extras) SubDocOperationResult
-	UpsertSubDoc(connStr, username, password, key string, keyValue []KeyValue, offset int64, extra Extras) SubDocOperationResult
-	Increment(connStr, username, password, key string, keyValue []KeyValue, offset int64, extra Extras) SubDocOperationResult
-	ReplaceSubDoc(connStr, username, password, key string, keyValue []KeyValue, offset int64, extra Extras) SubDocOperationResult
-	ReadSubDoc(connStr, username, password, key string, keyValue []KeyValue, offset int64, extra Extras) SubDocOperationResult
-	DeleteSubDoc(connStr, username, password, key string, keyValue []KeyValue, offset int64, extra Extras) SubDocOperationResult
+	InsertSubDoc(connStr, username, password, key string, keyValues []KeyValue, offset int64, extra Extras) SubDocOperationResult
+	UpsertSubDoc(connStr, username, password, key string, keyValues []KeyValue, offset int64, extra Extras) SubDocOperationResult
+	Increment(connStr, username, password, key string, keyValues []KeyValue, offset int64, extra Extras) SubDocOperationResult
+	ReplaceSubDoc(connStr, username, password, key string, keyValues []KeyValue, offset int64, extra Extras) SubDocOperationResult
+	ReadSubDoc(connStr, username, password, key string, keyValues []KeyValue, offset int64, extra Extras) SubDocOperationResult
+	DeleteSubDoc(connStr, username, password, key string, keyValues []KeyValue, offset int64, extra Extras) SubDocOperationResult
 	CreateBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult
+	UpdateBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult
+	ReadBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult
+	DeleteBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult
+	TouchBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult
 	Warmup(connStr, username, password string, extra Extras) error
 	Close(connStr string) error
 }

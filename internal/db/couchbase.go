@@ -6,7 +6,6 @@ import (
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/cb_sdk"
 	"github.com/couchbaselabs/sirius/internal/template"
-	"log"
 	"time"
 )
 
@@ -26,11 +25,6 @@ type perSubDocResult struct {
 	offset   int64
 }
 
-type bulkMutationResult struct {
-	result *gocb.MutationResult
-	err    error
-}
-
 type couchbaseBulkOperationResult struct {
 	keyValues map[string]perDocResult
 }
@@ -41,12 +35,14 @@ func newCouchbaseBulkOperation() *couchbaseBulkOperationResult {
 	}
 }
 
-func (c *couchbaseBulkOperationResult) AddResult(key string, value interface{}, err error, status bool, cas uint64) {
+func (c *couchbaseBulkOperationResult) AddResult(key string, value interface{}, err error, status bool, cas uint64,
+	offset int64) {
 	c.keyValues[key] = perDocResult{
 		value:  value,
 		error:  err,
 		status: status,
 		cas:    cas,
+		offset: offset,
 	}
 }
 
@@ -68,7 +64,7 @@ func (c *couchbaseBulkOperationResult) GetError(key string) error {
 	if x, ok := c.keyValues[key]; ok {
 		return x.error
 	}
-	return errors.New("Key not found in bulk operation")
+	return errors.New("key not found in bulk operation")
 }
 
 func (c *couchbaseBulkOperationResult) GetExtra(key string) map[string]any {
@@ -157,7 +153,7 @@ func newCouchbaseSubDocOperationResult(key string, keyValue []KeyValue, err erro
 		result: perSubDocResult{
 			keyValue: keyValue,
 			error:    err,
-			status:   false,
+			status:   status,
 			cas:      cas,
 			offset:   offset,
 		},
@@ -448,10 +444,10 @@ func (c *Couchbase) Touch(connStr, username, password, key string, offset int64,
 	return newCouchbaseOperationResult(key, nil, nil, true, uint64(result.Cas()), offset)
 }
 
-func (c *Couchbase) InsertSubDoc(connStr, username, password, key string, keyValue []KeyValue, offset int64,
+func (c *Couchbase) InsertSubDoc(connStr, username, password, key string, keyValues []KeyValue, offset int64,
 	extra Extras) SubDocOperationResult {
 	if err := validateStrings(connStr, username, password); err != nil {
-		return newCouchbaseSubDocOperationResult(key, keyValue, err, false, 0, offset)
+		return newCouchbaseSubDocOperationResult(key, keyValues, err, false, 0, offset)
 	}
 
 	bucketName := extra.Bucket
@@ -459,7 +455,7 @@ func (c *Couchbase) InsertSubDoc(connStr, username, password, key string, keyVal
 	collection := extra.Collection
 
 	if err := validateStrings(bucketName); err != nil {
-		return newCouchbaseSubDocOperationResult(key, keyValue, errors.New("bucket is missing"), false, 0, offset)
+		return newCouchbaseSubDocOperationResult(key, keyValues, errors.New("bucket is missing"), false, 0, offset)
 	}
 
 	if scope == "" {
@@ -473,11 +469,11 @@ func (c *Couchbase) InsertSubDoc(connStr, username, password, key string, keyVal
 	collectionObject, err1 := c.connectionManager.GetCollection(connStr, username, password, nil, bucketName,
 		scope, collection)
 	if err1 != nil {
-		return newCouchbaseSubDocOperationResult(key, keyValue, err1, false, 0, offset)
+		return newCouchbaseSubDocOperationResult(key, keyValues, err1, false, 0, offset)
 	}
 
 	var iOps []gocb.MutateInSpec
-	for _, x := range keyValue {
+	for _, x := range keyValues {
 		iOps = append(iOps, gocb.InsertSpec(x.Key, x.Doc, &gocb.InsertSpecOptions{
 			CreatePath: extra.CreatePath,
 			IsXattr:    extra.IsXattr,
@@ -502,20 +498,20 @@ func (c *Couchbase) InsertSubDoc(connStr, username, password, key string, keyVal
 		PreserveExpiry:  extra.PreserveExpiry,
 	})
 	if err2 != nil {
-		return newCouchbaseSubDocOperationResult(key, keyValue, err2, false, 0, offset)
+		return newCouchbaseSubDocOperationResult(key, keyValues, err2, false, 0, offset)
 	}
 	if result == nil {
-		return newCouchbaseSubDocOperationResult(key, keyValue,
+		return newCouchbaseSubDocOperationResult(key, keyValues,
 			fmt.Errorf("result is nil even after successful SUB DOC INSERT operation %s ", connStr), false, 0,
 			offset)
 	}
-	return newCouchbaseSubDocOperationResult(key, keyValue, nil, false, uint64(result.Cas()), offset)
+	return newCouchbaseSubDocOperationResult(key, keyValues, nil, false, uint64(result.Cas()), offset)
 }
 
-func (c *Couchbase) UpsertSubDoc(connStr, username, password, key string, keyValue []KeyValue, offset int64,
+func (c *Couchbase) UpsertSubDoc(connStr, username, password, key string, keyValues []KeyValue, offset int64,
 	extra Extras) SubDocOperationResult {
 	if err := validateStrings(connStr, username, password); err != nil {
-		return newCouchbaseSubDocOperationResult(key, keyValue, err, false, 0, offset)
+		return newCouchbaseSubDocOperationResult(key, keyValues, err, false, 0, offset)
 	}
 
 	bucketName := extra.Bucket
@@ -523,7 +519,7 @@ func (c *Couchbase) UpsertSubDoc(connStr, username, password, key string, keyVal
 	collection := extra.Collection
 
 	if err := validateStrings(bucketName); err != nil {
-		return newCouchbaseSubDocOperationResult(key, keyValue, errors.New("bucket is missing"), false, 0, offset)
+		return newCouchbaseSubDocOperationResult(key, keyValues, errors.New("bucket is missing"), false, 0, offset)
 	}
 
 	if scope == "" {
@@ -537,11 +533,11 @@ func (c *Couchbase) UpsertSubDoc(connStr, username, password, key string, keyVal
 	collectionObject, err1 := c.connectionManager.GetCollection(connStr, username, password, nil, bucketName,
 		scope, collection)
 	if err1 != nil {
-		return newCouchbaseSubDocOperationResult(key, keyValue, err1, false, 0, offset)
+		return newCouchbaseSubDocOperationResult(key, keyValues, err1, false, 0, offset)
 	}
 
 	var iOps []gocb.MutateInSpec
-	for _, x := range keyValue {
+	for _, x := range keyValues {
 		iOps = append(iOps, gocb.UpsertSpec(x.Key, x.Doc, &gocb.UpsertSpecOptions{
 			CreatePath: extra.CreatePath,
 			IsXattr:    extra.IsXattr,
@@ -566,20 +562,20 @@ func (c *Couchbase) UpsertSubDoc(connStr, username, password, key string, keyVal
 		PreserveExpiry:  extra.PreserveExpiry,
 	})
 	if err2 != nil {
-		return newCouchbaseSubDocOperationResult(key, keyValue, err2, false, 0, offset)
+		return newCouchbaseSubDocOperationResult(key, keyValues, err2, false, 0, offset)
 	}
 	if result == nil {
-		return newCouchbaseSubDocOperationResult(key, keyValue,
+		return newCouchbaseSubDocOperationResult(key, keyValues,
 			fmt.Errorf("result is nil even after successful SUB DOC UPSERT operation %s ", connStr), false, 0,
 			offset)
 	}
-	return newCouchbaseSubDocOperationResult(key, keyValue, nil, false, uint64(result.Cas()), offset)
+	return newCouchbaseSubDocOperationResult(key, keyValues, nil, false, uint64(result.Cas()), offset)
 }
 
-func (c *Couchbase) Increment(connStr, username, password, key string, keyValue []KeyValue, offset int64,
+func (c *Couchbase) Increment(connStr, username, password, key string, keyValues []KeyValue, offset int64,
 	extra Extras) SubDocOperationResult {
 	if err := validateStrings(connStr, username, password); err != nil {
-		return newCouchbaseSubDocOperationResult(key, keyValue, err, false, 0, offset)
+		return newCouchbaseSubDocOperationResult(key, keyValues, err, false, 0, offset)
 	}
 
 	bucketName := extra.Bucket
@@ -587,7 +583,7 @@ func (c *Couchbase) Increment(connStr, username, password, key string, keyValue 
 	collection := extra.Collection
 
 	if err := validateStrings(bucketName); err != nil {
-		return newCouchbaseSubDocOperationResult(key, keyValue, errors.New("bucket is missing"), false, 0, offset)
+		return newCouchbaseSubDocOperationResult(key, keyValues, errors.New("bucket is missing"), false, 0, offset)
 	}
 
 	if scope == "" {
@@ -601,15 +597,15 @@ func (c *Couchbase) Increment(connStr, username, password, key string, keyValue 
 	collectionObject, err1 := c.connectionManager.GetCollection(connStr, username, password, nil, bucketName,
 		scope, collection)
 	if err1 != nil {
-		return newCouchbaseSubDocOperationResult(key, keyValue, err1, false, 0, offset)
+		return newCouchbaseSubDocOperationResult(key, keyValues, err1, false, 0, offset)
 	}
 
 	var iOps []gocb.MutateInSpec
 
-	for _, x := range keyValue {
+	for _, x := range keyValues {
 		delta, ok := x.Doc.(int)
 		if !ok {
-			return newCouchbaseSubDocOperationResult(key, keyValue, errors.New("delta value is not int"), false, 0,
+			return newCouchbaseSubDocOperationResult(key, keyValues, errors.New("delta value is not int"), false, 0,
 				offset)
 		}
 		iOps = append(iOps, gocb.IncrementSpec(x.Key, int64(delta), &gocb.CounterSpecOptions{
@@ -637,20 +633,20 @@ func (c *Couchbase) Increment(connStr, username, password, key string, keyValue 
 	})
 
 	if err2 != nil {
-		return newCouchbaseSubDocOperationResult(key, keyValue, err2, false, 0, offset)
+		return newCouchbaseSubDocOperationResult(key, keyValues, err2, false, 0, offset)
 	}
 	if result == nil {
-		return newCouchbaseSubDocOperationResult(key, keyValue,
+		return newCouchbaseSubDocOperationResult(key, keyValues,
 			fmt.Errorf("result is nil even after successful SUB DOC INCREMENT operation %s ", connStr), false, 0,
 			offset)
 	}
-	return newCouchbaseSubDocOperationResult(key, keyValue, nil, true, uint64(result.Cas()), offset)
+	return newCouchbaseSubDocOperationResult(key, keyValues, nil, true, uint64(result.Cas()), offset)
 }
 
-func (c *Couchbase) ReplaceSubDoc(connStr, username, password, key string, keyValue []KeyValue, offset int64,
+func (c *Couchbase) ReplaceSubDoc(connStr, username, password, key string, keyValues []KeyValue, offset int64,
 	extra Extras) SubDocOperationResult {
 	if err := validateStrings(connStr, username, password); err != nil {
-		return newCouchbaseSubDocOperationResult(key, keyValue, err, false, 0, offset)
+		return newCouchbaseSubDocOperationResult(key, keyValues, err, false, 0, offset)
 	}
 
 	bucketName := extra.Bucket
@@ -658,7 +654,7 @@ func (c *Couchbase) ReplaceSubDoc(connStr, username, password, key string, keyVa
 	collection := extra.Collection
 
 	if err := validateStrings(bucketName); err != nil {
-		newCouchbaseSubDocOperationResult(key, keyValue, errors.New("bucket is missing"), false, 0, offset)
+		newCouchbaseSubDocOperationResult(key, keyValues, errors.New("bucket is missing"), false, 0, offset)
 	}
 
 	if scope == "" {
@@ -672,11 +668,11 @@ func (c *Couchbase) ReplaceSubDoc(connStr, username, password, key string, keyVa
 	collectionObject, err1 := c.connectionManager.GetCollection(connStr, username, password, nil, bucketName,
 		scope, collection)
 	if err1 != nil {
-		newCouchbaseSubDocOperationResult(key, keyValue, err1, false, 0, offset)
+		newCouchbaseSubDocOperationResult(key, keyValues, err1, false, 0, offset)
 	}
 
 	var iOps []gocb.MutateInSpec
-	for _, x := range keyValue {
+	for _, x := range keyValues {
 		iOps = append(iOps, gocb.ReplaceSpec(x.Key, x.Doc, &gocb.ReplaceSpecOptions{
 			IsXattr: extra.IsXattr,
 		}))
@@ -700,20 +696,20 @@ func (c *Couchbase) ReplaceSubDoc(connStr, username, password, key string, keyVa
 		PreserveExpiry:  extra.PreserveExpiry,
 	})
 	if err2 != nil {
-		return newCouchbaseSubDocOperationResult(key, keyValue, err2, false, 0, offset)
+		return newCouchbaseSubDocOperationResult(key, keyValues, err2, false, 0, offset)
 	}
 	if result == nil {
-		return newCouchbaseSubDocOperationResult(key, keyValue,
+		return newCouchbaseSubDocOperationResult(key, keyValues,
 			fmt.Errorf("result is nil even after successful SUB DOC REPLACE operation %s ", connStr), false, 0,
 			offset)
 	}
-	return newCouchbaseSubDocOperationResult(key, keyValue, nil, false, uint64(result.Cas()), offset)
+	return newCouchbaseSubDocOperationResult(key, keyValues, nil, false, uint64(result.Cas()), offset)
 }
 
-func (c *Couchbase) ReadSubDoc(connStr, username, password, key string, keyValue []KeyValue, offset int64,
+func (c *Couchbase) ReadSubDoc(connStr, username, password, key string, keyValues []KeyValue, offset int64,
 	extra Extras) SubDocOperationResult {
 	if err := validateStrings(connStr, username, password); err != nil {
-		newCouchbaseSubDocOperationResult(key, keyValue, err, false, 0, offset)
+		newCouchbaseSubDocOperationResult(key, keyValues, err, false, 0, offset)
 	}
 
 	bucketName := extra.Bucket
@@ -721,7 +717,7 @@ func (c *Couchbase) ReadSubDoc(connStr, username, password, key string, keyValue
 	collection := extra.Collection
 
 	if err := validateStrings(bucketName); err != nil {
-		return newCouchbaseSubDocOperationResult(key, keyValue, errors.New("bucket is missing"), false,
+		return newCouchbaseSubDocOperationResult(key, keyValues, errors.New("bucket is missing"), false,
 			0, offset)
 	}
 
@@ -736,12 +732,12 @@ func (c *Couchbase) ReadSubDoc(connStr, username, password, key string, keyValue
 	collectionObject, err1 := c.connectionManager.GetCollection(connStr, username, password, nil, bucketName,
 		scope, collection)
 	if err1 != nil {
-		return newCouchbaseSubDocOperationResult(key, keyValue, err1, false, 0, offset)
+		return newCouchbaseSubDocOperationResult(key, keyValues, err1, false, 0, offset)
 	}
 
 	var iOps []gocb.LookupInSpec
 
-	for _, x := range keyValue {
+	for _, x := range keyValues {
 		iOps = append(iOps, gocb.GetSpec(x.Key, &gocb.GetSpecOptions{
 			IsXattr: extra.IsXattr,
 		}))
@@ -752,17 +748,17 @@ func (c *Couchbase) ReadSubDoc(connStr, username, password, key string, keyValue
 	})
 
 	if err2 != nil {
-		return newCouchbaseSubDocOperationResult(key, keyValue, err2, false, 0, offset)
+		return newCouchbaseSubDocOperationResult(key, keyValues, err2, false, 0, offset)
 	}
 	if result == nil {
-		return newCouchbaseSubDocOperationResult(key, keyValue,
+		return newCouchbaseSubDocOperationResult(key, keyValues,
 			fmt.Errorf("result is nil even after successful SUB DOC READ operation %s ", connStr), false, 0,
 			offset)
 	}
 
 	var resultKeyValue []KeyValue
 
-	for i, x := range keyValue {
+	for i, x := range keyValues {
 		var resultFromHost interface{}
 		if err := result.ContentAt(uint(i), &resultFromHost); err == nil {
 			resultKeyValue = append(resultKeyValue, KeyValue{
@@ -782,10 +778,10 @@ func (c *Couchbase) ReadSubDoc(connStr, username, password, key string, keyValue
 	return newCouchbaseSubDocOperationResult(key, resultKeyValue, nil, false, uint64(result.Cas()), offset)
 }
 
-func (c *Couchbase) DeleteSubDoc(connStr, username, password, key string, keyValue []KeyValue, offset int64,
+func (c *Couchbase) DeleteSubDoc(connStr, username, password, key string, keyValues []KeyValue, offset int64,
 	extra Extras) SubDocOperationResult {
 	if err := validateStrings(connStr, username, password); err != nil {
-		return newCouchbaseSubDocOperationResult(key, keyValue, err, false, 0, offset)
+		return newCouchbaseSubDocOperationResult(key, keyValues, err, false, 0, offset)
 	}
 
 	bucketName := extra.Bucket
@@ -793,7 +789,7 @@ func (c *Couchbase) DeleteSubDoc(connStr, username, password, key string, keyVal
 	collection := extra.Collection
 
 	if err := validateStrings(bucketName); err != nil {
-		newCouchbaseSubDocOperationResult(key, keyValue, errors.New("bucket is missing"), false, 0, offset)
+		newCouchbaseSubDocOperationResult(key, keyValues, errors.New("bucket is missing"), false, 0, offset)
 	}
 
 	if scope == "" {
@@ -807,11 +803,11 @@ func (c *Couchbase) DeleteSubDoc(connStr, username, password, key string, keyVal
 	collectionObject, err1 := c.connectionManager.GetCollection(connStr, username, password, nil, bucketName,
 		scope, collection)
 	if err1 != nil {
-		newCouchbaseSubDocOperationResult(key, keyValue, err1, false, 0, offset)
+		newCouchbaseSubDocOperationResult(key, keyValues, err1, false, 0, offset)
 	}
 
 	var iOps []gocb.MutateInSpec
-	for _, x := range keyValue {
+	for _, x := range keyValues {
 		iOps = append(iOps, gocb.RemoveSpec(x.Key, &gocb.RemoveSpecOptions{
 			IsXattr: extra.IsXattr,
 		}))
@@ -835,14 +831,14 @@ func (c *Couchbase) DeleteSubDoc(connStr, username, password, key string, keyVal
 		PreserveExpiry:  extra.PreserveExpiry,
 	})
 	if err2 != nil {
-		return newCouchbaseSubDocOperationResult(key, keyValue, err2, false, 0, offset)
+		return newCouchbaseSubDocOperationResult(key, keyValues, err2, false, 0, offset)
 	}
 	if result == nil {
-		return newCouchbaseSubDocOperationResult(key, keyValue,
+		return newCouchbaseSubDocOperationResult(key, keyValues,
 			fmt.Errorf("result is nil even after successful SUB DOC DELETE operation %s ", connStr), false, 0,
 			offset)
 	}
-	return newCouchbaseSubDocOperationResult(key, keyValue, nil, true, uint64(result.Cas()), offset)
+	return newCouchbaseSubDocOperationResult(key, keyValues, nil, true, uint64(result.Cas()), offset)
 }
 
 func (c *Couchbase) Warmup(connStr, username, password string, extra Extras) error {
@@ -875,12 +871,12 @@ func (c *Couchbase) Close(connStr string) error {
 	return c.connectionManager.Disconnect(connStr)
 }
 
-func (c *Couchbase) CreateBulk(connStr, username, password string, keyValue []KeyValue, extra Extras) BulkOperationResult {
+func (c *Couchbase) CreateBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult {
 
 	result := newCouchbaseBulkOperation()
 
 	if err := validateStrings(connStr, username, password); err != nil {
-		result.failBulk(keyValue, err)
+		result.failBulk(keyValues, err)
 		return result
 	}
 
@@ -889,7 +885,7 @@ func (c *Couchbase) CreateBulk(connStr, username, password string, keyValue []Ke
 	collection := extra.Collection
 
 	if err := validateStrings(bucketName); err != nil {
-		result.failBulk(keyValue, errors.New("bucket is missing"))
+		result.failBulk(keyValues, errors.New("bucket is missing"))
 		return result
 	}
 
@@ -904,25 +900,20 @@ func (c *Couchbase) CreateBulk(connStr, username, password string, keyValue []Ke
 	collectionObj, err1 := c.connectionManager.GetCollection(connStr, username, password, nil, bucketName,
 		scope, collection)
 	if err1 != nil {
-		result.failBulk(keyValue, errors.New("bucket is missing"))
+		result.failBulk(keyValues, errors.New("bucket is missing"))
 		return result
 	}
 
 	var bulkOp []gocb.BulkOp
-	mutationResults := make(map[string]bulkMutationResult)
+	keyToOffset := make(map[string]int64)
 
-	for _, x := range keyValue {
-		mutationResults[x.Key] = bulkMutationResult{
-			result: &gocb.MutationResult{},
-			err:    nil,
-		}
+	for _, x := range keyValues {
+		keyToOffset[x.Key] = x.Offset
 
 		bulkOp = append(bulkOp, &gocb.InsertOp{
 			ID:     x.Key,
 			Value:  x.Doc,
 			Expiry: time.Duration(extra.Expiry) * time.Minute,
-			//Result: mutationResults[x.Key].result,
-			//Err:    mutationResults[x.Key].err,
 		})
 	}
 
@@ -932,37 +923,295 @@ func (c *Couchbase) CreateBulk(connStr, username, password string, keyValue []Ke
 		})
 
 	if err2 != nil {
-		result.failBulk(keyValue, err2)
+		result.failBulk(keyValues, err2)
 		return result
 	}
 
 	for _, x := range bulkOp {
 		insertOp, ok := x.(*gocb.InsertOp)
 		if !ok {
-			log.Println("decoding eror in CreateBulk gocb.Insert")
-			continue
-		} else if insertOp == nil {
-			log.Println("insertOp is nil")
+			result.AddResult(insertOp.ID, insertOp.Value, errors.New("decoding error InsertOp"), false,
+				0, -1)
 		} else if insertOp.Err != nil {
-			if insertOp.Result == nil {
-				log.Println("insertOp.Result is nil and err is nil")
-			} else {
-				result.AddResult(insertOp.ID, insertOp.Value, insertOp.Err, false, uint64(insertOp.Result.Cas()))
-			}
+			result.AddResult(insertOp.ID, insertOp.Value, insertOp.Err, false, 0, keyToOffset[insertOp.ID])
+
 		} else {
-			if insertOp.Result == nil {
-				log.Println("insertOp.Result is nil and err is not nil")
+			result.AddResult(insertOp.ID, insertOp.Value, nil, true, uint64(insertOp.Result.Cas()),
+				keyToOffset[insertOp.ID])
+		}
+	}
+	return result
+}
+
+func (c *Couchbase) UpdateBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult {
+
+	result := newCouchbaseBulkOperation()
+
+	if err := validateStrings(connStr, username, password); err != nil {
+		result.failBulk(keyValues, err)
+		return result
+	}
+
+	bucketName := extra.Bucket
+	scope := extra.Scope
+	collection := extra.Collection
+
+	if err := validateStrings(bucketName); err != nil {
+		result.failBulk(keyValues, errors.New("bucket is missing"))
+		return result
+	}
+
+	if scope == "" {
+		scope = cb_sdk.DefaultScope
+	}
+
+	if collection == "" {
+		collection = cb_sdk.DefaultCollection
+	}
+
+	collectionObj, err1 := c.connectionManager.GetCollection(connStr, username, password, nil, bucketName,
+		scope, collection)
+	if err1 != nil {
+		result.failBulk(keyValues, errors.New("bucket is missing"))
+		return result
+	}
+
+	var bulkOp []gocb.BulkOp
+	keyToOffset := make(map[string]int64)
+
+	for _, x := range keyValues {
+		keyToOffset[x.Key] = x.Offset
+		bulkOp = append(bulkOp, &gocb.UpsertOp{
+			ID:     x.Key,
+			Value:  x.Doc,
+			Expiry: time.Duration(extra.Expiry) * time.Minute,
+		})
+	}
+
+	err2 := collectionObj.Collection.Do(bulkOp,
+		&gocb.BulkOpOptions{
+			Timeout: time.Duration(extra.OperationTimeout) * time.Second,
+		})
+
+	if err2 != nil {
+		result.failBulk(keyValues, err2)
+		return result
+	}
+
+	for _, x := range bulkOp {
+		upsertOp, ok := x.(*gocb.UpsertOp)
+		if !ok {
+			result.AddResult(upsertOp.ID, nil, errors.New("decoding error UpsertOp"), false,
+				0, -1)
+		} else if upsertOp.Err != nil {
+			result.AddResult(upsertOp.ID, upsertOp.Value, upsertOp.Err, false, 0, keyToOffset[upsertOp.ID])
+
+		} else {
+			result.AddResult(upsertOp.ID, upsertOp.Value, nil, true, uint64(upsertOp.Result.Cas()), keyToOffset[upsertOp.ID])
+		}
+	}
+	return result
+}
+
+func (c *Couchbase) ReadBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult {
+
+	result := newCouchbaseBulkOperation()
+
+	if err := validateStrings(connStr, username, password); err != nil {
+		result.failBulk(keyValues, err)
+		return result
+	}
+
+	bucketName := extra.Bucket
+	scope := extra.Scope
+	collection := extra.Collection
+
+	if err := validateStrings(bucketName); err != nil {
+		result.failBulk(keyValues, errors.New("bucket is missing"))
+		return result
+	}
+
+	if scope == "" {
+		scope = cb_sdk.DefaultScope
+	}
+
+	if collection == "" {
+		collection = cb_sdk.DefaultCollection
+	}
+
+	collectionObj, err1 := c.connectionManager.GetCollection(connStr, username, password, nil, bucketName,
+		scope, collection)
+	if err1 != nil {
+		result.failBulk(keyValues, errors.New("bucket is missing"))
+		return result
+	}
+
+	var bulkOp []gocb.BulkOp
+	keyToOffset := make(map[string]int64)
+	for _, x := range keyValues {
+		keyToOffset[x.Key] = x.Offset
+		bulkOp = append(bulkOp, &gocb.GetOp{
+			ID: x.Key,
+		})
+	}
+
+	err2 := collectionObj.Collection.Do(bulkOp,
+		&gocb.BulkOpOptions{
+			Timeout: time.Duration(extra.OperationTimeout) * time.Second,
+		})
+
+	if err2 != nil {
+		result.failBulk(keyValues, err2)
+		return result
+	}
+
+	for _, x := range bulkOp {
+		getOp, ok := x.(*gocb.GetOp)
+		if !ok {
+			result.AddResult(getOp.ID, nil, errors.New("decoding error GetOp"), false, 0, -1)
+		} else if getOp.Err != nil {
+			result.AddResult(getOp.ID, nil, getOp.Err, false, 0, keyToOffset[getOp.ID])
+		} else {
+			var resultFromHost interface{}
+			if err := getOp.Result.Content(&resultFromHost); err != nil {
+				result.AddResult(getOp.ID, nil, err, false, uint64(getOp.Result.Cas()), keyToOffset[getOp.ID])
 			} else {
-				result.AddResult(insertOp.ID, insertOp.Value, nil, true, uint64(insertOp.Result.Cas()))
+				result.AddResult(getOp.ID, resultFromHost, err, true, uint64(getOp.Result.Cas()), keyToOffset[getOp.ID])
 			}
 		}
-		//if mutationResults[x.Key].err != nil {
-		//	result.AddResult(x.Key, x.Doc, mutationResults[x.Key].err, false,
-		//		uint64(mutationResults[x.Key].result.Cas()))
-		//} else {
-		//	result.AddResult(x.Key, x.Doc, nil, true, uint64(mutationResults[x.Key].result.Cas()))
-		//}
+	}
+	return result
+}
 
+func (c *Couchbase) DeleteBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult {
+	result := newCouchbaseBulkOperation()
+
+	if err := validateStrings(connStr, username, password); err != nil {
+		result.failBulk(keyValues, err)
+		return result
+	}
+
+	bucketName := extra.Bucket
+	scope := extra.Scope
+	collection := extra.Collection
+
+	if err := validateStrings(bucketName); err != nil {
+		result.failBulk(keyValues, errors.New("bucket is missing"))
+		return result
+	}
+
+	if scope == "" {
+		scope = cb_sdk.DefaultScope
+	}
+
+	if collection == "" {
+		collection = cb_sdk.DefaultCollection
+	}
+
+	collectionObj, err1 := c.connectionManager.GetCollection(connStr, username, password, nil, bucketName,
+		scope, collection)
+	if err1 != nil {
+		result.failBulk(keyValues, errors.New("bucket is missing"))
+		return result
+	}
+
+	var bulkOp []gocb.BulkOp
+	keyToOffset := make(map[string]int64)
+
+	for _, x := range keyValues {
+		keyToOffset[x.Key] = x.Offset
+		bulkOp = append(bulkOp, &gocb.RemoveOp{
+			ID: x.Key,
+		})
+	}
+
+	err2 := collectionObj.Collection.Do(bulkOp,
+		&gocb.BulkOpOptions{
+			Timeout: time.Duration(extra.OperationTimeout) * time.Second,
+		})
+
+	if err2 != nil {
+		result.failBulk(keyValues, err2)
+		return result
+	}
+
+	for _, x := range bulkOp {
+		removeOp, ok := x.(*gocb.RemoveOp)
+		if !ok {
+			result.AddResult(removeOp.ID, nil, errors.New("decoding error RemoveOp"), false, 0, -1)
+		} else if removeOp.Err != nil {
+			result.AddResult(removeOp.ID, nil, removeOp.Err, false, 0, keyToOffset[removeOp.ID])
+		} else {
+			result.AddResult(removeOp.ID, nil, nil, true, uint64(removeOp.Result.Cas()), keyToOffset[removeOp.ID])
+		}
+	}
+	return result
+}
+
+func (c *Couchbase) TouchBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult {
+	result := newCouchbaseBulkOperation()
+
+	if err := validateStrings(connStr, username, password); err != nil {
+		result.failBulk(keyValues, err)
+		return result
+	}
+
+	bucketName := extra.Bucket
+	scope := extra.Scope
+	collection := extra.Collection
+
+	if err := validateStrings(bucketName); err != nil {
+		result.failBulk(keyValues, errors.New("bucket is missing"))
+		return result
+	}
+
+	if scope == "" {
+		scope = cb_sdk.DefaultScope
+	}
+
+	if collection == "" {
+		collection = cb_sdk.DefaultCollection
+	}
+
+	collectionObj, err1 := c.connectionManager.GetCollection(connStr, username, password, nil, bucketName,
+		scope, collection)
+	if err1 != nil {
+		result.failBulk(keyValues, errors.New("bucket is missing"))
+		return result
+	}
+
+	var bulkOp []gocb.BulkOp
+	keyToOffset := make(map[string]int64)
+
+	for _, x := range keyValues {
+		keyToOffset[x.Key] = x.Offset
+		bulkOp = append(bulkOp, &gocb.TouchOp{
+			ID:     x.Key,
+			Expiry: time.Duration(extra.Expiry) * time.Minute,
+		})
+	}
+
+	err2 := collectionObj.Collection.Do(bulkOp,
+		&gocb.BulkOpOptions{
+			Timeout: time.Duration(extra.OperationTimeout) * time.Second,
+		})
+
+	if err2 != nil {
+		result.failBulk(keyValues, err2)
+		return result
+	}
+
+	for _, x := range bulkOp {
+		touchOp, ok := x.(*gocb.TouchOp)
+		if !ok {
+			result.AddResult(touchOp.ID, nil, errors.New("decoding error UpsertOp"), false,
+				0, -1)
+		} else if touchOp.Err != nil {
+			result.AddResult(touchOp.ID, nil, touchOp.Err, false, 0, keyToOffset[touchOp.ID])
+
+		} else {
+			result.AddResult(touchOp.ID, nil, nil, true, uint64(touchOp.Result.Cas()), keyToOffset[touchOp.ID])
+		}
 	}
 	return result
 }

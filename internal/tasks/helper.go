@@ -8,11 +8,16 @@ const (
 	DefaultIdentifierToken              = "default"
 	WatchIndexDuration           int    = 120
 	InsertOperation              string = "insert"
+	BulkInsertOperation          string = "bulkInsert"
 	QueryOperation               string = "query"
 	DeleteOperation              string = "delete"
+	BulkDeleteOperation          string = "bulkDelete"
 	UpsertOperation              string = "upsert"
+	BulkUpsertOperation          string = "bulkUpsert"
 	ReadOperation                string = "read"
+	BulkReadOperation            string = "bulkRead"
 	TouchOperation               string = "touch"
+	BulkTouchOperation           string = "bulkTouch"
 	ValidateOperation            string = "validate"
 	SingleInsertOperation        string = "singleInsert"
 	SingleDeleteOperation        string = "singleDelete"
@@ -37,6 +42,15 @@ const (
 	SingleDocValidateOperation   string = "SingleDocValidate"
 	BucketWarmUpOperation        string = "BucketWarmUp"
 )
+
+func CheckBulkOperation(operation string) bool {
+	switch operation {
+	case BulkInsertOperation, BulkUpsertOperation, BulkReadOperation, BulkDeleteOperation, BulkTouchOperation:
+		return true
+	default:
+		return false
+	}
+}
 
 func buildKeyAndValues(doc map[string]any, result map[string]any, startString string) {
 	for key, value := range doc {

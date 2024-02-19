@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 )
 
@@ -19,7 +20,27 @@ type Config struct {
 	serverRequests *server_requests.ServerRequests
 }
 
+type DebugServer struct {
+	*http.Server
+}
+
+// NewDebugServer provides new debug http server
+func NewDebugServer(address string) *DebugServer {
+	return &DebugServer{
+		&http.Server{
+			Addr:    address,
+			Handler: http.DefaultServeMux,
+		},
+	}
+}
+
 func main() {
+
+	go func() {
+		debugServer := NewDebugServer(fmt.Sprintf("%s:%d", "0.0.0.0", 6060))
+		log.Println("Starting Sirius profiling service at 6060")
+		log.Fatal(debugServer.ListenAndServe())
+	}()
 	// Generate Sirius Documentation
 	go sirius_documentation.Generate()
 
