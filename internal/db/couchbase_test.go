@@ -218,8 +218,8 @@ func TestCouchbase_CreateBulk(t *testing.T) {
 	m := meta_data.NewMetaData()
 	cm1 := m.GetCollectionMetadata("x")
 
-	batchSize := 4000
-	totalBatches := 250
+	batchSize := 100
+	totalBatches := 20000
 
 	wg := sync.WaitGroup{}
 
