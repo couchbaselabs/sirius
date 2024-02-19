@@ -13,6 +13,8 @@ import (
 	"github.com/couchbaselabs/sirius/internal/template"
 	"golang.org/x/sync/errgroup"
 	"log"
+	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -101,6 +103,14 @@ func (t *GenericLoadingTask) Config(req *tasks.Request, reRun bool) (int64, erro
 		_ = task_result.DeleteResultFile(t.ResultSeed)
 		log.Println("retrying :- ", t.Operation, t.IdentifierToken, t.ResultSeed)
 	}
+
+	t.State = task_state.ConfigTaskState(t.ResultSeed)
+	t.Result = task_result.ConfigTaskResult(t.Operation, t.ResultSeed)
+	t.gen = docgenerator.ConfigGenerator(
+		t.OperationConfig.KeySize,
+		t.OperationConfig.DocSize,
+		template.InitialiseTemplate(t.OperationConfig.TemplateName))
+
 	return t.ResultSeed, nil
 }
 
@@ -122,13 +132,6 @@ func (t *GenericLoadingTask) TearUp() error {
 }
 
 func (t *GenericLoadingTask) Do() {
-
-	t.State = task_state.ConfigTaskState(t.ResultSeed)
-	t.Result = task_result.ConfigTaskResult(t.Operation, t.ResultSeed)
-	t.gen = docgenerator.ConfigGenerator(
-		t.OperationConfig.KeySize,
-		t.OperationConfig.DocSize,
-		template.InitialiseTemplate(t.OperationConfig.TemplateName))
 
 	database, err := db.ConfigDatabase(t.DBType)
 	if err != nil {
@@ -159,7 +162,7 @@ func loadDocumentsInBatches(task *GenericLoadingTask) {
 	log.Println("identifier : ", task.MetaDataIdentifier())
 	log.Println("operation :", task.Operation)
 	log.Println("result ", task.ResultSeed)
-	log.Print(task.OperationConfig)
+	fmt.Println(task.OperationConfig)
 
 	// This is stop processing loading operation if user has already cancelled all the tasks from sirius
 	if task.req.ContextClosed() {
@@ -168,7 +171,26 @@ func loadDocumentsInBatches(task *GenericLoadingTask) {
 
 	wg := &sync.WaitGroup{}
 	numOfBatches := int64(0)
+
+	// default batch size is calculated by dividing the total operations in equal quantity to each thread.
 	batchSize := (task.OperationConfig.End - task.OperationConfig.Start) / int64(tasks.MaxThreads)
+
+	// if we are using sdk Batching call, then fetch the batch size from extras.
+	// current default value of a batch for SDK batching is 100 but will be picked from os.env
+	if tasks.CheckBulkOperation(task.Operation) {
+		if task.Extra.SDKBatchSize > 0 {
+			batchSize = (task.OperationConfig.End - task.OperationConfig.Start) / int64(task.Extra.SDKBatchSize)
+		} else {
+			envBatchSize := os.Getenv("sirius_sdk_batch_size")
+			if len(envBatchSize) == 0 {
+				batchSize = 100
+			} else {
+				if x, e := strconv.Atoi(envBatchSize); e != nil {
+					batchSize = int64(x)
+				}
+			}
+		}
+	}
 
 	if batchSize > 0 {
 		numOfBatches = (task.OperationConfig.End - task.OperationConfig.Start) / batchSize
@@ -217,7 +239,6 @@ func loadDocumentsInBatches(task *GenericLoadingTask) {
 	}
 
 	wg.Wait()
-	task.PostTaskExceptionHandling()
 	log.Println("completed :- ", task.Operation, task.IdentifierToken, task.ResultSeed)
 }
 
@@ -238,6 +259,13 @@ func loadBatch(task *GenericLoadingTask, t *loadingTask, batchStart int64, batch
 }
 
 func (t *GenericLoadingTask) PostTaskExceptionHandling() {
+
+	if t.Result == nil {
+		t.Result = task_result.ConfigTaskResult(t.Operation, t.ResultSeed)
+	}
+	if t.State == nil {
+		t.State = task_state.ConfigTaskState(t.ResultSeed)
+	}
 	t.Result.StopStoringResult()
 	t.State.StopStoringState()
 
@@ -275,11 +303,28 @@ func (t *GenericLoadingTask) PostTaskExceptionHandling() {
 				dataChannel <- x
 				routineLimiter <- struct{}{}
 				wg.Go(func() error {
-					//m := <-dataChannel
-					//var offset = int64(-1)
-					//for k, _ := range m {
-					//	offset = k
-					//}
+					//	m := <-dataChannel
+					//	var offset = int64(-1)
+					//	for k, _ := range m {
+					//		offset = k
+					//	}
+					//
+					//	l := loadingTask{
+					//		start:           offset,
+					//		end:             offset + 1,
+					//		operationConfig: t.OperationConfig,
+					//		seed:            t.MetaData.Seed,
+					//		operation:       t.Operation,
+					//		rerun:           true,
+					//		gen:             t.gen,
+					//		state:           t.State,
+					//		result:          t.Result,
+					//		databaseInfo:    tasks.DatabaseInformation{},
+					//		extra:           db.Extras{},
+					//		req:             t.req,
+					//		identifier:      t.IdentifierToken,
+					//		wg:              nil,}
+					//
 					//key := offset + t.MetaData.Seed
 					//docId := t.gen.BuildKey(key)
 					//

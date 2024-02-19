@@ -52,6 +52,10 @@ type Database interface {
 	ReadSubDoc(connStr, username, password, key string, keyValue []KeyValue, offset int64, extra Extras) SubDocOperationResult
 	DeleteSubDoc(connStr, username, password, key string, keyValue []KeyValue, offset int64, extra Extras) SubDocOperationResult
 	CreateBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult
+	UpdateBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult
+	ReadBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult
+	DeleteBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult
+	TouchBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult
 	Warmup(connStr, username, password string, extra Extras) error
 	Close(connStr string) error
 }
