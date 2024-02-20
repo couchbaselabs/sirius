@@ -137,9 +137,9 @@ func TestCouchbase(t *testing.T) {
 		fake := faker.NewWithSeed(rand.NewSource(int64(key)))
 		var keyValues []KeyValue
 		offsetCount := int64(0)
-		for key, _ := range gen.Template.GenerateSubPathAndValue(&fake, 10) {
+		for path, _ := range gen.Template.GenerateSubPathAndValue(&fake, 10) {
 			keyValues = append(keyValues, KeyValue{
-				Key:    key,
+				Key:    path,
 				Offset: offsetCount,
 			})
 			offsetCount++
@@ -205,7 +205,6 @@ func TestCouchbase(t *testing.T) {
 
 func TestCouchbase_CreateBulk(t *testing.T) {
 	db, err := ConfigDatabase("couchbase")
-	//gocb.SetLogger(gocb.VerboseStdioLogger())
 	if err != nil {
 		t.Fatal(err)
 	}

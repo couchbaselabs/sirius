@@ -140,6 +140,7 @@ func (t *GenericLoadingTask) Do() {
 		t.Result.FailWholeBulkOperation(t.OperationConfig.Start, t.OperationConfig.End,
 			err, t.State, t.gen, t.MetaData.Seed)
 		_ = t.TearUp()
+		return
 	}
 	err = database.Warmup(t.ConnStr, t.Username, t.Password, t.Extra)
 	if err != nil {
@@ -147,6 +148,7 @@ func (t *GenericLoadingTask) Do() {
 		t.Result.FailWholeBulkOperation(t.OperationConfig.Start, t.OperationConfig.End,
 			err, t.State, t.gen, t.MetaData.Seed)
 		_ = t.TearUp()
+		return
 	}
 
 	loadDocumentsInBatches(t)

@@ -237,6 +237,48 @@ func (app *Config) deleteTask(w http.ResponseWriter, r *http.Request) {
 	_ = app.writeJSON(w, http.StatusOK, resPayload)
 }
 
+// bulkDeleteTask is used to delete documents.
+func (app *Config) bulkDeleteTask(w http.ResponseWriter, r *http.Request) {
+	task := &bulk_loading.GenericLoadingTask{}
+	if err := app.readJSON(w, r, task); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	if err := checkIdentifierToken(task.IdentifierToken); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	task.Operation = tasks.BulkDeleteOperation
+	log.Print(task, tasks.BulkDeleteOperation)
+	err := app.serverRequests.AddTask(task.IdentifierToken, tasks.BulkDeleteOperation, task)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.IdentifierToken)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	resultSeed, err := task.Config(req, false)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	if err := app.taskManager.AddTask(task); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+	}
+	respPayload := util_sirius.TaskResponse{
+		Seed: fmt.Sprintf("%d", resultSeed),
+	}
+	resPayload := jsonResponse{
+		Error:   false,
+		Message: "Successfully started requested doc loading",
+		Data:    respPayload,
+	}
+	_ = app.writeJSON(w, http.StatusOK, resPayload)
+}
+
 // upsertTask is used to update documents.
 func (app *Config) upsertTask(w http.ResponseWriter, r *http.Request) {
 	task := &bulk_loading.GenericLoadingTask{}
@@ -250,6 +292,48 @@ func (app *Config) upsertTask(w http.ResponseWriter, r *http.Request) {
 	}
 	task.Operation = tasks.UpsertOperation
 	log.Print(task, tasks.UpsertOperation)
+	err := app.serverRequests.AddTask(task.IdentifierToken, tasks.UpsertOperation, task)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.IdentifierToken)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	resultSeed, err := task.Config(req, false)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	if err := app.taskManager.AddTask(task); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+	}
+	respPayload := util_sirius.TaskResponse{
+		Seed: fmt.Sprintf("%d", resultSeed),
+	}
+	resPayload := jsonResponse{
+		Error:   false,
+		Message: "Successfully started requested doc loading",
+		Data:    respPayload,
+	}
+	_ = app.writeJSON(w, http.StatusOK, resPayload)
+}
+
+// bulkUpsertTask is used to update documents.
+func (app *Config) bulkUpsertTask(w http.ResponseWriter, r *http.Request) {
+	task := &bulk_loading.GenericLoadingTask{}
+	if err := app.readJSON(w, r, task); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	if err := checkIdentifierToken(task.IdentifierToken); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	task.Operation = tasks.BulkUpsertOperation
+	log.Print(task, tasks.BulkUpsertOperation)
 	err := app.serverRequests.AddTask(task.IdentifierToken, tasks.UpsertOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
@@ -321,6 +405,48 @@ func (app *Config) touchTask(w http.ResponseWriter, r *http.Request) {
 	_ = app.writeJSON(w, http.StatusOK, resPayload)
 }
 
+// bulkTouchTask is used to update the expiry of documents
+func (app *Config) bulkTouchTask(w http.ResponseWriter, r *http.Request) {
+	task := &bulk_loading.GenericLoadingTask{}
+	if err := app.readJSON(w, r, task); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	if err := checkIdentifierToken(task.IdentifierToken); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	task.Operation = tasks.BulkTouchOperation
+	log.Print(task, tasks.BulkTouchOperation)
+	err := app.serverRequests.AddTask(task.IdentifierToken, tasks.BulkTouchOperation, task)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.IdentifierToken)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	resultSeed, err := task.Config(req, false)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	if err := app.taskManager.AddTask(task); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+	}
+	respPayload := util_sirius.TaskResponse{
+		Seed: fmt.Sprintf("%d", resultSeed),
+	}
+	resPayload := jsonResponse{
+		Error:   false,
+		Message: "Successfully started requested doc loading",
+		Data:    respPayload,
+	}
+	_ = app.writeJSON(w, http.StatusOK, resPayload)
+}
+
 // readTask is to read documents.
 func (app *Config) readTask(w http.ResponseWriter, r *http.Request) {
 	task := &bulk_loading.GenericLoadingTask{}
@@ -335,6 +461,48 @@ func (app *Config) readTask(w http.ResponseWriter, r *http.Request) {
 	task.Operation = tasks.ReadOperation
 	log.Print(task, tasks.ReadOperation)
 	err := app.serverRequests.AddTask(task.IdentifierToken, tasks.ReadOperation, task)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	req, err := app.serverRequests.GetRequestOfIdentifier(task.IdentifierToken)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	resultSeed, err := task.Config(req, false)
+	if err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	if err := app.taskManager.AddTask(task); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+	}
+	respPayload := util_sirius.TaskResponse{
+		Seed: fmt.Sprintf("%d", resultSeed),
+	}
+	resPayload := jsonResponse{
+		Error:   false,
+		Message: "Successfully started requested doc loading",
+		Data:    respPayload,
+	}
+	_ = app.writeJSON(w, http.StatusOK, resPayload)
+}
+
+// bulkReadTask is to read documents.
+func (app *Config) bulkReadTask(w http.ResponseWriter, r *http.Request) {
+	task := &bulk_loading.GenericLoadingTask{}
+	if err := app.readJSON(w, r, task); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	if err := checkIdentifierToken(task.IdentifierToken); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+	task.Operation = tasks.BulkReadOperation
+	log.Print(task, tasks.BulkReadOperation)
+	err := app.serverRequests.AddTask(task.IdentifierToken, tasks.BulkReadOperation, task)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
