@@ -907,13 +907,11 @@ func (c *Couchbase) CreateBulk(connStr, username, password string, keyValues []K
 	}
 
 	var bulkOp []gocb.BulkOp
-	mutationResults := make(map[string]bulkMutationResult)
 
-	for _, x := range keyValue {
-		mutationResults[x.Key] = bulkMutationResult{
-			result: &gocb.MutationResult{},
-			err:    nil,
-		}
+	keyToOffset := make(map[string]int64)
+
+	for _, x := range keyValues {
+		keyToOffset[x.Key] = x.Offset
 
 		bulkOp = append(bulkOp, &gocb.InsertOp{
 			ID:     x.Key,
@@ -935,22 +933,14 @@ func (c *Couchbase) CreateBulk(connStr, username, password string, keyValues []K
 	for _, x := range bulkOp {
 		insertOp, ok := x.(*gocb.InsertOp)
 		if !ok {
-			log.Println("decoding eror in CreateBulk gocb.Insert")
-			continue
-		} else if insertOp == nil {
-			log.Println("insertOp is nil")
+			result.AddResult(insertOp.ID, insertOp.Value, errors.New("decoding error InsertOp"), false,
+				0, -1)
 		} else if insertOp.Err != nil {
-			if insertOp.Result == nil {
-				log.Println("insertOp.Result is nil and err is nil")
-			} else {
-				result.AddResult(insertOp.ID, insertOp.Value, insertOp.Err, false, uint64(insertOp.Result.Cas()))
-			}
+			result.AddResult(insertOp.ID, insertOp.Value, insertOp.Err, false, 0, keyToOffset[insertOp.ID])
+
 		} else {
-			if insertOp.Result == nil {
-				log.Println("insertOp.Result is nil and err is not nil")
-			} else {
-				result.AddResult(insertOp.ID, insertOp.Value, nil, true, uint64(insertOp.Result.Cas()))
-			}
+			result.AddResult(insertOp.ID, insertOp.Value, nil, true, uint64(insertOp.Result.Cas()),
+				keyToOffset[insertOp.ID])
 		}
 		//if mutationResults[x.Key].err != nil {
 		//	result.AddResult(x.Key, x.Doc, mutationResults[x.Key].err, false,
@@ -962,3 +952,277 @@ func (c *Couchbase) CreateBulk(connStr, username, password string, keyValues []K
 	}
 	return result
 }
+
+func (c *Couchbase) UpdateBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult {
+
+	result := newCouchbaseBulkOperation()
+
+	if err := validateStrings(connStr, username, password); err != nil {
+		result.failBulk(keyValues, err)
+		return result
+	}
+
+	bucketName := extra.Bucket
+	scope := extra.Scope
+	collection := extra.Collection
+
+	if err := validateStrings(bucketName); err != nil {
+		result.failBulk(keyValues, errors.New("bucket is missing"))
+		return result
+	}
+
+	if scope == "" {
+		scope = cb_sdk.DefaultScope
+	}
+
+	if collection == "" {
+		collection = cb_sdk.DefaultCollection
+	}
+
+	collectionObj, err1 := c.connectionManager.GetCollection(connStr, username, password, nil, bucketName,
+		scope, collection)
+	if err1 != nil {
+		result.failBulk(keyValues, errors.New("bucket is missing"))
+		return result
+	}
+
+	var bulkOp []gocb.BulkOp
+	keyToOffset := make(map[string]int64)
+
+	for _, x := range keyValues {
+		keyToOffset[x.Key] = x.Offset
+		bulkOp = append(bulkOp, &gocb.UpsertOp{
+			ID:     x.Key,
+			Value:  x.Doc,
+			Expiry: time.Duration(extra.Expiry) * time.Minute,
+		})
+	}
+
+	err2 := collectionObj.Collection.Do(bulkOp,
+		&gocb.BulkOpOptions{
+			Timeout: time.Duration(extra.OperationTimeout) * time.Second,
+		})
+
+	if err2 != nil {
+		result.failBulk(keyValues, err2)
+		return result
+	}
+
+	for _, x := range bulkOp {
+		upsertOp, ok := x.(*gocb.UpsertOp)
+		if !ok {
+			result.AddResult(upsertOp.ID, nil, errors.New("decoding error UpsertOp"), false,
+				0, -1)
+		} else if upsertOp.Err != nil {
+			result.AddResult(upsertOp.ID, upsertOp.Value, upsertOp.Err, false, 0, keyToOffset[upsertOp.ID])
+
+		} else {
+			result.AddResult(upsertOp.ID, upsertOp.Value, nil, true, uint64(upsertOp.Result.Cas()), keyToOffset[upsertOp.ID])
+		}
+	}
+	return result
+}
+
+func (c *Couchbase) ReadBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult {
+
+	result := newCouchbaseBulkOperation()
+
+	if err := validateStrings(connStr, username, password); err != nil {
+		result.failBulk(keyValues, err)
+		return result
+	}
+
+	bucketName := extra.Bucket
+	scope := extra.Scope
+	collection := extra.Collection
+
+	if err := validateStrings(bucketName); err != nil {
+		result.failBulk(keyValues, errors.New("bucket is missing"))
+		return result
+	}
+
+	if scope == "" {
+		scope = cb_sdk.DefaultScope
+	}
+
+	if collection == "" {
+		collection = cb_sdk.DefaultCollection
+	}
+
+	collectionObj, err1 := c.connectionManager.GetCollection(connStr, username, password, nil, bucketName,
+		scope, collection)
+	if err1 != nil {
+		result.failBulk(keyValues, errors.New("bucket is missing"))
+		return result
+	}
+
+	var bulkOp []gocb.BulkOp
+	keyToOffset := make(map[string]int64)
+	for _, x := range keyValues {
+		keyToOffset[x.Key] = x.Offset
+		bulkOp = append(bulkOp, &gocb.GetOp{
+			ID: x.Key,
+		})
+	}
+
+	err2 := collectionObj.Collection.Do(bulkOp,
+		&gocb.BulkOpOptions{
+			Timeout: time.Duration(extra.OperationTimeout) * time.Second,
+		})
+
+	if err2 != nil {
+		result.failBulk(keyValues, err2)
+		return result
+	}
+
+	for _, x := range bulkOp {
+		getOp, ok := x.(*gocb.GetOp)
+		if !ok {
+			result.AddResult(getOp.ID, nil, errors.New("decoding error GetOp"), false, 0, -1)
+		} else if getOp.Err != nil {
+			result.AddResult(getOp.ID, nil, getOp.Err, false, 0, keyToOffset[getOp.ID])
+		} else {
+			var resultFromHost interface{}
+			if err := getOp.Result.Content(&resultFromHost); err != nil {
+				result.AddResult(getOp.ID, nil, err, false, uint64(getOp.Result.Cas()), keyToOffset[getOp.ID])
+			} else {
+				result.AddResult(getOp.ID, resultFromHost, err, true, uint64(getOp.Result.Cas()), keyToOffset[getOp.ID])
+			}
+		}
+	}
+	return result
+}
+
+func (c *Couchbase) DeleteBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult {
+	result := newCouchbaseBulkOperation()
+
+	if err := validateStrings(connStr, username, password); err != nil {
+		result.failBulk(keyValues, err)
+		return result
+	}
+
+	bucketName := extra.Bucket
+	scope := extra.Scope
+	collection := extra.Collection
+
+	if err := validateStrings(bucketName); err != nil {
+		result.failBulk(keyValues, errors.New("bucket is missing"))
+		return result
+	}
+
+	if scope == "" {
+		scope = cb_sdk.DefaultScope
+	}
+
+	if collection == "" {
+		collection = cb_sdk.DefaultCollection
+	}
+
+	collectionObj, err1 := c.connectionManager.GetCollection(connStr, username, password, nil, bucketName,
+		scope, collection)
+	if err1 != nil {
+		result.failBulk(keyValues, errors.New("bucket is missing"))
+		return result
+	}
+
+	var bulkOp []gocb.BulkOp
+	keyToOffset := make(map[string]int64)
+
+	for _, x := range keyValues {
+		keyToOffset[x.Key] = x.Offset
+		bulkOp = append(bulkOp, &gocb.RemoveOp{
+			ID: x.Key,
+		})
+	}
+
+	err2 := collectionObj.Collection.Do(bulkOp,
+		&gocb.BulkOpOptions{
+			Timeout: time.Duration(extra.OperationTimeout) * time.Second,
+		})
+
+	if err2 != nil {
+		result.failBulk(keyValues, err2)
+		return result
+	}
+
+	for _, x := range bulkOp {
+		removeOp, ok := x.(*gocb.RemoveOp)
+		if !ok {
+			result.AddResult(removeOp.ID, nil, errors.New("decoding error RemoveOp"), false, 0, -1)
+		} else if removeOp.Err != nil {
+			result.AddResult(removeOp.ID, nil, removeOp.Err, false, 0, keyToOffset[removeOp.ID])
+		} else {
+			result.AddResult(removeOp.ID, nil, nil, true, uint64(removeOp.Result.Cas()), keyToOffset[removeOp.ID])
+		}
+	}
+	return result
+}
+
+func (c *Couchbase) TouchBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult {
+	result := newCouchbaseBulkOperation()
+
+	if err := validateStrings(connStr, username, password); err != nil {
+		result.failBulk(keyValues, err)
+		return result
+	}
+
+	bucketName := extra.Bucket
+	scope := extra.Scope
+	collection := extra.Collection
+
+	if err := validateStrings(bucketName); err != nil {
+		result.failBulk(keyValues, errors.New("bucket is missing"))
+		return result
+	}
+
+	if scope == "" {
+		scope = cb_sdk.DefaultScope
+	}
+
+	if collection == "" {
+		collection = cb_sdk.DefaultCollection
+	}
+
+	collectionObj, err1 := c.connectionManager.GetCollection(connStr, username, password, nil, bucketName,
+		scope, collection)
+	if err1 != nil {
+		result.failBulk(keyValues, errors.New("bucket is missing"))
+		return result
+	}
+
+	var bulkOp []gocb.BulkOp
+	keyToOffset := make(map[string]int64)
+
+	for _, x := range keyValues {
+		keyToOffset[x.Key] = x.Offset
+		bulkOp = append(bulkOp, &gocb.TouchOp{
+			ID:     x.Key,
+			Expiry: time.Duration(extra.Expiry) * time.Minute,
+		})
+	}
+
+	err2 := collectionObj.Collection.Do(bulkOp,
+		&gocb.BulkOpOptions{
+			Timeout: time.Duration(extra.OperationTimeout) * time.Second,
+		})
+
+	if err2 != nil {
+		result.failBulk(keyValues, err2)
+		return result
+	}
+
+	for _, x := range bulkOp {
+		touchOp, ok := x.(*gocb.TouchOp)
+		if !ok {
+			result.AddResult(touchOp.ID, nil, errors.New("decoding error UpsertOp"), false,
+				0, -1)
+		} else if touchOp.Err != nil {
+			result.AddResult(touchOp.ID, nil, touchOp.Err, false, 0, keyToOffset[touchOp.ID])
+
+		} else {
+			result.AddResult(touchOp.ID, nil, nil, true, uint64(touchOp.Result.Cas()), keyToOffset[touchOp.ID])
+		}
+	}
+	return result
+}
+
