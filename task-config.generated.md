@@ -319,6 +319,7 @@ Description : Warming up a connection to database.
 | `PreserveExpiry` | `bool` | `json:preserveExpiry,omitempty`  |
 | `CreatePath` | `bool` | `json:createPath,omitempty`  |
 | `SDKBatchSize` | `int` | `json:SDKBatchSize,omitempty`  |
+| `Database` | `string` | `json:database,omitempty`  |
 
 ---
 Possible values for durability :-

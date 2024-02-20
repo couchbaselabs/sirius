@@ -84,7 +84,7 @@ func newMongoBulkOperation() *mongoBulkOperationResult {
 	}
 }
 
-func (m *mongoBulkOperationResult) AddResult(key string, value interface{}, err error, status bool, cas uint64) {
+func (m *mongoBulkOperationResult) AddResult(key string, value interface{}, err error, status bool) {
 	m.keyValues[key] = perMongoDocResult{
 		value:  value,
 		error:  err,
@@ -163,7 +163,7 @@ func (m Mongo) Create(connStr, username, password string, keyValue KeyValue, ext
 	mongoClient := m.connectionManager.Clusters[connStr].MongoClusterClient
 	//fmt.Println("MongoDB Create(): Client:", mongoClient)
 
-	if err := validateStrings(extra.Bucket); err != nil {
+	if err := validateStrings(extra.Database); err != nil {
 		return newMongoOperationResult(keyValue.Key, keyValue.Doc, errors.New("database is missing"), false,
 			keyValue.Offset)
 	}
@@ -171,7 +171,7 @@ func (m Mongo) Create(connStr, username, password string, keyValue KeyValue, ext
 		return newMongoOperationResult(keyValue.Key, keyValue.Doc, errors.New("collection is missing"), false,
 			keyValue.Offset)
 	}
-	mongoDatabase := mongoClient.Database(extra.Bucket)
+	mongoDatabase := mongoClient.Database(extra.Database)
 	mongoCollection := mongoDatabase.Collection(extra.Collection)
 
 	result, err2 := mongoCollection.InsertOne(context.TODO(), keyValue.Doc, nil)
@@ -248,7 +248,7 @@ func (m Mongo) CreateBulk(connStr, username, password string, keyValues []KeyVal
 	mongoClient := m.connectionManager.Clusters[connStr].MongoClusterClient
 	//fmt.Println("In CreateBulk(), Mongo Client:", mongoClient)
 
-	if err := validateStrings(extra.Bucket); err != nil {
+	if err := validateStrings(extra.Database); err != nil {
 		result.failBulk(keyValues, errors.New("database name is missing"))
 		return result
 	}
@@ -256,7 +256,7 @@ func (m Mongo) CreateBulk(connStr, username, password string, keyValues []KeyVal
 		result.failBulk(keyValues, errors.New("collection name is missing"))
 		return result
 	}
-	mongoDatabase := mongoClient.Database(extra.Bucket)
+	mongoDatabase := mongoClient.Database(extra.Database)
 	mongoCollection := mongoDatabase.Collection(extra.Collection)
 
 	var models []mongo.WriteModel
@@ -265,20 +265,29 @@ func (m Mongo) CreateBulk(connStr, username, password string, keyValues []KeyVal
 		models = append(models, model)
 	}
 	opts := options.BulkWrite().SetOrdered(false)
-	_, err := mongoCollection.BulkWrite(context.TODO(), models, opts)
+	mongoBulkWriteResult, err := mongoCollection.BulkWrite(context.TODO(), models, opts)
 	if err != nil {
 		log.Println("MongoDB CreateBulk(): Bulk Insert Error:", err)
+		result.failBulk(keyValues, errors.New("MongoDB CreateBulk(): Bulk Insert Error"))
+		return result
+	} else if int64(len(keyValues)) != mongoBulkWriteResult.InsertedCount {
+		result.failBulk(keyValues, errors.New("MongoDB CreateBulk(): Inserted Count does not match batch size"))
+		return result
 	}
+
+	// TODO
+	// Update the AddResult() function for MongoDB.
+
 	return result
 }
 
+// Warmup validates all the fields and checks if MongoDB Database or Collection is there
 func (m Mongo) Warmup(connStr, username, password string, extra Extras) error {
-	//TODO implement me
 	if err := validateStrings(connStr, username, password); err != nil {
 		return err
 	}
 
-	databaseName := extra.Bucket
+	databaseName := extra.Database
 	if err := validateStrings(databaseName); err != nil {
 		return errors.New("MongoDB Database name is missing")
 	}
@@ -288,23 +297,26 @@ func (m Mongo) Warmup(connStr, username, password string, extra Extras) error {
 		return errors.New("MongoDB Collection name is missing")
 	}
 
+	// TODO
 	// Checking if the Collection exists or not
-	mongoDatabase := m.connectionManager.Clusters[connStr].MongoClusterClient.Database(databaseName)
-	collectionNames, err := mongoDatabase.ListCollections(context.TODO(), nil)
-	if err != nil {
-		return errors.New("unable to list Collections for the given MongoDB Database")
-	}
-
-	for collectionNames.Next(context.TODO()) {
-		var name string
-		if err := collectionNames.Decode(&name); err != nil {
-			log.Println("MongoDB Warmup(): unable to decode Collection Name", err)
-			return err
-		}
-		if name == collectionName {
-			log.Println("MongoDB Warmup():", collectionName, "Collection exists")
-		}
-	}
+	//mongoDatabase := m.connectionManager.Clusters[connStr].MongoClusterClient.Database(databaseName)
+	//log.Println("MongoDB Warmup() : mongo database object var:", mongoDatabase)
+	//collectionNames, err := mongoDatabase.ListCollections(context.TODO(), nil)
+	//if err != nil {
+	//	//return errors.New("unable to list Collections for the given MongoDB Database")
+	//	return err
+	//}
+	//
+	//for collectionNames.Next(context.TODO()) {
+	//	var name string
+	//	if err := collectionNames.Decode(&name); err != nil {
+	//		log.Println("MongoDB Warmup(): unable to decode Collection Name", err)
+	//		return err
+	//	}
+	//	if name == collectionName {
+	//		log.Println("MongoDB Warmup():", collectionName, "Collection exists")
+	//	}
+	//}
 	return nil
 }
 
