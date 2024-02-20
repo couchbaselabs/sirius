@@ -84,7 +84,7 @@ type Attribute struct {
 }
 
 type Person struct {
-	ID            string    `json:" _id"`
+	ID            string    `json:"_id" bson:"_id"`
 	FirstName     string    `json:"firstName,omitempty"`
 	Age           float64   `json:"age,omitempty"`
 	Email         string    `json:"email,omitempty"`
