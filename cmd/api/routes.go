@@ -33,7 +33,7 @@ func (app *Config) routes() http.Handler {
 	mux.Post("/result", app.taskResult)
 	mux.Post("/clear_data", app.clearRequestFromServer)
 	//mux.Post("/validate", app.validateTask)
-	//mux.Post("/retry-exceptions", app.RetryExceptionTask)
+	mux.Post("/retry-exceptions", app.RetryExceptionTask)
 	mux.Post("/create", app.insertTask)
 	mux.Post("/bulk-create", app.bulkInsertTask)
 	mux.Post("/delete", app.deleteTask)

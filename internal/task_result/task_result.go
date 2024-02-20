@@ -26,12 +26,11 @@ type SDKTiming struct {
 }
 
 type FailedDocument struct {
-	SDKTiming   SDKTiming      `json:"sdkTimings" doc:"true"`
-	DocId       string         `json:"key" doc:"true"`
-	Status      bool           `json:"status"  doc:"true"`
-	Extra       map[string]any `json:"extra" doc:"true""`
-	ErrorString string         `json:"errorString"  doc:"true"`
-	Offset      int64          `json:"Offset" doc:"false"`
+	SDKTiming SDKTiming      `json:"sdkTimings" doc:"true"`
+	DocId     string         `json:"key" doc:"true"`
+	Status    bool           `json:"status"  doc:"true"`
+	Extra     map[string]any `json:"extra" doc:"true""`
+	Offset    int64          `json:"Offset" doc:"false"`
 }
 
 type SingleOperationResult struct {
@@ -274,16 +273,18 @@ func (t *TaskResult) StoreResultList(resultList []ResultHelper) {
 	for _, x := range resultList {
 		t.Failure++
 		v, errorString := db.CheckSDKException(x.err)
+		if v == "unknown exception" {
+			v += errorString
+		}
 		t.BulkError[v] = append(t.BulkError[v], FailedDocument{
 			SDKTiming: SDKTiming{
 				SendTime: x.initTime,
 				AckTime:  time.Now().UTC().Format(time.RFC850),
 			},
-			DocId:       x.docId,
-			Status:      x.status,
-			Extra:       x.extra,
-			ErrorString: errorString,
-			Offset:      x.offset,
+			DocId:  x.docId,
+			Status: x.status,
+			Extra:  x.extra,
+			Offset: x.offset,
 		})
 	}
 }

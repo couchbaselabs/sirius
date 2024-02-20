@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"sync"
 	"time"
 )
@@ -24,13 +25,13 @@ type StateHelper struct {
 }
 
 type KeyStates struct {
-	Completed []int64 `json:"completed"`
-	Err       []int64 `json:"err_sirius"`
+	Completed []int64 `json:"completed_state"`
+	Err       []int64 `json:"failed_state"`
 }
 
 type TaskState struct {
 	ResultSeed   int64              `json:"resultSeed"`
-	KeyStates    KeyStates          `json:"keyStates"`
+	KeyStates    KeyStates          `json:"keyStates" `
 	StateChannel chan StateHelper   `json:"-"`
 	ctx          context.Context    `json:"-"`
 	cancel       context.CancelFunc `json:"-"`
@@ -87,23 +88,31 @@ func (t *TaskState) AddOffsetToCompleteSet(offset int64) {
 	t.KeyStates.Completed = append(t.KeyStates.Completed, offset)
 }
 
-// AddRangeToCompleteSet will add a range of offset to Complete set
-func (t *TaskState) AddRangeToCompleteSet(start, end int64) {
-	for i := start; i <= end; i++ {
-		t.KeyStates.Completed = append(t.KeyStates.Completed, i)
-	}
-}
-
 // AddOffsetToErrSet will add offset to Error set
 func (t *TaskState) AddOffsetToErrSet(offset int64) {
 	t.KeyStates.Err = append(t.KeyStates.Err, offset)
 }
 
-// AddRangeToErrSet will add a range of offset to Error set
-func (t *TaskState) AddRangeToErrSet(start, end int64) {
-	for i := start; i <= end; i++ {
-		t.KeyStates.Err = append(t.KeyStates.Err, i)
+func (t *TaskState) RemoveOffsetFromErrSet(offset int64) {
+
+	index := sort.Search(len(t.KeyStates.Err), func(i int) bool {
+		return t.KeyStates.Err[i] >= offset
+	})
+
+	if index < len(t.KeyStates.Err) && t.KeyStates.Err[index] == offset {
+		t.KeyStates.Err = append(t.KeyStates.Err[:index], t.KeyStates.Err[index+1:]...)
 	}
+}
+
+func (t *TaskState) CheckOffsetInErr(offset int64) bool {
+	index := sort.Search(len(t.KeyStates.Err), func(i int) bool {
+		return t.KeyStates.Err[i] >= offset
+	})
+
+	if index < len(t.KeyStates.Err) && t.KeyStates.Err[index] == offset {
+		return true
+	}
+	return false
 }
 
 // ReturnCompletedOffset returns a lookup table for searching completed offsets
@@ -115,6 +124,28 @@ func (t *TaskState) ReturnCompletedOffset() map[int64]struct{} {
 		completed[v] = struct{}{}
 	}
 	return completed
+}
+
+func (t *TaskState) RemoveOffsetFromCompleteSet(offset int64) {
+
+	index := sort.Search(len(t.KeyStates.Completed), func(i int) bool {
+		return t.KeyStates.Completed[i] >= offset
+	})
+
+	if index < len(t.KeyStates.Completed) && t.KeyStates.Completed[index] == offset {
+		t.KeyStates.Completed = append(t.KeyStates.Completed[:index], t.KeyStates.Completed[index+1:]...)
+	}
+}
+
+func (t *TaskState) CheckOffsetInComplete(offset int64) bool {
+	index := sort.Search(len(t.KeyStates.Completed), func(i int) bool {
+		return t.KeyStates.Completed[i] >= offset
+	})
+
+	if index < len(t.KeyStates.Completed) && t.KeyStates.Completed[index] == offset {
+		return true
+	}
+	return false
 }
 
 // ReturnErrOffset returns a lookup table for searching  error offsets
@@ -135,7 +166,7 @@ func (t *TaskState) StoreState() {
 	go func() {
 		var completed []int64
 		var err []int64
-		d := time.NewTicker(10 * time.Second)
+		d := time.NewTicker(30 * time.Second)
 		defer d.Stop()
 		if t.ctx.Err() != nil {
 			log.Print("Ctx closed for StoreState()")
@@ -215,6 +246,15 @@ func (t *TaskState) ClearErrorKeyStates() {
 }
 
 func (t *TaskState) SaveTaskSateOnDisk() error {
+	defer t.lock.Unlock()
+	t.lock.Lock()
+	sort.Slice(t.KeyStates.Completed, func(i, j int) bool {
+		return t.KeyStates.Completed[i] < t.KeyStates.Completed[j]
+	})
+
+	sort.Slice(t.KeyStates.Err, func(i, j int) bool {
+		return t.KeyStates.Err[i] < t.KeyStates.Err[j]
+	})
 	cwd, err := os.Getwd()
 	if err != nil {
 		return err
@@ -229,24 +269,6 @@ func (t *TaskState) SaveTaskSateOnDisk() error {
 		return err
 	}
 	return nil
-}
-
-func (t *TaskState) MakeCompleteKeyFromMap(maps map[int64]struct{}) {
-	defer t.lock.Unlock()
-	t.lock.Lock()
-	t.ClearCompletedKeyStates()
-	for offset, _ := range maps {
-		t.KeyStates.Completed = append(t.KeyStates.Completed, offset)
-	}
-}
-
-func (t *TaskState) MakeErrorKeyFromMap(maps map[int64]struct{}) {
-	defer t.lock.Unlock()
-	t.lock.Lock()
-	t.ClearErrorKeyStates()
-	for offset, _ := range maps {
-		t.KeyStates.Err = append(t.KeyStates.Err, offset)
-	}
 }
 
 // ReadStateFromFile reads the task state stored on a file.
@@ -265,4 +287,22 @@ func ReadStateFromFile(seed string) (*TaskState, error) {
 		return nil, err
 	}
 	return state, nil
+}
+
+func (t *TaskState) MakeCompleteKeyFromMap(maps map[int64]struct{}) {
+	defer t.lock.Unlock()
+	t.lock.Lock()
+	t.ClearCompletedKeyStates()
+	for offset, _ := range maps {
+		t.KeyStates.Completed = append(t.KeyStates.Completed, offset)
+	}
+}
+
+func (t *TaskState) MakeErrorKeyFromMap(maps map[int64]struct{}) {
+	defer t.lock.Unlock()
+	t.lock.Lock()
+	t.ClearErrorKeyStates()
+	for offset, _ := range maps {
+		t.KeyStates.Err = append(t.KeyStates.Err, offset)
+	}
 }

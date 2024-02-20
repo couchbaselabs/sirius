@@ -18,25 +18,23 @@ type TaskWithIdentifier struct {
 }
 
 type Request struct {
-	Identifier    string                       `json:"identifier" doc:"false" `
-	Tasks         []TaskWithIdentifier         `json:"tasks" doc:"false"`
-	MetaData      *meta_data.MetaData          `json:"metaData" doc:"false"`
-	DocumentsMeta *meta_data.DocumentsMetaData `json:"documentMeta" doc:"false"`
-	lock          sync.Mutex                   `json:"-" doc:"false"`
-	ctx           context.Context              `json:"-"`
-	cancel        context.CancelFunc           `json:"-"`
+	Identifier string               `json:"identifier" doc:"false" `
+	Tasks      []TaskWithIdentifier `json:"tasks" doc:"false"`
+	MetaData   *meta_data.MetaData  `json:"metaData" doc:"false"`
+	lock       sync.Mutex           `json:"-" doc:"false"`
+	ctx        context.Context      `json:"-"`
+	cancel     context.CancelFunc   `json:"-"`
 }
 
 // NewRequest return  an instance of Request
 func NewRequest(identifier string) *Request {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Request{
-		Identifier:    identifier,
-		MetaData:      meta_data.NewMetaData(),
-		DocumentsMeta: meta_data.NewDocumentsMetaData(),
-		lock:          sync.Mutex{},
-		ctx:           ctx,
-		cancel:        cancel,
+		Identifier: identifier,
+		MetaData:   meta_data.NewMetaData(),
+		lock:       sync.Mutex{},
+		ctx:        ctx,
+		cancel:     cancel,
 	}
 }
 
@@ -58,15 +56,6 @@ func (r *Request) InitializeContext() {
 	ctx, cancel := context.WithCancel(context.Background())
 	r.ctx = ctx
 	r.cancel = cancel
-}
-
-// ReconfigureDocumentManager setups again cb_sdk.ConnectionManager
-func (r *Request) ReconfigureDocumentManager() {
-	defer r.lock.Unlock()
-	r.lock.Lock()
-	if r.DocumentsMeta == nil {
-		r.DocumentsMeta = meta_data.NewDocumentsMetaData()
-	}
 }
 
 // ClearAllTask will remove all task

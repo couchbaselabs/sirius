@@ -1,29 +1,27 @@
 package template
 
 import (
-	"github.com/jaswdr/faker"
+	"fmt"
+	"github.com/bgadrian/fastfaker/faker"
 	"log"
-	"math/rand"
 	"testing"
 )
 
 func TestGenerateHotel(t *testing.T) {
 	// Test to compare two same document generated from same seed
-	fake1 := faker.NewWithSeed(rand.NewSource(1678693916037126000))
-	fake11 := faker.NewWithSeed(rand.NewSource(1678693916037126000))
-	fake2 := faker.NewWithSeed(rand.NewSource(1678693916037126000))
-	template := InitialiseTemplate("hotel")
-	document1, err := template.GenerateDocument(&fake1, 0)
-	if err != nil {
-		t.Fail()
-	}
-	document2, err := template.GenerateDocument(&fake2, 0)
-	if err != nil {
-		t.Fail()
-	}
+	//fake1 := faker.NewWithSeed(rand.NewSource(1678693916037126000))
+	//fake2 := faker.NewWithSeed(rand.NewSource(1678693916037126000))
+	fake1 := faker.NewFastFaker()
+	fake1.Seed(1678693916037126000)
+	fake2 := faker.NewFastFaker()
+	fake2.Seed(1678693916037126000)
+	hotelTemplate := InitialiseTemplate("hotel")
+	document1 := hotelTemplate.GenerateDocument(fake1, "1678693916037126000", 0)
+	document2 := hotelTemplate.GenerateDocument(fake2, "1678693916037126000", 0)
+
 	log.Println(document1)
 	log.Println(document2)
-	ok, err := template.Compare(document1, document2)
+	ok, err := hotelTemplate.Compare(document1, document2)
 
 	if err != nil {
 		log.Println(err)
@@ -35,43 +33,35 @@ func TestGenerateHotel(t *testing.T) {
 		t.Fail()
 	}
 
-	template.UpdateDocument([]string{}, document1, 0, &fake1)
-
-	//// test to update the document1 and comparing it with original document
-	//document3, err_sirius := template.UpdateDocument([]string{}, document1, &fake1)
-	//log.Println(document3)
-	//if err_sirius != nil {
-	//	log.Println(err_sirius)
-	//	t.Fail()
-	//}
-	//
-	//document1Updated, ok := document3.(*Hotel)
-	//if !ok {
-	//	log.Println("test failed while updating the document3")
-	//	t.Fail()
-	//}
-	//log.Println(document1Updated, document1)
-	//
-	//ok, err_sirius = template.Compare(document1Updated, document1)
-	//
-	//if err_sirius != nil {
-	//	fmt.Println(err_sirius)
-	//	t.Fail()
-	//}
-	//
-	//if !ok {
-	//	log.Println("test failed while comparing the document1 and document1updated")
-	//	t.Fail()
-	//}
-
-	document1Copy, _ := template.GenerateDocument(&fake11, 0)
-	template.UpdateDocument([]string{}, document1Copy, 0, &fake11)
-	ok, err = template.Compare(document1Copy, document1)
-
+	// test to update the document1 and comparing it with original document
+	document3, err := hotelTemplate.UpdateDocument([]string{}, document1, 0, fake1)
 	if err != nil {
+		log.Println(err)
 		t.Fail()
 	}
+
+	log.Println()
+	log.Println(document3)
+	log.Println()
+
+	document4, err := hotelTemplate.UpdateDocument([]string{}, document2, 0, fake2)
+	if err != nil {
+		log.Println(err)
+		t.Fail()
+	}
+
+	log.Println()
+	log.Println(document4)
+	log.Println()
+
+	ok, err = hotelTemplate.Compare(document4, document3)
 	if !ok {
+		log.Println("test failed while comparing the document4 and document3")
+		t.Fatal("test failed while comparing the document4 and document3")
+	}
+
+	if err != nil {
+		fmt.Println(err)
 		t.Fail()
 	}
 

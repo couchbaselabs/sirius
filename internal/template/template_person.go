@@ -1,9 +1,8 @@
 package template
 
 import (
-	"encoding/json"
 	"fmt"
-	"github.com/jaswdr/faker"
+	"github.com/bgadrian/fastfaker/faker"
 	"reflect"
 	"strings"
 )
@@ -13,7 +12,7 @@ var bodyColor = []string{"Dark", "Fair", "Brown", "Grey"}
 var hobbyChoices = []string{"Video Gaming", "Football", "Basketball", "Cricket",
 	"Hockey", "Running", "Walking", "Guitar", "Flute", "Piano", "Chess", "Puzzle", "Skating", "Travelling"}
 var hairType = []string{"straight", "wavy", "curly", "Coily"}
-var HairColor = []string{"Red", "Green", "Yellow", "Grey", "Brown", "Black"}
+var hairColor = []string{"Red", "Green", "Yellow", "Grey", "Brown", "Black"}
 var hairLength = []string{"Long", "Short", "Medium"}
 var hairThickness = []string{"Thick", "Thin", "Medium"}
 var bodyType = []string{"Ectomorph", "endomorph", "Mesomorph", "triangle", "Inverted triangle",
@@ -83,53 +82,53 @@ type Attribute struct {
 }
 
 type Person struct {
+	ID            string    `json:"_id" bson:"_id"`
 	FirstName     string    `json:"firstName,omitempty"`
 	Age           float64   `json:"age,omitempty"`
 	Email         string    `json:"email,omitempty"`
 	Address       Address   `json:"address,omitempty"`
 	Gender        string    `json:"gender,omitempty"`
 	MaritalStatus string    `json:"maritalStatus,omitempty"`
-	Hobbies       []string  `json:"hobbies,omitempty"`
+	Hobbies       string    `json:"hobbies,omitempty"`
 	Attributes    Attribute `json:"attributes,omitempty"`
 	Mutated       float64   `json:"mutated"`
 	Padding       string    `json:"payload"`
 }
 
-func (p *Person) GenerateDocument(fake *faker.Faker, documentSize int) (interface{}, error) {
+func (p *Person) GenerateDocument(fake *faker.Faker, key string, documentSize int) interface{} {
 	person := &Person{
-		FirstName:     fake.Person().FirstName(),
-		Age:           fake.Float64(2, 0, 100),
-		Email:         fake.Internet().CompanyEmail(),
-		Gender:        gender[fake.IntBetween(1, len(gender)-1)],
-		MaritalStatus: maritalChoices[fake.IntBetween(1, len(maritalChoices)-1)],
-		Hobbies:       hobbyChoices[:fake.IntBetween(1, len(hobbyChoices)-1)],
+		ID:            key,
+		FirstName:     fake.Name(),
+		Age:           fake.Float64Range(1, 100),
+		Email:         fake.Email(),
+		Gender:        fake.Gender(),
+		MaritalStatus: fake.RandString(maritalChoices),
+		Hobbies:       fake.RandString(hobbyChoices),
 		Address: Address{
-			State: state[fake.IntBetween(1, len(state)-1)],
-			City:  city[fake.IntBetween(1, len(city)-1)],
+			State: fake.State(),
+			City:  fake.City(),
 		},
 		Attributes: Attribute{
-			Weight: fake.Float64(2, 0, 100),
-			Height: fake.Float64(2, 0, 100),
-			Colour: bodyColor[fake.IntBetween(1, len(bodyColor)-1)],
+			Weight: fake.Float64Range(1, 100),
+			Height: fake.Float64Range(1, 250),
+			Colour: fake.Color(),
 			Hair: Hair{
-				Type:      hairType[fake.IntBetween(1, len(hairType)-1)],
-				Colour:    HairColor[fake.IntBetween(1, len(hairType)-1)],
-				Length:    hairLength[fake.IntBetween(1, len(hairLength)-1)],
-				Thickness: hairThickness[fake.IntBetween(1, len(hairThickness)-1)],
+				Type:      fake.RandString(hairType),
+				Colour:    fake.RandString(hairColor),
+				Length:    fake.RandString(hairLength),
+				Thickness: fake.RandString(hairThickness),
 			},
-			BodyType: bodyType[fake.IntBetween(1, len(bodyType)-1)],
+			BodyType: fake.RandString(bodyType),
 		},
 		Mutated: MutatedPathDefaultValue,
 	}
-	personDocument, err := json.Marshal(*person)
-	if err != nil {
-		return nil, err
-	}
 
-	if (len(personDocument)) < int(documentSize) {
-		person.Padding = strings.Repeat("a", int(documentSize)-(len(personDocument)))
+	currentDocSize := calculateSizeOfStruct(person)
+
+	if (currentDocSize) < int(documentSize) {
+		person.Padding = strings.Repeat("a", int(documentSize)-(currentDocSize))
 	}
-	return person, nil
+	return person
 }
 
 func (p *Person) UpdateDocument(fieldsToChange []string, lastUpdatedDocument interface{}, documentSize int,
@@ -146,63 +145,61 @@ func (p *Person) UpdateDocument(fieldsToChange []string, lastUpdatedDocument int
 	}
 
 	if _, ok := checkFields["firstName"]; ok || (len(checkFields) == 0) {
-		person.FirstName = fake.Person().FirstName()
+		person.FirstName = fake.Name()
 	}
 	if _, ok := checkFields["age"]; ok || (len(checkFields) == 0) {
-		person.Age = fake.Float64(2, 0, 100)
+		person.Age = fake.Float64Range(1, 100)
 	}
 	if _, ok := checkFields["email"]; ok || (len(checkFields) == 0) {
-		person.Email = fake.Internet().CompanyEmail()
+		person.Email = fake.Email()
 	}
 	if _, ok := checkFields["address.state"]; ok || (len(checkFields) == 0) {
-		person.Address.State = state[fake.IntBetween(1, len(state)-1)]
+		person.Address.State = fake.State()
 	}
 	if _, ok := checkFields["address.city"]; ok || (len(checkFields) == 0) {
-		person.Address.City = city[fake.IntBetween(1, len(city)-1)]
+		person.Address.City = fake.City()
 	}
 	if _, ok := checkFields["gender"]; ok || (len(checkFields) == 0) {
-		person.Gender = gender[fake.IntBetween(1, len(gender)-1)]
+		person.Gender = fake.Gender()
 	}
 	if _, ok := checkFields["maritalStatus"]; ok || (len(checkFields) == 0) {
-		person.MaritalStatus = maritalChoices[fake.IntBetween(1, len(maritalChoices)-1)]
+		person.MaritalStatus = fake.RandString(maritalChoices)
 	}
 	if _, ok := checkFields["hobbies"]; ok || (len(checkFields) == 0) {
-		person.Hobbies = hobbyChoices[:fake.IntBetween(1, len(hobbyChoices)-1)]
+		person.Hobbies = fake.RandString(hobbyChoices)
 	}
 	if _, ok := checkFields["attributes.weight"]; ok || (len(checkFields) == 0) {
-		person.Attributes.Weight = fake.Float64(2, 0, 100)
+		person.Attributes.Weight = fake.Float64Range(1, 100)
 	}
 	if _, ok := checkFields["attributes.height"]; ok || (len(checkFields) == 0) {
-		person.Attributes.Height = fake.Float64(2, 0, 100)
+		person.Attributes.Height = fake.Float64Range(1, 250)
 	}
 	if _, ok := checkFields["attributes.colour"]; ok || (len(checkFields) == 0) {
-		person.Attributes.Colour = bodyColor[fake.IntBetween(1, len(bodyColor)-1)]
+		person.Attributes.Colour = fake.Color()
 	}
 	if _, ok := checkFields["attributes.hair.type"]; ok || (len(checkFields) == 0) {
-		person.Attributes.Hair.Type = hairType[fake.IntBetween(1, len(hairType)-1)]
+		person.Attributes.Hair.Type = fake.RandString(hairType)
 	}
 	if _, ok := checkFields["attributes.hair.colour"]; ok || (len(checkFields) == 0) {
-		person.Attributes.Hair.Colour = HairColor[fake.IntBetween(1, len(hairType)-1)]
+		person.Attributes.Hair.Colour = fake.RandString(hairColor)
 	}
 	if _, ok := checkFields["attributes.hair.length"]; ok || (len(checkFields) == 0) {
-		person.Attributes.Hair.Length = hairLength[fake.IntBetween(1, len(hairLength)-1)]
+		person.Attributes.Hair.Length = fake.RandString(hairLength)
 	}
 	if _, ok := checkFields["attributes.hair.thickness"]; ok || (len(checkFields) == 0) {
-		person.Attributes.Hair.Thickness = hairThickness[fake.IntBetween(1, len(hairThickness)-1)]
+		person.Attributes.Hair.Thickness = fake.RandString(hairThickness)
 	}
 	if _, ok := checkFields["attributes.bodyType"]; ok || (len(checkFields) == 0) {
-		person.Attributes.BodyType = bodyType[fake.IntBetween(1, len(bodyType)-1)]
+		person.Attributes.BodyType = fake.RandString(bodyType)
 	}
 
 	person.Padding = ""
-	personDocument, err := json.Marshal(*person)
-	if err != nil {
-		return nil, err
+	currentDocSize := calculateSizeOfStruct(person)
+
+	if (currentDocSize) < int(documentSize) {
+		person.Padding = strings.Repeat("a", int(documentSize)-(currentDocSize))
 	}
 
-	if (len(personDocument)) < int(documentSize) {
-		person.Padding = strings.Repeat("a", int(documentSize)-(len(personDocument)))
-	}
 	return person, nil
 }
 
@@ -220,6 +217,6 @@ func (p *Person) Compare(document1 interface{}, document2 interface{}) (bool, er
 
 func (p *Person) GenerateSubPathAndValue(fake *faker.Faker, subDocSize int) map[string]any {
 	return map[string]interface{}{
-		"subDocData": fake.RandomStringWithLength(subDocSize),
+		"_1": strings.Repeat(fake.Letter(), subDocSize),
 	}
 }

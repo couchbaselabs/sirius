@@ -1,12 +1,11 @@
 package db
 
 import (
+	"github.com/bgadrian/fastfaker/faker"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
 	"github.com/couchbaselabs/sirius/internal/meta_data"
 	"github.com/couchbaselabs/sirius/internal/template"
-	"github.com/jaswdr/faker"
 	"log"
-	"math/rand"
 	"sync"
 	"testing"
 	"time"
@@ -52,9 +51,10 @@ func TestCouchbase(t *testing.T) {
 	for i := int64(0); i < int64(10); i++ {
 		key := i + cm1.Seed
 		docId := gen.BuildKey(key)
-		fake := faker.NewWithSeed(rand.NewSource(int64(key)))
-		doc, _ := g.Template.GenerateDocument(&fake, 10)
-		//log.Println(docId, Doc)
+		fake := faker.NewFastFaker()
+		fake.Seed(key)
+		doc := g.Template.GenerateDocument(fake, docId, 10)
+		log.Println(docId, doc)
 		x := db.Update(connStr, username, password, KeyValue{
 			Key:    docId,
 			Doc:    doc,
@@ -69,12 +69,13 @@ func TestCouchbase(t *testing.T) {
 		}
 
 	}
-	// update
+	//update
 	for i := int64(0); i < int64(10); i++ {
 		key := i + cm1.Seed
 		docId := gen.BuildKey(key)
-		fake := faker.NewWithSeed(rand.NewSource(int64(key)))
-		doc, _ := g.Template.GenerateDocument(&fake, 10)
+		fake := faker.NewFastFaker()
+		fake.Seed(key)
+		doc := g.Template.GenerateDocument(fake, docId, 10)
 		//log.Println(docId, Doc)
 		x := db.Update(connStr, username, password, KeyValue{
 			Key:    docId,
@@ -88,8 +89,8 @@ func TestCouchbase(t *testing.T) {
 		} else {
 			log.Println("Update", x.Key(), " ", x.Value())
 		}
-
 	}
+
 	// Read
 	for i := int64(0); i < int64(10); i++ {
 		docId := gen.BuildKey(i + cm1.Seed)
@@ -107,12 +108,13 @@ func TestCouchbase(t *testing.T) {
 	for i := int64(0); i < int64(5); i++ {
 		key := i + cm1.Seed
 		docId := gen.BuildKey(key)
-		fake := faker.NewWithSeed(rand.NewSource(int64(key)))
+		fake := faker.NewFastFaker()
+		fake.Seed(key)
 		var keyValues []KeyValue
 		offsetCount := int64(0)
-		for key, value := range gen.Template.GenerateSubPathAndValue(&fake, 10) {
+		for subPath, value := range gen.Template.GenerateSubPathAndValue(fake, 10) {
 			keyValues = append(keyValues, KeyValue{
-				Key:    key,
+				Key:    subPath,
 				Doc:    value,
 				Offset: offsetCount,
 			})
@@ -133,10 +135,11 @@ func TestCouchbase(t *testing.T) {
 	for i := int64(0); i < int64(5); i++ {
 		key := i + cm1.Seed
 		docId := gen.BuildKey(key)
-		fake := faker.NewWithSeed(rand.NewSource(int64(key)))
+		fake := faker.NewFastFaker()
+		fake.Seed(key)
 		var keyValues []KeyValue
 		offsetCount := int64(0)
-		for path, _ := range gen.Template.GenerateSubPathAndValue(&fake, 10) {
+		for path, _ := range gen.Template.GenerateSubPathAndValue(fake, 10) {
 			keyValues = append(keyValues, KeyValue{
 				Key:    path,
 				Offset: offsetCount,
@@ -236,8 +239,9 @@ func TestCouchbase_CreateBulk(t *testing.T) {
 			for k := x * batchSize; k < (x+1)*batchSize; k++ {
 				key := int64(k) + cm1.Seed
 				docId := gen.BuildKey(key)
-				fake := faker.NewWithSeed(rand.NewSource(int64(key)))
-				doc, _ := gen.Template.GenerateDocument(&fake, 10)
+				fake := faker.NewFastFaker()
+				fake.Seed(key)
+				doc := gen.Template.GenerateDocument(fake, docId, 10)
 				keyValue = append(keyValue, KeyValue{
 					Key:    docId,
 					Doc:    doc,

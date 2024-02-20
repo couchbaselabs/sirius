@@ -1,10 +1,9 @@
 package docgenerator
 
 import (
+	"github.com/bgadrian/fastfaker/faker"
 	"github.com/couchbaselabs/sirius/internal/template"
-	"github.com/jaswdr/faker"
 	"log"
-	"math/rand"
 	"testing"
 )
 
@@ -21,9 +20,10 @@ func TestGenerator_GetNextKey(t *testing.T) {
 		key := seed + i
 		docId := g.BuildKey(key)
 		log.Println(docId)
-		fake := faker.NewWithSeed(rand.NewSource(int64(key)))
-		_, err := g.Template.GenerateDocument(&fake, 1024)
-		if err != nil {
+		fake := faker.NewFastFaker()
+		fake.Seed(key)
+		doc := g.Template.GenerateDocument(fake, docId, 1024)
+		if doc == nil {
 			t.Fail()
 		}
 	}

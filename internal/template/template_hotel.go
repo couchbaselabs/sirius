@@ -1,12 +1,11 @@
 package template
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/jaswdr/faker"
+	"github.com/bgadrian/fastfaker/faker"
 	"reflect"
-	"time"
+	"strings"
 )
 
 type Rating struct {
@@ -23,6 +22,7 @@ type Review struct {
 }
 
 type Hotel struct {
+	ID            string   `json:"_id" bson:"_id"`
 	Country       string   `json:"country,omitempty"`
 	Address       string   `json:"address,omitempty"`
 	FreeParking   bool     `json:"free_parking,omitempty"`
@@ -41,61 +41,58 @@ type Hotel struct {
 	Padding       string   `json:"padding"`
 }
 
-func buildReview(fake *faker.Faker, length int) []Review {
+func buildReview(fake *faker.Faker, length int32) []Review {
 	var r []Review
-	for i := 0; i < length; i++ {
+	for i := 0; i < int(length); i++ {
 		r = append(r, Review{
-			Date:   fake.Time().ISO8601(time.UnixMilli(fake.Int64Between(0, 1000000000))),
-			Author: fake.Person().Name(),
+			Date:   fake.DateStr(),
+			Author: fake.Name(),
 			Rating: Rating{
-				Value:       float64(fake.IntBetween(0, 10)),
-				Cleanliness: float64(fake.IntBetween(0, 10)),
-				Overall:     float64(fake.IntBetween(1, 10)),
-				CheckIn:     float64(fake.IntBetween(0, 100)),
-				Rooms:       float64(fake.IntBetween(0, 100)),
+				Value:       float64(fake.Int32Range(0, 10)),
+				Cleanliness: float64(fake.Int32Range(0, 10)),
+				Overall:     float64(fake.Int32Range(1, 10)),
+				CheckIn:     float64(fake.Int32Range(0, 100)),
+				Rooms:       float64(fake.Int32Range(0, 100)),
 			},
 		})
 	}
 	return r
 }
 
-func buildPublicLikes(fake *faker.Faker, length int) []string {
+func buildPublicLikes(fake *faker.Faker, length int32) []string {
 	var s []string
-	for i := 0; i < length; i++ {
-		s = append(s, fake.Person().Name())
+	for i := 0; i < int(length); i++ {
+		s = append(s, fake.Name())
 	}
 	return s
 }
 
-func (h *Hotel) GenerateDocument(fake *faker.Faker, documentSize int) (interface{}, error) {
+func (h *Hotel) GenerateDocument(fake *faker.Faker, key string, documentSize int) interface{} {
 	hotel := &Hotel{
-		Country:       fake.Address().Country(),
-		Address:       fake.Address().Address(),
+		ID:            key,
+		Country:       fake.Country(),
+		Address:       fake.Address().Address,
 		FreeParking:   fake.Bool(),
-		City:          fake.Address().City(),
+		City:          fake.Address().City,
 		Type:          "Hotel",
-		URL:           fake.Internet().URL(),
-		Reviews:       buildReview(fake, fake.IntBetween(1, 3)),
-		Phone:         fake.Phone().Number(),
-		Price:         float64(fake.IntBetween(1000, 10000)),
-		AvgRating:     fake.Float(4, 0, 1),
+		URL:           fake.URL(),
+		Reviews:       buildReview(fake, fake.Int32Range(1, 3)),
+		Phone:         fake.Phone(),
+		Price:         fake.Price(1000, 100000),
+		AvgRating:     fake.Float64Range(1, 5),
 		FreeBreakfast: fake.Bool(),
-		Name:          fake.Person().Name(),
-		PublicLikes:   buildPublicLikes(fake, fake.IntBetween(1, 2)),
-		Email:         fake.Internet().CompanyEmail(),
+		Name:          fake.BeerName(),
+		PublicLikes:   buildPublicLikes(fake, fake.Int32Range(1, 3)),
+		Email:         fake.URL(),
 		Mutated:       MutatedPathDefaultValue,
 	}
 
-	hotelDocument, err := json.Marshal(*hotel)
-	if err != nil {
-		return nil, err
+	currentDocSize := calculateSizeOfStruct(hotel)
+	if (currentDocSize) < int(documentSize) {
+		hotel.Padding = strings.Repeat("a", int(documentSize)-(currentDocSize))
 	}
+	return hotel
 
-	if (len(hotelDocument)) < int(documentSize) {
-		hotel.Padding = fake.RandomStringWithLength(int(documentSize) - (len(hotelDocument)))
-	}
-
-	return hotel, nil
 }
 
 func (h *Hotel) UpdateDocument(fieldsToChange []string, lastUpdatedDocument interface{}, documentSize int,
@@ -112,52 +109,48 @@ func (h *Hotel) UpdateDocument(fieldsToChange []string, lastUpdatedDocument inte
 	}
 
 	if _, ok := checkFields["country"]; ok || len(checkFields) == 0 {
-		hotel.Country = fake.Address().Country()
+		hotel.Country = fake.Country()
 	}
 	if _, ok := checkFields["address"]; ok || len(checkFields) == 0 {
-		hotel.Address = fake.Address().Address()
+		hotel.Address = fake.Address().Address
 	}
 	if _, ok := checkFields["free_parking"]; ok || len(checkFields) == 0 {
 		hotel.FreeParking = fake.Bool()
 	}
 	if _, ok := checkFields["city"]; ok || len(checkFields) == 0 {
-		hotel.City = fake.Address().City()
+		hotel.City = fake.Address().City
 	}
 	if _, ok := checkFields["url"]; ok || len(checkFields) == 0 {
-		hotel.URL = fake.Internet().URL()
+		hotel.URL = fake.URL()
 	}
 	if _, ok := checkFields["reviews"]; ok || len(checkFields) == 0 {
-		hotel.Reviews = buildReview(fake, fake.IntBetween(1, 3))
+		hotel.Reviews = buildReview(fake, fake.Int32Range(1, 3))
 	}
 	if _, ok := checkFields["phone"]; ok || len(checkFields) == 0 {
-		hotel.Phone = fake.Phone().Number()
+		hotel.Phone = fake.Phone()
 	}
 	if _, ok := checkFields["price"]; ok || len(checkFields) == 0 {
-		hotel.Price = float64(fake.IntBetween(1000, 10000))
+		hotel.Price = fake.Float64Range(1, 5)
 	}
 	if _, ok := checkFields["avg_rating"]; ok || len(checkFields) == 0 {
-		hotel.AvgRating = fake.Float(4, 0, 1)
+		hotel.AvgRating = fake.Float64Range(1, 5)
 	}
 	if _, ok := checkFields["free_breakfast"]; ok || len(checkFields) == 0 {
 		hotel.FreeBreakfast = fake.Bool()
 	}
 	if _, ok := checkFields["name"]; ok || len(checkFields) == 0 {
-		hotel.Name = fake.Person().Name()
+		hotel.Name = fake.BeerName()
 	}
 	if _, ok := checkFields["public_likes"]; ok || len(checkFields) == 0 {
-		hotel.PublicLikes = buildPublicLikes(fake, fake.IntBetween(1, 2))
+		hotel.PublicLikes = buildPublicLikes(fake, fake.Int32Range(1, 3))
 	}
 	if _, ok := checkFields["email"]; ok || len(checkFields) == 0 {
-		hotel.Email = fake.Internet().CompanyEmail()
+		hotel.Email = fake.URL()
 	}
 	hotel.Padding = ""
-	hotelDocument, err := json.Marshal(*hotel)
-	if err != nil {
-		return nil, err
-	}
-
-	if (len(hotelDocument)) < int(documentSize) {
-		hotel.Padding = fake.RandomStringWithLength(int(documentSize) - (len(hotelDocument)))
+	currentDocSize := calculateSizeOfStruct(hotel)
+	if (currentDocSize) < int(documentSize) {
+		hotel.Padding = strings.Repeat("a", int(documentSize)-(currentDocSize))
 	}
 
 	return hotel, nil
@@ -190,6 +183,6 @@ func (h *Hotel) GenerateIndexesForSdk() (map[string][]string, error) {
 
 func (h *Hotel) GenerateSubPathAndValue(fake *faker.Faker, subDocSize int) map[string]any {
 	return map[string]interface{}{
-		"subDocData": fake.RandomStringWithLength(subDocSize),
+		"_1": strings.Repeat(fake.Letter(), subDocSize),
 	}
 }

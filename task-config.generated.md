@@ -14,6 +14,7 @@ configuration that is also available on a per-task basis:
  * [/delete](#delete)
  * [/read](#read)
  * [/result](#result)
+ * [/retry-exceptions](#retry-exceptions)
  * [/sub-doc-delete](#sub-doc-delete)
  * [/sub-doc-insert](#sub-doc-insert)
  * [/sub-doc-read](#sub-doc-read)
@@ -153,6 +154,28 @@ Description : Do operation between range from [start,end)
 | ---- | ---- | -------- |
 | `IdentifierToken` | `string` | `json:identifierToken`  |
 | `OperationConfig` | `ptr` | `json:operationConfig`  |
+| `DBType` | `string` | `json:dbType`  |
+| `ConnStr` | `string` | `json:connectionString`  |
+| `Username` | `string` | `json:username`  |
+| `Password` | `string` | `json:password`  |
+| `Extra` | `struct` | `json:extra`  |
+
+---
+#### /retry-exceptions
+
+ REST : POST
+
+Description : Retry Exception reties failed operations.
+IgnoreExceptions will ignore failed operation occurred in this category. 
+RetryExceptions will retry failed operation occurred in this category. 
+RetryAttempts is the number of retry attempts.
+
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `ResultSeed` | `string` | `json:resultSeed`  |
+| `Exceptions` | `struct` | `json:exceptions`  |
 | `DBType` | `string` | `json:dbType`  |
 | `ConnStr` | `string` | `json:connectionString`  |
 | `Username` | `string` | `json:username`  |
@@ -319,6 +342,7 @@ Description : Warming up a connection to database.
 | `PreserveExpiry` | `bool` | `json:preserveExpiry,omitempty`  |
 | `CreatePath` | `bool` | `json:createPath,omitempty`  |
 | `SDKBatchSize` | `int` | `json:SDKBatchSize,omitempty`  |
+| `MutateFlag` | `bool` | `json:mutateFlag,omitempty`  |
 
 ---
 Possible values for durability :-
@@ -371,14 +395,12 @@ Possible values for durability :-
 | `DocId` | `string` | `json:key`  |
 | `Status` | `bool` | `json:status`  |
 | `Extra` | `map` | `json:extra`  |
-| `ErrorString` | `string` | `json:errorString`  |
 #### exceptions
 
 | Name | Type | JSON Tag |
 | ---- | ---- | -------- |
 | `IgnoreExceptions` | `slice` | `json:ignoreExceptions,omitempty`  |
 | `RetryExceptions` | `slice` | `json:retryExceptions,omitempty`  |
-| `RetryAttempts` | `int` | `json:retryAttempts,omitempty`  |
 #### operationConfig
 
 | Name | Type | JSON Tag |
@@ -399,7 +421,6 @@ Possible values for durability :-
 | `DocId` | `string` | `json:key`  |
 | `Status` | `bool` | `json:status`  |
 | `Extra` | `map` | `json:extra`  |
-| `ErrorString` | `string` | `json:errorString`  |
 #### sdkTimings
 
 | Name | Type | JSON Tag |

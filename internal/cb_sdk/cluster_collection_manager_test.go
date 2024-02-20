@@ -2,13 +2,12 @@ package cb_sdk
 
 import (
 	"errors"
+	"github.com/bgadrian/fastfaker/faker"
 	"github.com/couchbase/gocb/v2"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
 	"github.com/couchbaselabs/sirius/internal/meta_data"
 	"github.com/couchbaselabs/sirius/internal/template"
-	"github.com/jaswdr/faker"
 	"log"
-	"math/rand"
 	"strings"
 	"testing"
 )
@@ -62,8 +61,9 @@ func TestConfigConnectionManager(t *testing.T) {
 		for i := int64(0); i < int64(10); i++ {
 			key := i + cm1.Seed
 			docId := gen.BuildKey(key)
-			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
-			doc, _ := g.Template.GenerateDocument(&fake, 100)
+			fake := faker.NewFastFaker()
+			fake.Seed(key)
+			doc := g.Template.GenerateDocument(fake, docId, 100)
 			//log.Println(docId, doc)
 			_, e := c.Collection.Upsert(docId, doc, nil)
 			if e != nil {

@@ -10,7 +10,6 @@ import (
 	"github.com/couchbaselabs/sirius/internal/task_result"
 	"github.com/couchbaselabs/sirius/internal/task_state"
 	"github.com/couchbaselabs/sirius/internal/tasks"
-	"github.com/couchbaselabs/sirius/internal/tasks/bulk_loading"
 	"github.com/couchbaselabs/sirius/internal/tasks/util_sirius"
 	"github.com/couchbaselabs/sirius/internal/template"
 	"net/http"
@@ -81,33 +80,20 @@ func registerInterfaces() {
 	gob.Register(&map[string]any{})
 	gob.Register(&tasks.Request{})
 	gob.Register(&meta_data.MetaData{})
-	gob.Register(&meta_data.DocumentsMetaData{})
 	gob.Register(&template.Person{})
 	gob.Register(&template.Hotel{})
-	gob.Register(&template.SmallTemplate{})
+	gob.Register(&template.Small{})
 	gob.Register(&server_requests.ServerRequests{})
-	gob.Register(&bulk_loading.GenericLoadingTask{})
+	gob.Register(&tasks.GenericLoadingTask{})
 	gob.Register(&util_sirius.TaskResult{})
 	//gob.Register(&bulk_loading.ValidateTask{})
 	gob.Register(&task_result.TaskResult{})
 	gob.Register(&task_state.TaskState{})
-	//gob.Register(&key_based_loading_cb.SingleInsertTask{})
-	//gob.Register(&key_based_loading_cb.SingleDeleteTask{})
-	//gob.Register(&key_based_loading_cb.SingleUpsertTask{})
-	//gob.Register(&key_based_loading_cb.SingleReadTask{})
-	//gob.Register(&key_based_loading_cb.SingleTouchTask{})
-	//gob.Register(&key_based_loading_cb.SingleReplaceTask{})
 	//gob.Register(&bulk_query_cb.QueryTask{})
 	gob.Register(&meta_data.MetaData{})
 	gob.Register(&meta_data.CollectionMetaData{})
-	//gob.Register(&bulk_loading.RetryExceptions{})
-	//gob.Register(&key_based_loading_cb.SingleSubDocInsert{})
-	//gob.Register(&key_based_loading_cb.SingleSubDocUpsert{})
-	//gob.Register(&key_based_loading_cb.SingleSubDocReplace{})
-	//gob.Register(&key_based_loading_cb.SingleSubDocDelete{})
-	//gob.Register(&key_based_loading_cb.SingleSubDocRead{})
-	//gob.Register(&key_based_loading_cb.SingleValidate{})
-	//gob.Register(&db_util.BucketWarmUpTask{})
+	gob.Register(&tasks.RetryExceptions{})
+	gob.Register(&tasks.BucketWarmUpTask{})
 
 	r := sirius_documentation.Register{}
 	for _, taskReg := range r.RegisteredTasks() {

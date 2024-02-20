@@ -1,8 +1,10 @@
 package template
 
 import (
-	"github.com/jaswdr/faker"
+	"github.com/bgadrian/fastfaker/faker"
+	"reflect"
 	"strings"
+	"unsafe"
 )
 
 const (
@@ -12,7 +14,7 @@ const (
 )
 
 type Template interface {
-	GenerateDocument(fake *faker.Faker, documentSize int) (interface{}, error)
+	GenerateDocument(fake *faker.Faker, key string, documentSize int) interface{}
 	UpdateDocument(fieldsToChange []string, lastUpdatedDocument interface{}, documentSize int,
 		fake *faker.Faker) (interface{}, error)
 	Compare(document1 interface{}, document2 interface{}) (bool, error)
@@ -30,8 +32,38 @@ func InitialiseTemplate(template string) Template {
 	case "hotel":
 		return &Hotel{}
 	case "small":
-		return &SmallTemplate{}
+		return &Small{}
 	default:
 		return &Person{}
 	}
+}
+
+func calculateSizeOfStruct(person interface{}) int {
+	value := reflect.ValueOf(person)
+	size := int(unsafe.Sizeof(person))
+
+	if value.Kind() != reflect.Struct {
+		return size
+	}
+
+	numFields := value.NumField()
+	for i := 0; i < numFields; i++ {
+		field := value.Field(i)
+		switch field.Kind() {
+		case reflect.String:
+			size += len(field.String())
+		case reflect.Float64:
+			size += int(unsafe.Sizeof(float64(0)))
+		case reflect.Slice:
+			if field.Type().Elem().Kind() == reflect.String {
+				for j := 0; j < field.Len(); j++ {
+					size += len(field.Index(j).String())
+				}
+			}
+		case reflect.Struct:
+			size += calculateSizeOfStruct(field.Interface())
+		}
+	}
+
+	return size
 }

@@ -3,15 +3,14 @@ package tasks
 import (
 	"github.com/couchbaselabs/sirius/internal/db"
 	"github.com/shettyh/threadpool"
-	"sync"
+	"runtime"
 )
 
-var MaxConcurrentRoutines = 512
-var MaxThreads = 32
-var MAXQueueSize int64 = 1000000
-var Pool = threadpool.NewThreadPool(MaxThreads, MAXQueueSize)
+var MaxRetryingRoutines = 250
 
-var lock = sync.Mutex{}
+var MaxThreads = 2*runtime.NumCPU() + 1
+var MAXQueueSize int64 = 10000000
+var Pool = threadpool.NewThreadPool(MaxThreads, MAXQueueSize)
 
 type Task interface {
 	Describe() string

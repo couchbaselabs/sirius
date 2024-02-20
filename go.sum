@@ -1,3 +1,5 @@
+github.com/bgadrian/fastfaker v2.1.0+incompatible h1:wO1y36lVtEW/jY2x+oraPzsETVIiap4nJkIYApWOWCg=
+github.com/bgadrian/fastfaker v2.1.0+incompatible/go.mod h1:aQSXCiKk6GFZoS6DBRP8w2L81E6kIm2JgjpfhMkl64M=
 github.com/couchbase/gocb/v2 v2.6.1 h1:2/ACkqvy/PPp9hd/B9f8N4sUGVauqFOuVWoOgpdYA7U=
 github.com/couchbase/gocb/v2 v2.6.1/go.mod h1:qFMQJUna2RQaGyYS87J0jxOBhprhfLCUz64apvI9FPc=
 github.com/couchbase/gocbcore/v10 v10.2.1 h1:C5zXZUWdKrE2hncDBdDLRoKXNaVc7BYrn6JOgNZAODA=
@@ -7,6 +9,8 @@ github.com/couchbaselabs/gocaves/client v0.0.0-20221010100422-25779db8de05/go.mo
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+github.com/engoengine/math v1.0.4 h1:B21m/8HMenXvc9/WL3U9bEndIR6QM4Dw9cT/noQjy7E=
+github.com/engoengine/math v1.0.4/go.mod h1:5Q4qHspv3qnO83hv09Z2dNHaVqo+7YI5WWDIEXY/HE4=
 github.com/go-chi/chi/v5 v5.0.8 h1:lD+NLqFcAi1ovnVZpsnObHGW4xb4J8lNmoYVfECH1Y0=
 github.com/go-chi/chi/v5 v5.0.8/go.mod h1:DslCQbL2OYiznFReuXYUmQ2hGd1aDpCnlMNITLSKoi8=
 github.com/go-chi/cors v1.2.1 h1:xEC8UT3Rlp2QuWNEr4Fs/c2EAGVKBwy/1vHx3bppil4=
@@ -15,8 +19,10 @@ github.com/golang/snappy v0.0.4 h1:yAGX7huGHXlcLOEtBnF4w7FQwA26wojNCwOYAEhLjQM=
 github.com/golang/snappy v0.0.4/go.mod h1:/XxbfmMg8lxefKM7IXC3fBNl/7bRcc72aCRzEWrmP2Q=
 github.com/google/uuid v1.3.0 h1:t6JiXgmwXMjEs8VusXIJk2BXHsn+wx8BZdTaoZ5fu7I=
 github.com/google/uuid v1.3.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
-github.com/jaswdr/faker v1.16.0 h1:5ZjusQbqIZwJnUymPirNKJI1yFCuozdSR9oeYPgD5Uk=
-github.com/jaswdr/faker v1.16.0/go.mod h1:x7ZlyB1AZqwqKZgyQlnqEG8FDptmHlncA5u2zY/yi6w=
+github.com/jaswdr/faker v1.19.1 h1:xBoz8/O6r0QAR8eEvKJZMdofxiRH+F0M/7MU9eNKhsM=
+github.com/jaswdr/faker v1.19.1/go.mod h1:x7ZlyB1AZqwqKZgyQlnqEG8FDptmHlncA5u2zY/yi6w=
+github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
+github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/shettyh/threadpool v0.0.0-20200323115144-b99fd8aaa945 h1:u3vPe14JsH9ON3V1XDpTRzIxzBkyvQLC0gJilH1qGgc=

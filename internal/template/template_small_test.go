@@ -2,75 +2,81 @@ package template
 
 import (
 	"fmt"
-	"github.com/jaswdr/faker"
+	"github.com/bgadrian/fastfaker/faker"
+
 	"log"
-	"math/rand"
 	"testing"
 )
 
 func TestGenerateSmall(t *testing.T) {
-	// Test to compare two same document generated from same seed
-	fake1 := faker.NewWithSeed(rand.NewSource(1678693916037126000))
-	fake2 := faker.NewWithSeed(rand.NewSource(1678693916037126000))
-	template := InitialiseTemplate("small")
-	document1, err := template.GenerateDocument(&fake1, 12)
-	if err != nil {
-		t.Fail()
-	}
-	document2, err := template.GenerateDocument(&fake2, 12)
-	if err != nil {
-		t.Fail()
-	}
+	//Test to compare two same document generated from same seed
+	fake1 := faker.NewFastFaker()
+	fake1.Seed(1678693916037126002)
+	fake2 := faker.NewFastFaker()
+	fake2.Seed(1678693916037126001)
+	smallTemplate := InitialiseTemplate("small")
+	document1 := smallTemplate.GenerateDocument(fake1, "1678693916037126002", 10)
+	document2 := smallTemplate.GenerateDocument(fake2, "1678693916037126001", 10)
+
 	log.Println(document1)
 	log.Println(document2)
-	ok, err := template.Compare(document1, document2)
+	ok, err := smallTemplate.Compare(document1, document2)
 
 	if err != nil {
 		log.Println(err)
 		t.Fail()
 	}
 
-	if !ok {
+	if ok {
+		log.Println("document1 is same as document 2 but expected different")
 		t.Fail()
 	}
 
 	// test to update the document1 and comparing it with original document
-	document3, err := template.UpdateDocument([]string{}, document1, 20, &fake1)
+	document3, err := smallTemplate.UpdateDocument([]string{}, document1, 10, fake1)
 	if err != nil {
 		log.Println(err)
 		t.Fail()
 	}
 
-	document1Updated, ok := document3.(*SmallTemplate)
-	if !ok {
+	log.Println()
+	log.Println(document3)
+	log.Println()
+
+	document4, err := smallTemplate.UpdateDocument([]string{}, document2, 10, fake2)
+	if err != nil {
+		log.Println(err)
 		t.Fail()
 	}
-	log.Println(document1Updated, document1)
 
-	ok, err = template.Compare(document1Updated, document1)
+	log.Println()
+	log.Println(document4)
+	log.Println()
+
+	ok, err = smallTemplate.Compare(document4, document3)
+	if ok {
+		log.Println("document3 is same as document4  but expected different")
+		t.Fail()
+	}
 
 	if err != nil {
 		fmt.Println(err)
 		t.Fail()
 	}
 
-	if !ok {
-		t.Fail()
-	}
-
-	queries, err := template.GenerateQueries("bucket-1", "saurabh-1", "mishra-1")
-	if err != nil {
-		fmt.Println(err)
-		t.Fail()
-	} else {
-		log.Println(queries)
-	}
-	indexes, err := template.GenerateIndexes("bucket-1", "saurabh-1", "mishra-1")
-	if err != nil {
-		fmt.Println(err)
-		t.Fail()
-	} else {
-		log.Println(indexes)
-	}
+	//queries, err := smallTemplate.GenerateQueries("bucket-1", "saurabh-1", "mishra-1")
+	//if err != nil {
+	//	fmt.Println(err)
+	//	t.Fail()
+	//} else {
+	//	log.Println(queries)
+	//}
+	//indexes, err := smallTemplate.GenerateIndexes("bucket-1", "saurabh-1", "mishra-1")
+	//if err != nil {
+	//	fmt.Println(err)
+	//	t.Fail()
+	//} else {
+	//	log.Println(indexes)
+	//}
 
 }
