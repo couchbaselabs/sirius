@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/couchbaselabs/sirius/internal/sdk_mongo"
+	"github.com/barkha06/sirius/internal/sdk_mongo"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"

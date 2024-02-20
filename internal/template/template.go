@@ -1,8 +1,9 @@
 package template
 
 import (
-	"github.com/jaswdr/faker"
 	"strings"
+
+	"github.com/jaswdr/faker"
 )
 
 const (
@@ -12,7 +13,7 @@ const (
 )
 
 type Template interface {
-	GenerateDocument(fake *faker.Faker, documentSize int) (interface{}, error)
+	GenerateDocument(key string, fake *faker.Faker, documentSize int) (interface{}, error)
 	UpdateDocument(fieldsToChange []string, lastUpdatedDocument interface{}, documentSize int,
 		fake *faker.Faker) (interface{}, error)
 	Compare(document1 interface{}, document2 interface{}) (bool, error)

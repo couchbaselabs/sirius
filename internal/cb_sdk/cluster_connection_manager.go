@@ -1,11 +1,12 @@
 package cb_sdk
 
 import (
-	"github.com/couchbase/gocb/v2"
-	"github.com/couchbaselabs/sirius/internal/err_sirius"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/barkha06/sirius/internal/err_sirius"
+	"github.com/couchbase/gocb/v2"
 )
 
 // ConnectionManager contains different cluster information and connections to them.

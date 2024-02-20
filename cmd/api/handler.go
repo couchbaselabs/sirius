@@ -2,13 +2,14 @@ package main
 
 import (
 	"fmt"
-	"github.com/couchbaselabs/sirius/internal/task_result"
-	"github.com/couchbaselabs/sirius/internal/tasks"
-	"github.com/couchbaselabs/sirius/internal/tasks/bulk_loading"
-	"github.com/couchbaselabs/sirius/internal/tasks/db_util"
-	"github.com/couchbaselabs/sirius/internal/tasks/util_sirius"
 	"log"
 	"net/http"
+
+	"github.com/barkha06/sirius/internal/task_result"
+	"github.com/barkha06/sirius/internal/tasks"
+	"github.com/barkha06/sirius/internal/tasks/bulk_loading"
+	"github.com/barkha06/sirius/internal/tasks/db_util"
+	"github.com/barkha06/sirius/internal/tasks/util_sirius"
 )
 
 // testServer supports GET method.

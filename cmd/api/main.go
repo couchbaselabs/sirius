@@ -2,13 +2,14 @@ package main
 
 import (
 	"fmt"
-	"github.com/couchbaselabs/sirius/internal/server_requests"
-	"github.com/couchbaselabs/sirius/internal/sirius_documentation"
-	"github.com/couchbaselabs/sirius/internal/tasks_manager"
 	"io"
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/barkha06/sirius/internal/server_requests"
+	"github.com/barkha06/sirius/internal/sirius_documentation"
+	"github.com/barkha06/sirius/internal/tasks_manager"
 )
 
 const webPort = "4000"

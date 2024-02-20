@@ -1,8 +1,8 @@
 package key_based_loading_cb
 
 import (
-	"github.com/couchbaselabs/sirius/internal/cb_sdk"
-	"github.com/couchbaselabs/sirius/internal/tasks"
+	"github.com/barkha06/sirius/internal/cb_sdk"
+	"github.com/barkha06/sirius/internal/tasks"
 )
 
 type KeyBasedTask interface {

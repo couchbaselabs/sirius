@@ -1,6 +1,6 @@
 package key_based_loading_cb
 
-import "github.com/couchbaselabs/sirius/internal/err_sirius"
+import "github.com/barkha06/sirius/internal/err_sirius"
 
 type SingleOperationConfig struct {
 	Keys     []string `json:"keys" doc:"true"`

@@ -3,7 +3,8 @@ package tasks_manager
 import (
 	"context"
 	"fmt"
-	"github.com/couchbaselabs/sirius/internal/tasks"
+
+	"github.com/barkha06/sirius/internal/tasks"
 )
 
 // TaskManager will act as queue which will be responsible for handling

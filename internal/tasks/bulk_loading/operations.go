@@ -1,15 +1,16 @@
 package bulk_loading
 
 import (
-	"github.com/couchbaselabs/sirius/internal/db"
-	"github.com/couchbaselabs/sirius/internal/docgenerator"
-	"github.com/couchbaselabs/sirius/internal/task_result"
-	"github.com/couchbaselabs/sirius/internal/task_state"
-	"github.com/couchbaselabs/sirius/internal/tasks"
-	"github.com/jaswdr/faker"
 	"math/rand"
 	"sync"
 	"time"
+
+	"github.com/barkha06/sirius/internal/db"
+	"github.com/barkha06/sirius/internal/docgenerator"
+	"github.com/barkha06/sirius/internal/task_result"
+	"github.com/barkha06/sirius/internal/task_state"
+	"github.com/barkha06/sirius/internal/tasks"
+	"github.com/jaswdr/faker"
 )
 
 func insertDocuments(start, end, seed int64, operationConfig *OperationConfig,
@@ -40,7 +41,7 @@ func insertDocuments(start, end, seed int64, operationConfig *OperationConfig,
 		key := offset + seed
 		docId := gen.BuildKey(key)
 		fake := faker.NewWithSeed(rand.NewSource(int64(key)))
-		doc, err1 := gen.Template.GenerateDocument(&fake, operationConfig.DocSize)
+		doc, err1 := gen.Template.GenerateDocument(docId, &fake, operationConfig.DocSize)
 		initTime := time.Now().UTC().Format(time.RFC850)
 		if err1 != nil {
 			result.IncrementFailure(initTime, docId, err1, false, nil, offset)
@@ -103,7 +104,7 @@ func bulkInsertDocuments(start, end, seed int64, operationConfig *OperationConfi
 			key := offset + seed
 			docId := gen.BuildKey(key)
 			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
-			doc, err1 := gen.Template.GenerateDocument(&fake, operationConfig.DocSize)
+			doc, err1 := gen.Template.GenerateDocument(docId, &fake, operationConfig.DocSize)
 
 			if err1 != nil {
 				result.IncrementFailure(initTime, docId, err1, false, nil, offset)
@@ -148,7 +149,7 @@ func bulkInsertDocuments(start, end, seed int64, operationConfig *OperationConfi
 			key := offset + seed
 			docId := gen.BuildKey(key)
 			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
-			doc, err1 := gen.Template.GenerateDocument(&fake, operationConfig.DocSize)
+			doc, err1 := gen.Template.GenerateDocument(docId, &fake, operationConfig.DocSize)
 
 			if err1 != nil {
 				result.IncrementFailure(initTime, docId, err1, false, nil, offset)
@@ -211,7 +212,7 @@ func upsertDocuments(start, end, seed int64, operationConfig *OperationConfig,
 		fake := faker.NewWithSeed(rand.NewSource(int64(key)))
 		initTime := time.Now().UTC().Format(time.RFC850)
 
-		originalDoc, err1 := gen.Template.GenerateDocument(&fake, operationConfig.DocSize)
+		originalDoc, err1 := gen.Template.GenerateDocument(docId, &fake, operationConfig.DocSize)
 		if err1 != nil {
 			state.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 			result.IncrementFailure(initTime, docId, err1, false, nil, offset)
@@ -655,59 +656,59 @@ func subDocReplaceDocuments(start, end, seed int64, operationConfig *OperationCo
 	}
 }
 
-func bulkInsertDocuments(start, end, seed int64, operationConfig *OperationConfig,
-	rerun bool, gen *docgenerator.Generator, state *task_state.TaskState, result *task_result.TaskResult,
-	databaseInfo tasks.DatabaseInformation, extra db.Extras, wg *sync.WaitGroup) {
+// func bulkInsertDocuments(start, end, seed int64, operationConfig *OperationConfig,
+// 	rerun bool, gen *docgenerator.Generator, state *task_state.TaskState, result *task_result.TaskResult,
+// 	databaseInfo tasks.DatabaseInformation, extra db.Extras, wg *sync.WaitGroup) {
 
-	defer wg.Done()
+// 	defer wg.Done()
 
-	skip := make(map[int64]struct{})
-	for _, offset := range state.KeyStates.Completed {
-		skip[offset] = struct{}{}
-	}
-	for _, offset := range state.KeyStates.Err {
-		skip[offset] = struct{}{}
-	}
+// 	skip := make(map[int64]struct{})
+// 	for _, offset := range state.KeyStates.Completed {
+// 		skip[offset] = struct{}{}
+// 	}
+// 	for _, offset := range state.KeyStates.Err {
+// 		skip[offset] = struct{}{}
+// 	}
 
-	database, dbErr := db.ConfigDatabase(databaseInfo.DBType)
-	if dbErr != nil {
-		result.FailWholeBulkOperation(start, end, dbErr, state, gen, seed)
-		return
-	}
+// 	database, dbErr := db.ConfigDatabase(databaseInfo.DBType)
+// 	if dbErr != nil {
+// 		result.FailWholeBulkOperation(start, end, dbErr, state, gen, seed)
+// 		return
+// 	}
 
-	var keyValues []db.KeyValue
-	for offset := start; offset < end; offset++ {
-		if _, ok := skip[offset]; ok {
-			continue
-		}
+// 	var keyValues []db.KeyValue
+// 	for offset := start; offset < end; offset++ {
+// 		if _, ok := skip[offset]; ok {
+// 			continue
+// 		}
 
-		key := offset + seed
-		docId := gen.BuildKey(key)
-		fake := faker.NewWithSeed(rand.NewSource(int64(key)))
-		doc, _ := gen.Template.GenerateDocument(&fake, operationConfig.DocSize)
-		keyValues = append(keyValues, db.KeyValue{
-			Key:    docId,
-			Doc:    doc,
-			Offset: offset,
-		})
-	}
+// 		key := offset + seed
+// 		docId := gen.BuildKey(key)
+// 		fake := faker.NewWithSeed(rand.NewSource(int64(key)))
+// 		doc, _ := gen.Template.GenerateDocument(docId, &fake, operationConfig.DocSize)
+// 		keyValues = append(keyValues, db.KeyValue{
+// 			Key:    docId,
+// 			Doc:    doc,
+// 			Offset: offset,
+// 		})
+// 	}
 
-	initTime := time.Now().UTC().Format(time.RFC850)
-	bulkResult := database.CreateBulk(databaseInfo.ConnStr, databaseInfo.Username, databaseInfo.Password, keyValues,
-		extra)
+// 	initTime := time.Now().UTC().Format(time.RFC850)
+// 	bulkResult := database.CreateBulk(databaseInfo.ConnStr, databaseInfo.Username, databaseInfo.Password, keyValues,
+// 		extra)
 
-	for _, x := range keyValues {
-		if bulkResult.GetError(x.Key) != nil {
-			if db.CheckAllowedInsertError(bulkResult.GetError(x.Key)) && rerun {
-				state.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: x.Offset}
-			} else {
-				result.IncrementFailure(initTime, x.Key, bulkResult.GetError(x.Key), false, bulkResult.GetExtra(x.Key),
-					x.Offset)
-				state.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: x.Offset}
-			}
-		} else {
-			state.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: x.Offset}
-		}
+// 	for _, x := range keyValues {
+// 		if bulkResult.GetError(x.Key) != nil {
+// 			if db.CheckAllowedInsertError(bulkResult.GetError(x.Key)) && rerun {
+// 				state.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: x.Offset}
+// 			} else {
+// 				result.IncrementFailure(initTime, x.Key, bulkResult.GetError(x.Key), false, bulkResult.GetExtra(x.Key),
+// 					x.Offset)
+// 				state.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: x.Offset}
+// 			}
+// 		} else {
+// 			state.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: x.Offset}
+// 		}
 
-	}
-}
+// 	}
+// }

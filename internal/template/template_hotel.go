@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/jaswdr/faker"
 	"reflect"
 	"time"
+
+	"github.com/jaswdr/faker"
 )
 
 type Rating struct {
@@ -23,6 +24,7 @@ type Review struct {
 }
 
 type Hotel struct {
+	ID            string   `json:"_id`
 	Country       string   `json:"country,omitempty"`
 	Address       string   `json:"address,omitempty"`
 	FreeParking   bool     `json:"free_parking,omitempty"`
@@ -67,8 +69,9 @@ func buildPublicLikes(fake *faker.Faker, length int) []string {
 	return s
 }
 
-func (h *Hotel) GenerateDocument(fake *faker.Faker, documentSize int) (interface{}, error) {
+func (h *Hotel) GenerateDocument(key string, fake *faker.Faker, documentSize int) (interface{}, error) {
 	hotel := &Hotel{
+		ID:            key,
 		Country:       fake.Address().Country(),
 		Address:       fake.Address().Address(),
 		FreeParking:   fake.Bool(),

@@ -1,8 +1,8 @@
 package cb_sdk
 
 import (
+	"github.com/barkha06/sirius/internal/err_sirius"
 	"github.com/couchbase/gocb/v2"
-	"github.com/couchbaselabs/sirius/internal/err_sirius"
 )
 
 const (

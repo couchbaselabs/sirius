@@ -1,9 +1,10 @@
 package tasks
 
 import (
-	"github.com/couchbaselabs/sirius/internal/db"
-	"github.com/shettyh/threadpool"
 	"sync"
+
+	"github.com/barkha06/sirius/internal/db"
+	"github.com/shettyh/threadpool"
 )
 
 var MaxConcurrentRoutines = 512

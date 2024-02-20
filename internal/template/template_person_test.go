@@ -2,22 +2,31 @@ package template
 
 import (
 	"fmt"
-	"github.com/jaswdr/faker"
 	"log"
 	"math/rand"
 	"testing"
+
+	"github.com/barkha06/sirius/internal/docgenerator"
+	"github.com/jaswdr/faker"
 )
 
 func TestGeneratePerson(t *testing.T) {
 	// Test to compare two same document generated from same seed
-	fake1 := faker.NewWithSeed(rand.NewSource(1678693916037126000))
-	fake2 := faker.NewWithSeed(rand.NewSource(1678693916037126000))
+	var seed int64 = 1678693916037126000
+	fake1 := faker.NewWithSeed(rand.NewSource(seed))
+	fake2 := faker.NewWithSeed(rand.NewSource(seed))
 	template := InitialiseTemplate("person")
-	document1, err := template.GenerateDocument(&fake1, 0)
+	gen := &docgenerator.Generator{
+		KeySize:  25,
+		DocType:  "json",
+		Template: template,
+	}
+	docID := gen.BuildKey(seed)
+	document1, err := template.GenerateDocument(docID, &fake1, 0)
 	if err != nil {
 		t.Fail()
 	}
-	document2, err := template.GenerateDocument(&fake2, 0)
+	document2, err := template.GenerateDocument(docID, &fake2, 0)
 	if err != nil {
 		t.Fail()
 	}

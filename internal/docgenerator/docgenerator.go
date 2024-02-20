@@ -2,8 +2,9 @@ package docgenerator
 
 import (
 	"fmt"
-	"github.com/couchbaselabs/sirius/internal/template"
 	"strings"
+
+	"github.com/barkha06/sirius/internal/template"
 )
 
 type DocumentType string

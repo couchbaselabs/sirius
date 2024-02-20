@@ -2,18 +2,21 @@ package template
 
 import (
 	"fmt"
-	"github.com/jaswdr/faker"
 	"reflect"
+
+	"github.com/jaswdr/faker"
 )
 
 type SmallTemplate struct {
+	ID         string  `json:_id`
 	RandomData string  `json:"d,omitempty"`
 	Mutated    float64 `json:"mutated,omitempty"`
 }
 
-func (s *SmallTemplate) GenerateDocument(fake *faker.Faker, documentSize int) (interface{}, error) {
+func (s *SmallTemplate) GenerateDocument(key string, fake *faker.Faker, documentSize int) (interface{}, error) {
 	return &SmallTemplate{
-		RandomData: fake.RandomStringWithLength(int(documentSize) - 1),
+		ID:         key,
+		RandomData: fake.RandomStringWithLength(int(documentSize) - 1 - len(key)),
 		Mutated:    MutatedPathDefaultValue,
 	}, nil
 }

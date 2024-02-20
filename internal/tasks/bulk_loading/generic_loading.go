@@ -3,21 +3,22 @@ package bulk_loading
 import (
 	"errors"
 	"fmt"
-	"github.com/couchbaselabs/sirius/internal/db"
-	"github.com/couchbaselabs/sirius/internal/docgenerator"
-	"github.com/couchbaselabs/sirius/internal/err_sirius"
-	"github.com/couchbaselabs/sirius/internal/meta_data"
-	"github.com/couchbaselabs/sirius/internal/task_result"
-	"github.com/couchbaselabs/sirius/internal/task_state"
-	"github.com/couchbaselabs/sirius/internal/tasks"
-	"github.com/couchbaselabs/sirius/internal/template"
-	"golang.org/x/sync/errgroup"
 	"log"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/barkha06/sirius/internal/db"
+	"github.com/barkha06/sirius/internal/docgenerator"
+	"github.com/barkha06/sirius/internal/err_sirius"
+	"github.com/barkha06/sirius/internal/meta_data"
+	"github.com/barkha06/sirius/internal/task_result"
+	"github.com/barkha06/sirius/internal/task_state"
+	"github.com/barkha06/sirius/internal/tasks"
+	"github.com/barkha06/sirius/internal/template"
+	"golang.org/x/sync/errgroup"
 )
 
 type GenericLoadingTask struct {

@@ -1,11 +1,12 @@
 package meta_data
 
 import (
-	"github.com/couchbaselabs/sirius/internal/docgenerator"
-	"github.com/couchbaselabs/sirius/internal/template"
-	"github.com/jaswdr/faker"
 	"sync"
 	"time"
+
+	"github.com/barkha06/sirius/internal/docgenerator"
+	"github.com/barkha06/sirius/internal/template"
+	"github.com/jaswdr/faker"
 )
 
 type SubDocMutations struct {

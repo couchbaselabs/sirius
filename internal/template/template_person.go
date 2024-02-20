@@ -3,9 +3,10 @@ package template
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/jaswdr/faker"
 	"reflect"
 	"strings"
+
+	"github.com/jaswdr/faker"
 )
 
 var maritalChoices = []string{"Single", "Married", "Divorcee"}
@@ -83,6 +84,7 @@ type Attribute struct {
 }
 
 type Person struct {
+	ID            string    `json: _id`
 	FirstName     string    `json:"firstName,omitempty"`
 	Age           float64   `json:"age,omitempty"`
 	Email         string    `json:"email,omitempty"`
@@ -95,8 +97,9 @@ type Person struct {
 	Padding       string    `json:"payload"`
 }
 
-func (p *Person) GenerateDocument(fake *faker.Faker, documentSize int) (interface{}, error) {
+func (p *Person) GenerateDocument(key string, fake *faker.Faker, documentSize int) (interface{}, error) {
 	person := &Person{
+		ID:            key,
 		FirstName:     fake.Person().FirstName(),
 		Age:           fake.Float64(2, 0, 100),
 		Email:         fake.Internet().CompanyEmail(),

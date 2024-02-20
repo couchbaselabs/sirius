@@ -1,26 +1,39 @@
-package template
+package test
 
 import (
-	"github.com/jaswdr/faker"
+	"fmt"
 	"log"
 	"math/rand"
 	"testing"
+
+	"github.com/barkha06/sirius/internal/docgenerator"
+	"github.com/barkha06/sirius/internal/template"
+	"github.com/jaswdr/faker"
 )
 
 func TestGenerateHotel(t *testing.T) {
 	// Test to compare two same document generated from same seed
-	fake1 := faker.NewWithSeed(rand.NewSource(1678693916037126000))
-	fake11 := faker.NewWithSeed(rand.NewSource(1678693916037126000))
-	fake2 := faker.NewWithSeed(rand.NewSource(1678693916037126000))
-	template := InitialiseTemplate("hotel")
-	document1, err := template.GenerateDocument(&fake1, 0)
+	var seed int64 = 1678693916037126000
+	fake1 := faker.NewWithSeed(rand.NewSource(seed))
+	fake11 := faker.NewWithSeed(rand.NewSource(seed))
+	fake2 := faker.NewWithSeed(rand.NewSource(seed))
+	template := template.InitialiseTemplate("hotel")
+	gen := &docgenerator.Generator{
+		KeySize:  25,
+		DocType:  "json",
+		Template: template,
+	}
+	docID := gen.BuildKey(seed)
+	document1, err := template.GenerateDocument(docID, &fake1, 100)
 	if err != nil {
 		t.Fail()
 	}
-	document2, err := template.GenerateDocument(&fake2, 0)
+	document2, err := template.GenerateDocument(docID, &fake2, 100)
 	if err != nil {
 		t.Fail()
 	}
+	log.Println("Hello")
+	fmt.Println("Hello")
 	log.Println(document1)
 	log.Println(document2)
 	ok, err := template.Compare(document1, document2)
@@ -64,7 +77,7 @@ func TestGenerateHotel(t *testing.T) {
 	//	t.Fail()
 	//}
 
-	document1Copy, _ := template.GenerateDocument(&fake11, 0)
+	document1Copy, _ := template.GenerateDocument(docID, &fake11, 0)
 	template.UpdateDocument([]string{}, document1Copy, 0, &fake11)
 	ok, err = template.Compare(document1Copy, document1)
 

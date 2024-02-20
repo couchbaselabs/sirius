@@ -3,7 +3,7 @@ package db
 import (
 	"sync"
 
-	"github.com/couchbaselabs/sirius/internal/err_sirius"
+	"github.com/barkha06/sirius/internal/err_sirius"
 )
 
 const (

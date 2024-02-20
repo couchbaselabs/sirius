@@ -2,10 +2,11 @@ package cb_sdk
 
 import (
 	"fmt"
-	"github.com/couchbase/gocb/v2"
-	"github.com/couchbaselabs/sirius/internal/err_sirius"
 	"log"
 	"time"
+
+	"github.com/barkha06/sirius/internal/err_sirius"
+	"github.com/couchbase/gocb/v2"
 )
 
 const WaitUnityReadyTime = 10

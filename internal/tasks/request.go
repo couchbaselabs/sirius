@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
-	"github.com/couchbaselabs/sirius/internal/meta_data"
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/barkha06/sirius/internal/meta_data"
 )
 
 const RequestPath = "./internal/tasks/request_logs"

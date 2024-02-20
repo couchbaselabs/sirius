@@ -1,15 +1,16 @@
 package db
 
 import (
-	"github.com/couchbaselabs/sirius/internal/docgenerator"
-	"github.com/couchbaselabs/sirius/internal/meta_data"
-	"github.com/couchbaselabs/sirius/internal/template"
-	"github.com/jaswdr/faker"
 	"log"
 	"math/rand"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/barkha06/sirius/internal/docgenerator"
+	"github.com/barkha06/sirius/internal/meta_data"
+	"github.com/barkha06/sirius/internal/template"
+	"github.com/jaswdr/faker"
 )
 
 func TestCouchbase(t *testing.T) {
@@ -53,7 +54,7 @@ func TestCouchbase(t *testing.T) {
 		key := i + cm1.Seed
 		docId := gen.BuildKey(key)
 		fake := faker.NewWithSeed(rand.NewSource(int64(key)))
-		doc, _ := g.Template.GenerateDocument(&fake, 10)
+		doc, _ := g.Template.GenerateDocument(docID, &fake, 10)
 		//log.Println(docId, Doc)
 		x := db.Update(connStr, username, password, KeyValue{
 			Key:    docId,
@@ -74,7 +75,7 @@ func TestCouchbase(t *testing.T) {
 		key := i + cm1.Seed
 		docId := gen.BuildKey(key)
 		fake := faker.NewWithSeed(rand.NewSource(int64(key)))
-		doc, _ := g.Template.GenerateDocument(&fake, 10)
+		doc, _ := g.Template.GenerateDocument(docID, &fake, 10)
 		//log.Println(docId, Doc)
 		x := db.Update(connStr, username, password, KeyValue{
 			Key:    docId,
@@ -238,7 +239,7 @@ func TestCouchbase_CreateBulk(t *testing.T) {
 				key := int64(k) + cm1.Seed
 				docId := gen.BuildKey(key)
 				fake := faker.NewWithSeed(rand.NewSource(int64(key)))
-				doc, _ := gen.Template.GenerateDocument(&fake, 10)
+				doc, _ := gen.Template.GenerateDocument(docID, &fake, 10)
 				keyValue = append(keyValue, KeyValue{
 					Key:    docId,
 					Doc:    doc,
