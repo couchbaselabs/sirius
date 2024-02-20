@@ -8,6 +8,7 @@ require (
 	github.com/go-chi/cors v1.2.1
 	github.com/jaswdr/faker v1.16.0
 	github.com/shettyh/threadpool v0.0.0-20200323115144-b99fd8aaa945
+	go.mongodb.org/mongo-driver v1.14.0
 	golang.org/x/exp v0.0.0-20230801115018-d63ba01acd4b
 	golang.org/x/sync v0.1.0
 )
