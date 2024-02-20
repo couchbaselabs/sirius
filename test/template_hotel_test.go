@@ -1,7 +1,6 @@
 package test
 
 import (
-	"fmt"
 	"log"
 	"math/rand"
 	"testing"
@@ -17,26 +16,25 @@ func TestGenerateHotel(t *testing.T) {
 	fake1 := faker.NewWithSeed(rand.NewSource(seed))
 	fake11 := faker.NewWithSeed(rand.NewSource(seed))
 	fake2 := faker.NewWithSeed(rand.NewSource(seed))
-	template := template.InitialiseTemplate("hotel")
+	temp := template.InitialiseTemplate("hotel")
 	gen := &docgenerator.Generator{
 		KeySize:  25,
 		DocType:  "json",
-		Template: template,
+		Template: temp,
 	}
 	docID := gen.BuildKey(seed)
-	document1, err := template.GenerateDocument(docID, &fake1, 100)
+	document1, err := temp.GenerateDocument(docID, &fake1, 100)
 	if err != nil {
 		t.Fail()
 	}
-	document2, err := template.GenerateDocument(docID, &fake2, 100)
+	document2, err := temp.GenerateDocument(docID, &fake2, 100)
 	if err != nil {
 		t.Fail()
 	}
 	log.Println("Hello")
-	fmt.Println("Hello")
 	log.Println(document1)
 	log.Println(document2)
-	ok, err := template.Compare(document1, document2)
+	ok, err := temp.Compare(document1, document2)
 
 	if err != nil {
 		log.Println(err)
@@ -48,7 +46,7 @@ func TestGenerateHotel(t *testing.T) {
 		t.Fail()
 	}
 
-	template.UpdateDocument([]string{}, document1, 0, &fake1)
+	temp.UpdateDocument([]string{}, document1, 0, &fake1)
 
 	//// test to update the document1 and comparing it with original document
 	//document3, err_sirius := template.UpdateDocument([]string{}, document1, &fake1)
@@ -77,9 +75,9 @@ func TestGenerateHotel(t *testing.T) {
 	//	t.Fail()
 	//}
 
-	document1Copy, _ := template.GenerateDocument(docID, &fake11, 0)
-	template.UpdateDocument([]string{}, document1Copy, 0, &fake11)
-	ok, err = template.Compare(document1Copy, document1)
+	document1Copy, _ := temp.GenerateDocument(docID, &fake11, 0)
+	temp.UpdateDocument([]string{}, document1Copy, 0, &fake11)
+	ok, err = temp.Compare(document1Copy, document1)
 
 	if err != nil {
 		t.Fail()

@@ -24,7 +24,7 @@ type Review struct {
 }
 
 type Hotel struct {
-	ID            string   `json:"_id`
+	ID            string   `json:"_id"`
 	Country       string   `json:"country,omitempty"`
 	Address       string   `json:"address,omitempty"`
 	FreeParking   bool     `json:"free_parking,omitempty"`

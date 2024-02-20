@@ -1,4 +1,4 @@
-package template
+package test
 
 import (
 	"fmt"
@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/barkha06/sirius/internal/docgenerator"
+	"github.com/barkha06/sirius/internal/template"
 	"github.com/jaswdr/faker"
 )
 
@@ -15,24 +16,24 @@ func TestGeneratePerson(t *testing.T) {
 	var seed int64 = 1678693916037126000
 	fake1 := faker.NewWithSeed(rand.NewSource(seed))
 	fake2 := faker.NewWithSeed(rand.NewSource(seed))
-	template := InitialiseTemplate("person")
+	temp := template.InitialiseTemplate("person")
 	gen := &docgenerator.Generator{
 		KeySize:  25,
 		DocType:  "json",
-		Template: template,
+		Template: temp,
 	}
 	docID := gen.BuildKey(seed)
-	document1, err := template.GenerateDocument(docID, &fake1, 0)
+	document1, err := temp.GenerateDocument(docID, &fake1, 0)
 	if err != nil {
 		t.Fail()
 	}
-	document2, err := template.GenerateDocument(docID, &fake2, 0)
+	document2, err := temp.GenerateDocument(docID, &fake2, 0)
 	if err != nil {
 		t.Fail()
 	}
 	log.Println(document1)
 	log.Println(document2)
-	ok, err := template.Compare(document1, document2)
+	ok, err := temp.Compare(document1, document2)
 
 	if err != nil {
 		log.Println(err)
@@ -45,7 +46,7 @@ func TestGeneratePerson(t *testing.T) {
 	}
 
 	// test to update the document1 and comparing it with original document
-	document3, err := template.UpdateDocument([]string{}, document1, 2100, &fake1)
+	document3, err := temp.UpdateDocument([]string{}, document1, 2100, &fake1)
 	if err != nil {
 		log.Println(err)
 		t.Fail()
@@ -55,13 +56,13 @@ func TestGeneratePerson(t *testing.T) {
 	log.Println(document3)
 	log.Println()
 
-	document1Updated, ok := document3.(*Person)
+	document1Updated, ok := document3.(*template.Person)
 	if !ok {
 		log.Println("test failed while updating the document3")
 		t.Fail()
 	}
 
-	ok, err = template.Compare(document1Updated, document1)
+	ok, err = temp.Compare(document1Updated, document1)
 	if !ok {
 		log.Println("test failed while comparing the document1 and document1updated")
 		t.Fatal("test failed while comparing the document1 and document1updated")
@@ -72,14 +73,14 @@ func TestGeneratePerson(t *testing.T) {
 		t.Fail()
 	}
 
-	queries, err := template.GenerateQueries("bucket-1", "saurabh-1", "mishra-1")
+	queries, err := temp.GenerateQueries("bucket-1", "saurabh-1", "mishra-1")
 	if err != nil {
 		fmt.Println(err)
 		t.Fail()
 	} else {
 		log.Println(queries)
 	}
-	indexes, err := template.GenerateIndexes("bucket-1", "saurabh-1", "mishra-1")
+	indexes, err := temp.GenerateIndexes("bucket-1", "saurabh-1", "mishra-1")
 	if err != nil {
 		fmt.Println(err)
 		t.Fail()

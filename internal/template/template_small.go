@@ -8,7 +8,7 @@ import (
 )
 
 type SmallTemplate struct {
-	ID         string  `json:_id`
+	ID         string  `json:"_id"`
 	RandomData string  `json:"d,omitempty"`
 	Mutated    float64 `json:"mutated,omitempty"`
 }
