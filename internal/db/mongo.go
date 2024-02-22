@@ -7,7 +7,7 @@ import (
 	"log"
 
 	"github.com/barkha06/sirius/internal/sdk_mongo"
-
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -84,11 +84,12 @@ func newMongoBulkOperation() *mongoBulkOperationResult {
 	}
 }
 
-func (m *mongoBulkOperationResult) AddResult(key string, value interface{}, err error, status bool) {
+func (m *mongoBulkOperationResult) AddResult(key string, value interface{}, err error, status bool, offset int64) {
 	m.keyValues[key] = perMongoDocResult{
 		value:  value,
 		error:  err,
 		status: status,
+		offset: offset,
 	}
 }
 
@@ -188,8 +189,38 @@ func (m Mongo) Create(connStr, username, password string, keyValue KeyValue, ext
 }
 
 func (m Mongo) Update(connStr, username, password string, keyValue KeyValue, extra Extras) OperationResult {
+	if err := validateStrings(connStr, username, password); err != nil {
+		return newMongoOperationResult(keyValue.Key, keyValue.Doc, err, false, keyValue.Offset)
+	}
+
+	mongoClient := m.connectionManager.Clusters[connStr].MongoClusterClient
+
+	if err := validateStrings(extra.Database); err != nil {
+		return newMongoOperationResult(keyValue.Key, keyValue.Doc, errors.New("database is missing"), false,
+			keyValue.Offset)
+	}
+	if err := validateStrings(extra.Collection); err != nil {
+		return newMongoOperationResult(keyValue.Key, keyValue.Doc, errors.New("collection is missing"), false,
+			keyValue.Offset)
+	}
+	mongoDatabase := mongoClient.Database(extra.Database)
+	mongoCollection := mongoDatabase.Collection(extra.Collection)
+	filter := bson.M{"_id": keyValue.Key}
+	update := bson.M{"$set": keyValue.Doc}
+	log.Println(filter, update)
+	result, err2 := mongoCollection.UpdateOne(context.TODO(), filter, update, options.Update().SetUpsert(true))
+
+	if err2 != nil {
+		return newMongoOperationResult(keyValue.Key, keyValue.Doc, err2, false, keyValue.Offset)
+	}
+	if result == nil {
+		return newMongoOperationResult(keyValue.Key, keyValue.Doc,
+			fmt.Errorf("result is nil even after successful UPDATE operation %s ", connStr), false,
+			keyValue.Offset)
+	}
+	return newMongoOperationResult(keyValue.Key, keyValue.Doc, nil, true, keyValue.Offset)
 	//TODO implement me
-	panic("implement me")
+	// panic("implement me")
 }
 
 func (m Mongo) Read(connStr, username, password, key string, offset int64, extra Extras) OperationResult {
@@ -330,7 +361,61 @@ func (m Mongo) Close(connStr string) error {
 
 func (m Mongo) UpdateBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult {
 	//TODO implement me
-	panic("implement me")
+	// panic("implement me")
+	result := newMongoBulkOperation()
+	if err := validateStrings(connStr, username, password); err != nil {
+		result.failBulk(keyValues, err)
+		return result
+	}
+
+	mongoClient := m.connectionManager.Clusters[connStr].MongoClusterClient
+	//fmt.Println("In CreateBulk(), Mongo Client:", mongoClient)
+
+	if err := validateStrings(extra.Database); err != nil {
+		result.failBulk(keyValues, errors.New("database name is missing"))
+		return result
+	}
+	if err := validateStrings(extra.Collection); err != nil {
+		result.failBulk(keyValues, errors.New("collection name is missing"))
+		return result
+	}
+	mongoDatabase := mongoClient.Database(extra.Database)
+	mongoCollection := mongoDatabase.Collection(extra.Collection)
+
+	var models []mongo.WriteModel
+	keyToOffset := make(map[string]int64)
+	for _, x := range keyValues {
+		keyToOffset[x.Key] = x.Offset
+		filter := bson.M{"_id": x.Key}
+		update := bson.M{"$set": x.Doc}
+		// result, err2 := mongoCollection.UpdateOne(context.TODO(), filter, update, options.Update().SetUpsert(true))
+		model := mongo.NewUpdateOneModel().SetFilter(filter).SetUpdate(update).SetUpsert(true)
+		models = append(models, model)
+	}
+	opts := options.BulkWrite().SetOrdered(false)
+	mongoBulkWriteResult, err := mongoCollection.BulkWrite(context.TODO(), models, opts)
+	log.Println(mongoBulkWriteResult)
+	if err != nil {
+		log.Println("MongoDB CreateBulk(): Bulk Insert Error:", err)
+		result.failBulk(keyValues, errors.New("MongoDB UpdateBulk(): Bulk Upsert Error"))
+		return result
+	} else if int64(len(keyValues)) != mongoBulkWriteResult.MatchedCount {
+		result.failBulk(keyValues, errors.New("MongoDB UpdateBulk(): Upserted Count does not match batch size"))
+		return result
+	}
+
+	for _, x := range models {
+		upsertOp, ok := x.(*mongo.UpdateOneModel)
+		docid := upsertOp.Filter.(bson.M)["_id"]
+		value := upsertOp.Update.(bson.M)["$set"]
+		if !ok {
+			result.AddResult(docid.(string), nil, errors.New("decoding error GetOp"), false, -1)
+		} else {
+			result.AddResult(docid.(string), value, nil, true, keyToOffset[docid.(string)])
+		}
+	}
+
+	return result
 }
 
 func (m Mongo) ReadBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult {
@@ -348,22 +433,22 @@ func (m Mongo) TouchBulk(connStr, username, password string, keyValues []KeyValu
 	panic("implement me")
 }
 
-func (m Mongo) UpdateBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult {
-	//TODO implement me
-	panic("implement me")
-}
+// func (m Mongo) UpdateBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult {
+// 	//TODO implement me
+// 	panic("implement me")
+// }
 
-func (m Mongo) ReadBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult {
-	//TODO implement me
-	panic("implement me")
-}
+// func (m Mongo) ReadBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult {
+// 	//TODO implement me
+// 	panic("implement me")
+// }
 
-func (m Mongo) DeleteBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult {
-	//TODO implement me
-	panic("implement me")
-}
+// func (m Mongo) DeleteBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult {
+// 	//TODO implement me
+// 	panic("implement me")
+// }
 
-func (m Mongo) TouchBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult {
-	//TODO implement me
-	panic("implement me")
-}
+// func (m Mongo) TouchBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult {
+// 	//TODO implement me
+// 	panic("implement me")
+// }

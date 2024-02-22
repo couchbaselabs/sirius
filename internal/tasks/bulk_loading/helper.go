@@ -220,7 +220,7 @@ func retracePreviousMutations(r *tasks.Request, collectionIdentifier string, off
 	r.Lock()
 	for i := range r.Tasks {
 		td := r.Tasks[i]
-		if td.Operation == tasks.UpsertOperation {
+		if td.Operation == tasks.UpsertOperation || td.Operation == tasks.BulkUpsertOperation {
 			if tempX, ok := td.Task.(BulkTask); ok {
 				u, ok := tempX.(*GenericLoadingTask)
 				if ok {
@@ -229,6 +229,7 @@ func retracePreviousMutations(r *tasks.Request, collectionIdentifier string, off
 					}
 					if offset >= (u.OperationConfig.Start) && (offset < u.OperationConfig.End) && resultSeed != u.
 						ResultSeed {
+
 						if u.State == nil {
 							u.State = task_state.ConfigTaskState(resultSeed)
 						}

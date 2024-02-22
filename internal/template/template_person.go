@@ -164,7 +164,7 @@ func (p *Person) UpdateDocument(fieldsToChange []string, lastUpdatedDocument int
 		person.Address.City = city[fake.IntBetween(1, len(city)-1)]
 	}
 	if _, ok := checkFields["gender"]; ok || (len(checkFields) == 0) {
-		person.Gender = gender[fake.IntBetween(1, len(gender)-1)]
+		person.Gender = gender[fake.IntBetween(0, len(gender)-1)]
 	}
 	if _, ok := checkFields["maritalStatus"]; ok || (len(checkFields) == 0) {
 		person.MaritalStatus = maritalChoices[fake.IntBetween(1, len(maritalChoices)-1)]
@@ -206,6 +206,7 @@ func (p *Person) UpdateDocument(fieldsToChange []string, lastUpdatedDocument int
 	if (len(personDocument)) < int(documentSize) {
 		person.Padding = strings.Repeat("a", int(documentSize)-(len(personDocument)))
 	}
+	// log.Println("\n In updatedocument: prev: ", lastUpdatedDocument, "\t new: ", person)
 	return person, nil
 }
 

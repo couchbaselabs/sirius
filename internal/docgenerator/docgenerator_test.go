@@ -23,7 +23,7 @@ func TestGenerator_GetNextKey(t *testing.T) {
 		docId := g.BuildKey(key)
 		log.Println(docId)
 		fake := faker.NewWithSeed(rand.NewSource(int64(key)))
-		_, err := g.Template.GenerateDocument(docID, &fake, 1024)
+		_, err := g.Template.GenerateDocument(docId, &fake, 1024)
 		if err != nil {
 			t.Fail()
 		}

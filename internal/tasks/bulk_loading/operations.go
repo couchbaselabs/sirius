@@ -5,12 +5,11 @@ import (
 	"sync"
 	"time"
 
-
-	"github.com/couchbaselabs/sirius/internal/db"
-	"github.com/couchbaselabs/sirius/internal/docgenerator"
-	"github.com/couchbaselabs/sirius/internal/task_result"
-	"github.com/couchbaselabs/sirius/internal/task_state"
-	"github.com/couchbaselabs/sirius/internal/tasks"
+	"github.com/barkha06/sirius/internal/db"
+	"github.com/barkha06/sirius/internal/docgenerator"
+	"github.com/barkha06/sirius/internal/task_result"
+	"github.com/barkha06/sirius/internal/task_state"
+	"github.com/barkha06/sirius/internal/tasks"
 	"github.com/jaswdr/faker"
 )
 
@@ -68,120 +67,120 @@ func insertDocuments(start, end, seed int64, operationConfig *OperationConfig,
 	}
 }
 
-func bulkInsertDocuments(start, end, seed int64, operationConfig *OperationConfig,
-	rerun bool, gen *docgenerator.Generator, state *task_state.TaskState, result *task_result.TaskResult,
-	databaseInfo tasks.DatabaseInformation, extra db.Extras, wg *sync.WaitGroup) {
+// func bulkInsertDocuments(start, end, seed int64, operationConfig *OperationConfig,
+// 	rerun bool, gen *docgenerator.Generator, state *task_state.TaskState, result *task_result.TaskResult,
+// 	databaseInfo tasks.DatabaseInformation, extra db.Extras, wg *sync.WaitGroup) {
 
-	defer wg.Done()
+// 	defer wg.Done()
 
-	skip := make(map[int64]struct{})
-	for _, offset := range state.KeyStates.Completed {
-		skip[offset] = struct{}{}
-	}
-	for _, offset := range state.KeyStates.Err {
-		skip[offset] = struct{}{}
-	}
+// 	skip := make(map[int64]struct{})
+// 	for _, offset := range state.KeyStates.Completed {
+// 		skip[offset] = struct{}{}
+// 	}
+// 	for _, offset := range state.KeyStates.Err {
+// 		skip[offset] = struct{}{}
+// 	}
 
-	database, dbErr := db.ConfigDatabase(databaseInfo.DBType)
-	if dbErr != nil {
-		result.FailWholeBulkOperation(start, end, dbErr, state, gen, seed)
-		return
-	}
+// 	database, dbErr := db.ConfigDatabase(databaseInfo.DBType)
+// 	if dbErr != nil {
+// 		result.FailWholeBulkOperation(start, end, dbErr, state, gen, seed)
+// 		return
+// 	}
 
-	batchSize := int64(100)
-	totalNumOfDocs := end - start
-	numBatches := int64(totalNumOfDocs / batchSize)
-	remNumOfDocs := totalNumOfDocs - (numBatches * batchSize)
-	offset := start
+// 	batchSize := int64(100)
+// 	totalNumOfDocs := end - start
+// 	numBatches := int64(totalNumOfDocs / batchSize)
+// 	remNumOfDocs := totalNumOfDocs - (numBatches * batchSize)
+// 	offset := start
 
-	for i := int64(0); i < numBatches; i++ {
-		var keyValues []db.KeyValue
-		initTime := time.Now().UTC().Format(time.RFC850)
-		for j := int64(0); j < batchSize; j++ {
-			if _, ok := skip[offset]; ok {
-				continue
-			}
+// 	for i := int64(0); i < numBatches; i++ {
+// 		var keyValues []db.KeyValue
+// 		initTime := time.Now().UTC().Format(time.RFC850)
+// 		for j := int64(0); j < batchSize; j++ {
+// 			if _, ok := skip[offset]; ok {
+// 				continue
+// 			}
 
-			key := offset + seed
-			docId := gen.BuildKey(key)
-			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
-			doc, err1 := gen.Template.GenerateDocument(docId, &fake, operationConfig.DocSize)
+// 			key := offset + seed
+// 			docId := gen.BuildKey(key)
+// 			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
+// 			doc, err1 := gen.Template.GenerateDocument(docId, &fake, operationConfig.DocSize)
 
-			if err1 != nil {
-				result.IncrementFailure(initTime, docId, err1, false, nil, offset)
-				continue
-			}
-			keyVal := db.KeyValue{
-				Key:    docId,
-				Doc:    doc,
-				Offset: offset,
-			}
-			keyValues = append(keyValues, keyVal)
-			offset++
-		}
+// 			if err1 != nil {
+// 				result.IncrementFailure(initTime, docId, err1, false, nil, offset)
+// 				continue
+// 			}
+// 			keyVal := db.KeyValue{
+// 				Key:    docId,
+// 				Doc:    doc,
+// 				Offset: offset,
+// 			}
+// 			keyValues = append(keyValues, keyVal)
+// 			offset++
+// 		}
 
-		bulkOperationResult := database.CreateBulk(databaseInfo.ConnStr, databaseInfo.Username, databaseInfo.Password, keyValues, extra)
+// 		bulkOperationResult := database.CreateBulk(databaseInfo.ConnStr, databaseInfo.Username, databaseInfo.Password, keyValues, extra)
 
-		for j := range keyValues {
-			if bulkOperationResult.GetError(keyValues[j].Key) != nil {
-				if db.CheckAllowedInsertError(bulkOperationResult.GetError(keyValues[j].Key)) && rerun {
-					state.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
-					continue
-				} else {
-					result.IncrementFailure(initTime, keyValues[j].Key, bulkOperationResult.GetError(keyValues[j].Key), false, bulkOperationResult.GetExtra(keyValues[j].Key), offset)
-					state.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
-				}
-			} else {
-				state.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
-			}
-		}
+// 		for j := range keyValues {
+// 			if bulkOperationResult.GetError(keyValues[j].Key) != nil {
+// 				if db.CheckAllowedInsertError(bulkOperationResult.GetError(keyValues[j].Key)) && rerun {
+// 					state.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
+// 					continue
+// 				} else {
+// 					result.IncrementFailure(initTime, keyValues[j].Key, bulkOperationResult.GetError(keyValues[j].Key), false, bulkOperationResult.GetExtra(keyValues[j].Key), offset)
+// 					state.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
+// 				}
+// 			} else {
+// 				state.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
+// 			}
+// 		}
 
-	}
+// 	}
 
-	// Inserting the remaining documents
-	if remNumOfDocs > 0 {
-		var keyValues []db.KeyValue
-		initTime := time.Now().UTC().Format(time.RFC850)
-		for i := int64(0); i < remNumOfDocs; i++ {
-			if _, ok := skip[offset]; ok {
-				continue
-			}
+// 	// Inserting the remaining documents
+// 	if remNumOfDocs > 0 {
+// 		var keyValues []db.KeyValue
+// 		initTime := time.Now().UTC().Format(time.RFC850)
+// 		for i := int64(0); i < remNumOfDocs; i++ {
+// 			if _, ok := skip[offset]; ok {
+// 				continue
+// 			}
 
-			key := offset + seed
-			docId := gen.BuildKey(key)
-			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
-			doc, err1 := gen.Template.GenerateDocument(docId, &fake, operationConfig.DocSize)
+// 			key := offset + seed
+// 			docId := gen.BuildKey(key)
+// 			fake := faker.NewWithSeed(rand.NewSource(int64(key)))
+// 			doc, err1 := gen.Template.GenerateDocument(docId, &fake, operationConfig.DocSize)
 
-			if err1 != nil {
-				result.IncrementFailure(initTime, docId, err1, false, nil, offset)
-				continue
-			}
-			keyVal := db.KeyValue{
-				Key:    docId,
-				Doc:    doc,
-				Offset: offset,
-			}
-			keyValues = append(keyValues, keyVal)
-			offset++
-		}
+// 			if err1 != nil {
+// 				result.IncrementFailure(initTime, docId, err1, false, nil, offset)
+// 				continue
+// 			}
+// 			keyVal := db.KeyValue{
+// 				Key:    docId,
+// 				Doc:    doc,
+// 				Offset: offset,
+// 			}
+// 			keyValues = append(keyValues, keyVal)
+// 			offset++
+// 		}
 
-		bulkOperationResult := database.CreateBulk(databaseInfo.ConnStr, databaseInfo.Username, databaseInfo.Password, keyValues, extra)
+// 		bulkOperationResult := database.CreateBulk(databaseInfo.ConnStr, databaseInfo.Username, databaseInfo.Password, keyValues, extra)
 
-		for j := range keyValues {
-			if bulkOperationResult.GetError(keyValues[j].Key) != nil {
-				if db.CheckAllowedInsertError(bulkOperationResult.GetError(keyValues[j].Key)) && rerun {
-					state.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
-					continue
-				} else {
-					result.IncrementFailure(initTime, keyValues[j].Key, bulkOperationResult.GetError(keyValues[j].Key), false, bulkOperationResult.GetExtra(keyValues[j].Key), offset)
-					state.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
-				}
-			} else {
-				state.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
-			}
-		}
-	}
-}
+// 		for j := range keyValues {
+// 			if bulkOperationResult.GetError(keyValues[j].Key) != nil {
+// 				if db.CheckAllowedInsertError(bulkOperationResult.GetError(keyValues[j].Key)) && rerun {
+// 					state.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
+// 					continue
+// 				} else {
+// 					result.IncrementFailure(initTime, keyValues[j].Key, bulkOperationResult.GetError(keyValues[j].Key), false, bulkOperationResult.GetExtra(keyValues[j].Key), offset)
+// 					state.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
+// 				}
+// 			} else {
+// 				state.StateChannel <- task_state.StateHelper{Status: task_state.COMPLETED, Offset: offset}
+// 			}
+// 		}
+// 	}
+// }
 
 func upsertDocuments(start, end, seed int64, operationConfig *OperationConfig,
 	_ bool, gen *docgenerator.Generator, state *task_state.TaskState, result *task_result.TaskResult,
@@ -213,20 +212,21 @@ func upsertDocuments(start, end, seed int64, operationConfig *OperationConfig,
 		fake := faker.NewWithSeed(rand.NewSource(int64(key)))
 		initTime := time.Now().UTC().Format(time.RFC850)
 
-		originalDoc, err1 := gen.Template.GenerateDocument(docId, &fake, operationConfig.DocSize)
+		originalDoc1, err1 := gen.Template.GenerateDocument(docId, &fake, operationConfig.DocSize)
 		if err1 != nil {
 			state.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 			result.IncrementFailure(initTime, docId, err1, false, nil, offset)
 			continue
 		}
-		originalDoc, err1 = retracePreviousMutations(req, identifier, offset, originalDoc, gen, &fake,
+		// log.Println("\noriginal doc: ", originalDoc1)
+		originalDoc, err1 := retracePreviousMutations(req, identifier, offset, originalDoc1, gen, &fake,
 			result.ResultSeed)
 		if err1 != nil {
 			state.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 			result.IncrementFailure(initTime, docId, err1, false, nil, offset)
 			continue
 		}
-
+		// log.Println(" last updated: ", originalDoc)
 		docUpdated, err2 := gen.Template.UpdateDocument(operationConfig.FieldsToChange, originalDoc,
 			operationConfig.DocSize, &fake)
 		if err2 != nil {
@@ -234,7 +234,7 @@ func upsertDocuments(start, end, seed int64, operationConfig *OperationConfig,
 			result.IncrementFailure(initTime, docId, err2, false, nil, offset)
 			continue
 		}
-
+		// log.Println("\n new doc ", docUpdated)
 		operationResult := database.Update(databaseInfo.ConnStr, databaseInfo.Username, databaseInfo.Password, db.KeyValue{
 			Key:    docId,
 			Doc:    docUpdated,
@@ -686,7 +686,7 @@ func bulkInsertDocuments(start, end, seed int64, operationConfig *OperationConfi
 		key := offset + seed
 		docId := gen.BuildKey(key)
 		fake := faker.NewWithSeed(rand.NewSource(int64(key)))
-		doc, _ := gen.Template.GenerateDocument(&fake, operationConfig.DocSize)
+		doc, _ := gen.Template.GenerateDocument(docId, &fake, operationConfig.DocSize)
 		keyValues = append(keyValues, db.KeyValue{
 			Key:    docId,
 			Doc:    doc,
@@ -716,7 +716,7 @@ func bulkInsertDocuments(start, end, seed int64, operationConfig *OperationConfi
 
 func bulkUpsertDocuments(start, end, seed int64, operationConfig *OperationConfig,
 	rerun bool, gen *docgenerator.Generator, state *task_state.TaskState, result *task_result.TaskResult,
-	databaseInfo tasks.DatabaseInformation, extra db.Extras, wg *sync.WaitGroup) {
+	databaseInfo tasks.DatabaseInformation, extra db.Extras, req *tasks.Request, identifier string, wg *sync.WaitGroup) {
 
 	defer wg.Done()
 
@@ -743,10 +743,12 @@ func bulkUpsertDocuments(start, end, seed int64, operationConfig *OperationConfi
 		key := offset + seed
 		docId := gen.BuildKey(key)
 		fake := faker.NewWithSeed(rand.NewSource(int64(key)))
-		doc, _ := gen.Template.GenerateDocument(&fake, operationConfig.DocSize)
+		originalDoc1, _ := gen.Template.GenerateDocument(docId, &fake, operationConfig.DocSize)
+		originalDoc, _ := retracePreviousMutations(req, identifier, offset, originalDoc1, gen, &fake, result.ResultSeed)
+		docUpdated, _ := gen.Template.UpdateDocument(operationConfig.FieldsToChange, originalDoc, operationConfig.DocSize, &fake)
 		keyValues = append(keyValues, db.KeyValue{
 			Key:    docId,
-			Doc:    doc,
+			Doc:    docUpdated,
 			Offset: offset,
 		})
 	}

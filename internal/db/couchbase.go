@@ -3,7 +3,8 @@ package db
 import (
 	"errors"
 	"fmt"
-	"log"
+
+	// "log"
 	"time"
 
 	"github.com/barkha06/sirius/internal/cb_sdk"
@@ -1225,4 +1226,3 @@ func (c *Couchbase) TouchBulk(connStr, username, password string, keyValues []Ke
 	}
 	return result
 }
-
