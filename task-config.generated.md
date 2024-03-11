@@ -22,6 +22,7 @@ configuration that is also available on a per-task basis:
  * [/sub-doc-upsert](#sub-doc-upsert)
  * [/touch](#touch)
  * [/upsert](#upsert)
+ * [/validate](#validate)
  * [/warmup-bucket](#warmup-bucket)
 
 ---
@@ -286,6 +287,23 @@ Description : Do operation between range from [start,end)
 
 ---
 #### /upsert
+
+ REST : POST
+
+Description : Do operation between range from [start,end)
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `OperationConfig` | `ptr` | `json:operationConfig`  |
+| `DBType` | `string` | `json:dbType`  |
+| `ConnStr` | `string` | `json:connectionString`  |
+| `Username` | `string` | `json:username`  |
+| `Password` | `string` | `json:password`  |
+| `Extra` | `struct` | `json:extra`  |
+
+---
+#### /validate
 
  REST : POST
 
