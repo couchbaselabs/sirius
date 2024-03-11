@@ -17,7 +17,7 @@ import (
 
 const (
 	ResultPath         = "./internal/task_result/task_result_logs"
-	ResultChannelLimit = 10000
+	ResultChannelLimit = 10000000
 )
 
 type SDKTiming struct {
@@ -249,6 +249,9 @@ func (t *TaskResult) StoreResult() {
 			select {
 			case <-t.ctx.Done():
 				{
+					for s := range t.ResultChannel {
+						resultList = append(resultList, s)
+					}
 					t.StoreResultList(resultList)
 					resultList = resultList[:0]
 					return
@@ -271,6 +274,9 @@ func (t *TaskResult) StoreResultList(resultList []ResultHelper) {
 	defer t.lock.Unlock()
 	t.lock.Lock()
 	for _, x := range resultList {
+		if x.err == nil {
+			continue
+		}
 		t.Failure++
 		v, errorString := db.CheckSDKException(x.err)
 		if v == "unknown exception" {
@@ -293,9 +299,9 @@ func (t *TaskResult) StopStoringResult() {
 	if t.ctx.Err() != nil {
 		return
 	}
-	time.Sleep(1 * time.Second)
+	close(t.ResultChannel)
 	t.cancel()
-	time.Sleep(1 * time.Second)
+	time.Sleep(5 * time.Second)
 }
 
 // DeleteResultFile deletes the result file

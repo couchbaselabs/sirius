@@ -54,7 +54,6 @@ func TestCouchbase(t *testing.T) {
 		fake := faker.NewFastFaker()
 		fake.Seed(key)
 		doc := g.Template.GenerateDocument(fake, docId, 10)
-		log.Println(docId, doc)
 		x := db.Update(connStr, username, password, KeyValue{
 			Key:    docId,
 			Doc:    doc,
@@ -65,7 +64,7 @@ func TestCouchbase(t *testing.T) {
 		if x.GetError() != nil {
 			t.Error(x.GetError())
 		} else {
-			log.Println("Update", x.Key(), " ", x.Value())
+			log.Println("Update", x.Key())
 		}
 
 	}
@@ -87,7 +86,7 @@ func TestCouchbase(t *testing.T) {
 		if x.GetError() != nil {
 			t.Error(x.GetError())
 		} else {
-			log.Println("Update", x.Key(), " ", x.Value())
+			log.Println("Update", x.Key())
 		}
 	}
 
@@ -100,7 +99,8 @@ func TestCouchbase(t *testing.T) {
 		if x.GetError() != nil {
 			t.Error(x.GetError())
 		} else {
-			log.Println("Read", x.Value(), " key ", x.Key())
+			//log.Println("Read", x.Value(), " key ", x.Key())
+			log.Println(x.Value().(map[string]any))
 		}
 	}
 

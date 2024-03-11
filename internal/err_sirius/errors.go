@@ -36,4 +36,5 @@ const (
 	CollectionIsMissing                = Error("collection is in extra parameters for mongo cluster")
 	InternalErrorSetOperationType      = Error(
 		"operation type not set in the handler of route before configuring the generic loading task")
+	IntegrityLost = Error("document comparison failed")
 )

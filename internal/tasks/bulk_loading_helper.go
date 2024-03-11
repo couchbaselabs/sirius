@@ -71,151 +71,124 @@ func ConfigureOperationConfig(o *OperationConfig) error {
 	return nil
 }
 
-// // checkBulkWriteOperation is used to check if the Write operation is on main doc or sub doc
-//
-//	func checkBulkWriteOperation(operation string, subDocFlag bool) bool {
-//		if subDocFlag {
-//			switch operation {
-//			case tasks.SubDocInsertOperation, tasks.SubDocUpsertOperation, tasks.SingleSubDocReplaceOperation:
-//				return true
-//			default:
-//				return false
-//			}
-//		} else {
-//			switch operation {
-//			case tasks.InsertOperation, tasks.UpsertOperation, tasks.TouchOperation:
-//				return true
-//			default:
-//				return false
-//			}
-//		}
-//	}
-//
-// // retrieveLastConfig retrieves the OperationConfig for the offset for a successful Sirius operation.
-//
-//	func retrieveLastConfig(r *tasks.Request, offset int64, subDocFlag bool) (OperationConfig, error) {
-//		if r == nil {
-//			return OperationConfig{}, err_sirius.RequestIsNil
-//		}
-//		for i := range r.Tasks {
-//			if checkBulkWriteOperation(r.Tasks[len(r.Tasks)-i-1].Operation, subDocFlag) {
-//				task, ok := r.Tasks[len(r.Tasks)-i-1].Task.(BulkTask)
-//				if ok {
-//					operationConfig, taskState := task.GetOperationConfig()
-//					if operationConfig == nil {
-//						continue
-//					} else {
-//						if offset >= (operationConfig.Start) && (offset < operationConfig.End) {
-//							if _, ok := taskState.ReturnCompletedOffset()[offset]; ok {
-//								return *operationConfig, nil
-//							}
-//						}
-//					}
-//				}
-//			}
-//		}
-//		return OperationConfig{}, err_sirius.NilOperationConfig
-//	}
-//
-// // retracePreviousFailedInsertions returns a lookup table representing the offsets which are not inserted properly..
-// func retracePreviousFailedInsertions(r *tasks.Request, collectionIdentifier string,
-//
-//		resultSeed int64) (map[int64]struct{}, error) {
-//		if r == nil {
-//			return map[int64]struct{}{}, err_sirius.RequestIsNil
-//		}
-//		defer r.Unlock()
-//		r.Lock()
-//		result := make(map[int64]struct{})
-//		for i := range r.Tasks {
-//			td := r.Tasks[i]
-//			if td.Operation == tasks.InsertOperation {
-//				if task, ok := td.Task.(BulkTask); ok {
-//					u, ok1 := task.(*GenericLoadingTask)
-//					if ok1 {
-//						if collectionIdentifier != u.MetaDataIdentifier() {
-//							continue
-//						}
-//						if resultSeed != u.ResultSeed {
-//							errorOffSet := u.State.ReturnErrOffset()
-//							for offSet, _ := range errorOffSet {
-//								result[offSet] = struct{}{}
-//							}
-//						}
-//					}
-//				}
-//			}
-//		}
-//		return result, nil
-//	}
-//
-// // retracePreviousDeletions returns a lookup table representing the offsets which are successfully deleted.
-// func retracePreviousDeletions(r *tasks.Request, collectionIdentifier string, resultSeed int64) (map[int64]struct{},
-//
-//		error) {
-//		if r == nil {
-//			return map[int64]struct{}{}, err_sirius.RequestIsNil
-//		}
-//		defer r.Unlock()
-//		r.Lock()
-//		result := make(map[int64]struct{})
-//		for i := range r.Tasks {
-//			td := r.Tasks[i]
-//			if td.Operation == tasks.DeleteOperation {
-//				if task, ok := td.Task.(BulkTask); ok {
-//					u, ok1 := task.(*DeleteTask)
-//					if ok1 {
-//						if collectionIdentifier != u.MetaDataIdentifier() {
-//							continue
-//						}
-//						if resultSeed != u.ResultSeed {
-//							completedOffSet := u.State.ReturnCompletedOffset()
-//							for deletedOffset, _ := range completedOffSet {
-//								result[deletedOffset] = struct{}{}
-//							}
-//						}
-//					}
-//				}
-//			}
-//		}
-//		return result, nil
-//	}
-//
-// // retracePreviousSubDocDeletions  returns a lookup table representing the offsets which are successfully deleted.
-// func retracePreviousSubDocDeletions(r *tasks.Request, collectionIdentifier string,
-//
-//		resultSeed int64) (map[int64]struct{}, error) {
-//		if r == nil {
-//			return map[int64]struct{}{}, err_sirius.RequestIsNil
-//		}
-//		defer r.Unlock()
-//		r.Lock()
-//		result := make(map[int64]struct{})
-//		if r == nil {
-//			return result, err_sirius.RequestIsNil
-//		}
-//		for i := range r.Tasks {
-//			td := r.Tasks[i]
-//			if td.Operation == tasks.SubDocDeleteOperation {
-//				if task, ok := td.Task.(BulkTask); ok {
-//					u, ok1 := task.(*SubDocDelete)
-//					if ok1 {
-//						if collectionIdentifier != u.MetaDataIdentifier() {
-//							continue
-//						}
-//						if resultSeed != u.ResultSeed {
-//							completedOffSet := u.State.ReturnCompletedOffset()
-//							for deletedOffset, _ := range completedOffSet {
-//								result[deletedOffset] = struct{}{}
-//							}
-//						}
-//					}
-//				}
-//			}
-//		}
-//		return result, nil
-//	}
-//
+// checkBulkWriteOperation is used to check if the Write operation is on main doc or sub doc
+func checkBulkWriteOperation(operation string, subDocFlag bool) bool {
+	if subDocFlag {
+		switch operation {
+		case SubDocInsertOperation, SubDocUpsertOperation, SubDocReplaceOperation:
+			return true
+		default:
+			return false
+		}
+	} else {
+		switch operation {
+		case InsertOperation, UpsertOperation, TouchOperation, BulkUpsertOperation, BulkInsertOperation,
+			BulkTouchOperation:
+			return true
+		default:
+			return false
+		}
+	}
+}
+
+// retrieveLastConfig retrieves the OperationConfig for the offset for a successful Sirius operation.
+func retrieveLastConfig(r *Request, offset int64, subDocFlag bool) (OperationConfig, error) {
+	if r == nil {
+		return OperationConfig{}, err_sirius.RequestIsNil
+	}
+	for i := range r.Tasks {
+		if checkBulkWriteOperation(r.Tasks[len(r.Tasks)-i-1].Operation, subDocFlag) {
+			task, ok := r.Tasks[len(r.Tasks)-i-1].Task.(BulkTask)
+			if ok {
+				operationConfig, taskState := task.GetOperationConfig()
+				if operationConfig == nil {
+					continue
+				} else {
+					if offset >= (operationConfig.Start) && (offset < operationConfig.End) {
+						if ok := taskState.CheckOffsetInComplete(offset); ok {
+							return *operationConfig, nil
+						}
+					}
+				}
+			}
+		}
+	}
+	return OperationConfig{}, err_sirius.NilOperationConfig
+}
+
+// retracePreviousDeletions returns a lookup table representing the offsets which are successfully deleted.
+func retracePreviousDeletions(r *Request, collectionIdentifier string, resultSeed int64) (map[int64]struct{},
+
+	error) {
+	if r == nil {
+		return map[int64]struct{}{}, err_sirius.RequestIsNil
+	}
+	defer r.Unlock()
+	r.Lock()
+	result := make(map[int64]struct{})
+	for i := range r.Tasks {
+		td := r.Tasks[i]
+		if td.Operation == DeleteOperation {
+			if task, ok := td.Task.(BulkTask); ok {
+				u, ok1 := task.(*GenericLoadingTask)
+				if ok1 {
+					if collectionIdentifier != u.MetaDataIdentifier() {
+						continue
+					}
+					if resultSeed != u.ResultSeed {
+						if u.State == nil {
+							u.State = task_state.ConfigTaskState(resultSeed)
+						}
+						completedOffSet := u.State.ReturnCompletedOffset()
+						for deletedOffset, _ := range completedOffSet {
+							result[deletedOffset] = struct{}{}
+						}
+					}
+				}
+			}
+		}
+	}
+	return result, nil
+}
+
+// retracePreviousSubDocDeletions  returns a lookup table representing the offsets which are successfully deleted.
+func retracePreviousSubDocDeletions(r *Request, collectionIdentifier string,
+
+	resultSeed int64) (map[int64]struct{}, error) {
+	if r == nil {
+		return map[int64]struct{}{}, err_sirius.RequestIsNil
+	}
+	defer r.Unlock()
+	r.Lock()
+	result := make(map[int64]struct{})
+	if r == nil {
+		return result, err_sirius.RequestIsNil
+	}
+	for i := range r.Tasks {
+		td := r.Tasks[i]
+		if td.Operation == SubDocDeleteOperation {
+			if task, ok := td.Task.(BulkTask); ok {
+				u, ok1 := task.(*GenericLoadingTask)
+				if ok1 {
+					if collectionIdentifier != u.MetaDataIdentifier() {
+						continue
+					}
+					if resultSeed != u.ResultSeed {
+						if u.State == nil {
+							u.State = task_state.ConfigTaskState(resultSeed)
+						}
+						completedOffSet := u.State.ReturnCompletedOffset()
+						for deletedOffset, _ := range completedOffSet {
+							result[deletedOffset] = struct{}{}
+						}
+					}
+				}
+			}
+		}
+	}
+	return result, nil
+}
+
 // retracePreviousMutations returns an updated document after mutating the original documents.
 func retracePreviousMutations(r *Request, collectionIdentifier string, offset int64, doc interface{},
 	gen *docgenerator.Generator, fake *faker.Faker, resultSeed int64) (interface{}, error) {
@@ -238,13 +211,11 @@ func retracePreviousMutations(r *Request, collectionIdentifier string, offset in
 						if u.State == nil {
 							u.State = task_state.ConfigTaskState(resultSeed)
 						}
-
 						if u.State.CheckOffsetInComplete(offset) {
 							doc, _ = gen.Template.UpdateDocument(u.OperationConfig.FieldsToChange, doc,
 								u.OperationConfig.DocSize, fake)
 						}
 					}
-
 				}
 			}
 		}
@@ -289,86 +260,100 @@ func retracePreviousSubDocMutations(r *Request, collectionIdentifier string, off
 	return result, nil
 }
 
-//
-//// countMutation return the number of mutation happened on an offset
-//func countMutation(r *tasks.Request, collectionIdentifier string, offset int64, resultSeed int64) (int, error) {
-//	if r == nil {
-//		return 0, err_sirius.RequestIsNil
-//	}
-//	defer r.Unlock()
-//	r.Lock()
-//	var result int = 0
-//	for i := range r.Tasks {
-//		td := r.Tasks[i]
-//		if td.Operation == tasks.SubDocUpsertOperation {
-//			if task, ok := td.Task.(BulkTask); ok {
-//				u, ok1 := task.(*SubDocUpsert)
-//				if ok1 {
-//					if collectionIdentifier != u.MetaDataIdentifier() {
-//						continue
-//					}
-//					if offset >= (u.OperationConfig.Start) && (offset < u.OperationConfig.End) && resultSeed != u.
-//						ResultSeed {
-//						completeOffset := u.State.ReturnCompletedOffset()
-//						if _, ok := completeOffset[offset]; ok {
-//							result++
-//						}
-//					}
-//				}
-//			}
-//		} else if td.Operation == tasks.SubDocDeleteOperation {
-//			if task, ok := td.Task.(BulkTask); ok {
-//				u, ok1 := task.(*SubDocDelete)
-//				if ok1 {
-//					if collectionIdentifier != u.MetaDataIdentifier() {
-//						continue
-//					}
-//					if offset >= (u.OperationConfig.Start) && (offset < u.OperationConfig.End) && resultSeed != u.
-//						ResultSeed {
-//						completeOffset := u.State.ReturnCompletedOffset()
-//						if _, ok := completeOffset[offset]; ok {
-//							result++
-//						}
-//					}
-//				}
-//			}
-//		} else if td.Operation == tasks.SubDocReplaceOperation {
-//			if task, ok := td.Task.(BulkTask); ok {
-//				u, ok1 := task.(*SubDocReplace)
-//				if ok1 {
-//					if collectionIdentifier != u.MetaDataIdentifier() {
-//						continue
-//					}
-//					if offset >= (u.OperationConfig.Start) && (offset < u.OperationConfig.End) && resultSeed != u.
-//						ResultSeed {
-//						completeOffset := u.State.ReturnCompletedOffset()
-//						if _, ok := completeOffset[offset]; ok {
-//							result++
-//						}
-//					}
-//				}
-//			}
-//		} else if td.Operation == tasks.SubDocInsertOperation {
-//			if task, ok := td.Task.(BulkTask); ok {
-//				u, ok1 := task.(*SubDocInsert)
-//				if ok1 {
-//					if collectionIdentifier != u.MetaDataIdentifier() {
-//						continue
-//					}
-//					if offset >= (u.OperationConfig.Start) && (offset < u.OperationConfig.End) && resultSeed != u.
-//						ResultSeed {
-//						completeOffset := u.State.ReturnCompletedOffset()
-//						if _, ok := completeOffset[offset]; ok {
-//							result++
-//						}
-//					}
-//				}
-//			}
-//		}
-//	}
-//	return result, nil
-//
-//}
+// countMutation return the number of mutation happened on an offset
+func countMutation(r *Request, collectionIdentifier string, offset int64, resultSeed int64) (int, error) {
+	if r == nil {
+		return 0, err_sirius.RequestIsNil
+	}
+	defer r.Unlock()
+	r.Lock()
+	var result int = 0
+	for i := range r.Tasks {
+		td := r.Tasks[i]
+		if td.Operation == SubDocUpsertOperation {
+			if task, ok := td.Task.(BulkTask); ok {
+				u, ok1 := task.(*GenericLoadingTask)
+				if ok1 {
+					if collectionIdentifier != u.MetaDataIdentifier() {
+						continue
+					}
+					if offset >= (u.OperationConfig.Start) && (offset < u.OperationConfig.End) && resultSeed != u.
+						ResultSeed {
+						if u.State == nil {
+							u.State = task_state.ConfigTaskState(resultSeed)
+						}
+
+						if u.State.CheckOffsetInComplete(offset) {
+							result++
+						}
+					}
+				}
+			}
+		} else if td.Operation == SubDocDeleteOperation {
+			if task, ok := td.Task.(BulkTask); ok {
+				u, ok1 := task.(*GenericLoadingTask)
+				if ok1 {
+					if collectionIdentifier != u.MetaDataIdentifier() {
+						continue
+					}
+					if offset >= (u.OperationConfig.Start) && (offset < u.OperationConfig.End) && resultSeed != u.
+						ResultSeed {
+						if u.State == nil {
+							u.State = task_state.ConfigTaskState(resultSeed)
+						}
+
+						if u.State.CheckOffsetInComplete(offset) {
+							result++
+						}
+					}
+				}
+			}
+		} else if td.Operation == SubDocReplaceOperation {
+			if task, ok := td.Task.(BulkTask); ok {
+				u, ok1 := task.(*GenericLoadingTask)
+				if ok1 {
+					if collectionIdentifier != u.MetaDataIdentifier() {
+						continue
+					}
+					if offset >= (u.OperationConfig.Start) && (offset < u.OperationConfig.End) && resultSeed != u.
+						ResultSeed {
+						if u.State == nil {
+							u.State = task_state.ConfigTaskState(resultSeed)
+						}
+
+						if u.State.CheckOffsetInComplete(offset) {
+							result++
+						}
+					}
+				}
+			}
+		} else if td.Operation == SubDocInsertOperation {
+			if task, ok := td.Task.(BulkTask); ok {
+				u, ok1 := task.(*GenericLoadingTask)
+				if ok1 {
+					if collectionIdentifier != u.MetaDataIdentifier() {
+						continue
+					}
+					if offset >= (u.OperationConfig.Start) && (offset < u.OperationConfig.End) && resultSeed != u.
+						ResultSeed {
+						if u.State == nil {
+							u.State = task_state.ConfigTaskState(resultSeed)
+						}
+
+						if u.State.CheckOffsetInComplete(offset) {
+							result++
+						}
+					}
+				}
+			}
+		} else if checkBulkWriteOperation(td.Operation, false) {
+			result = 0
+		}
+	}
+
+	return result, nil
+
+}
 
 func GetExceptions(result *task_result.TaskResult, RetryExceptions []string) []string {
 	var exceptionList []string

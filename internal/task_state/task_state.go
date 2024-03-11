@@ -117,8 +117,8 @@ func (t *TaskState) CheckOffsetInErr(offset int64) bool {
 
 // ReturnCompletedOffset returns a lookup table for searching completed offsets
 func (t *TaskState) ReturnCompletedOffset() map[int64]struct{} {
-	//defer t.lock.Unlock()
-	//t.lock.lock()
+	defer t.lock.Unlock()
+	t.lock.Lock()
 	completed := make(map[int64]struct{})
 	for _, v := range t.KeyStates.Completed {
 		completed[v] = struct{}{}

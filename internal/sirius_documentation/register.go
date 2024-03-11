@@ -35,7 +35,7 @@ func (r *Register) RegisteredTasks() map[string]TaskRegister {
 		"/sub-doc-replace":  {"POST", &tasks.GenericLoadingTask{}},
 		"/retry-exceptions": {"POST", &tasks.RetryExceptions{}},
 		"/warmup-bucket":    {"POST", &tasks.BucketWarmUpTask{}},
-		//"/validate":    {"POST", &bulk_loading.ValidateTask{}},
+		"/validate":         {"POST", &tasks.GenericLoadingTask{}},
 	}
 }
 

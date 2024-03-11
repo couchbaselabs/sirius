@@ -155,7 +155,7 @@ func (t *GenericLoadingTask) Do() {
 		_ = t.TearUp()
 		return
 	}
-	log.Println(MaxThreads)
+
 	loadDocumentsInBatches(t)
 
 	_ = t.TearUp()
@@ -195,8 +195,9 @@ func loadDocumentsInBatches(task *GenericLoadingTask) {
 			batchSize = (task.OperationConfig.End - task.OperationConfig.Start) / int64(MaxThreads)
 		}
 	}
-
-	numOfBatches = (task.OperationConfig.End - task.OperationConfig.Start) / (batchSize)
+	if batchSize > 0 {
+		numOfBatches = (task.OperationConfig.End - task.OperationConfig.Start) / (batchSize)
+	}
 	remainingItems := (task.OperationConfig.End - task.OperationConfig.Start) - (numOfBatches * batchSize)
 
 	fmt.Println()
@@ -330,6 +331,5 @@ func (t *GenericLoadingTask) SetException(exceptions Exceptions) {
 }
 
 func (t *GenericLoadingTask) GetOperationConfig() (*OperationConfig, *task_state.TaskState) {
-
 	return t.OperationConfig, t.State
 }

@@ -3,7 +3,7 @@
 This Readme file provides instructions for building and running a Go application named **Sirius**. A distributed testing framework designed for Couchbase,
 serving as a REST-based loading service for system, functional, performance and volume testing.
 
-Doc loader different capabilities are described using  [**Rest Endpoints**](t-config.generated.md).
+Doc loader different capabilities are described using  [**Rest Endpoints**](task-config.generated.md).
 
 [Sirius APIs Demo](https://documenter.getpostman.com/view/25450208/2s93sdXWeB)
 ## Requirements
