@@ -11,7 +11,8 @@ import (
 	"os"
 )
 
-const webPort = "4000"
+var webPort = ""
+const DefaultWebPort = "4000"
 const TaskQueueSize = 100
 
 type Config struct {
@@ -19,7 +20,18 @@ type Config struct {
 	serverRequests *server_requests.ServerRequests
 }
 
+func set_port_to_use() {
+    value := os.Getenv("SIRIUS_PORT")
+    if len(value) == 0 {
+        webPort = DefaultWebPort
+    } else {
+        webPort = value
+    }
+}
+
+
 func main() {
+    set_port_to_use()
 	registerInterfaces()
 
 	logFile, err := os.OpenFile(getFileName(), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
