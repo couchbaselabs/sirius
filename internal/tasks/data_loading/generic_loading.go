@@ -1,26 +1,28 @@
-package tasks
+package data_loading
 
 import (
 	"fmt"
-	"github.com/couchbaselabs/sirius/internal/db"
-	"github.com/couchbaselabs/sirius/internal/docgenerator"
-	"github.com/couchbaselabs/sirius/internal/err_sirius"
-	"github.com/couchbaselabs/sirius/internal/meta_data"
-	"github.com/couchbaselabs/sirius/internal/task_result"
-	"github.com/couchbaselabs/sirius/internal/task_state"
-	"github.com/couchbaselabs/sirius/internal/template"
-	"golang.org/x/sync/errgroup"
 	"log"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/couchbaselabs/sirius/internal/db"
+	"github.com/couchbaselabs/sirius/internal/docgenerator"
+	"github.com/couchbaselabs/sirius/internal/err_sirius"
+	"github.com/couchbaselabs/sirius/internal/meta_data"
+	"github.com/couchbaselabs/sirius/internal/task_result"
+	"github.com/couchbaselabs/sirius/internal/task_state"
+	"github.com/couchbaselabs/sirius/internal/tasks"
+	"github.com/couchbaselabs/sirius/internal/template"
+	"golang.org/x/sync/errgroup"
 )
 
 type GenericLoadingTask struct {
 	IdentifierToken string `json:"identifierToken" doc:"true"`
-	DatabaseInformation
+	tasks.DatabaseInformation
 	ResultSeed      int64                         `json:"resultSeed" doc:"false"`
 	TaskPending     bool                          `json:"taskPending" doc:"false"`
 	State           *task_state.TaskState         `json:"State" doc:"false"`
@@ -29,7 +31,7 @@ type GenericLoadingTask struct {
 	Operation       string                        `json:"-" doc:"false"`
 	Result          *task_result.TaskResult       `json:"-" doc:"false"`
 	gen             *docgenerator.Generator       `json:"-" doc:"false"`
-	req             *Request                      `json:"-" doc:"false"`
+	req             *tasks.Request                `json:"-" doc:"false"`
 	rerun           bool                          `json:"-" doc:"false"`
 	lock            sync.Mutex                    `json:"-" doc:"false"`
 }
@@ -54,7 +56,7 @@ func (t *GenericLoadingTask) CheckIfPending() bool {
 }
 
 // Config configures  the insert task
-func (t *GenericLoadingTask) Config(req *Request, reRun bool) (int64, error) {
+func (t *GenericLoadingTask) Config(req *tasks.Request, reRun bool) (int64, error) {
 	t.TaskPending = true
 	t.req = req
 
@@ -173,12 +175,12 @@ func loadDocumentsInBatches(task *GenericLoadingTask) {
 	numOfBatches := int64(0)
 
 	//default batch size is calculated by dividing the total operations in equal quantity to each thread.
-	batchSize := (task.OperationConfig.End - task.OperationConfig.Start) / int64(MaxThreads)
+	batchSize := (task.OperationConfig.End - task.OperationConfig.Start) / int64(tasks.MaxThreads)
 
 	//batchSize := int64(0)
 	// if we are using sdk Batching call, then fetch the batch size from extras.
 	// current default value of a batch for SDK batching is 100 but will be picked from os.env
-	if CheckBulkOperation(task.Operation) {
+	if tasks.CheckBulkOperation(task.Operation) {
 		if task.Extra.SDKBatchSize > 0 {
 			batchSize = int64(task.Extra.SDKBatchSize)
 		} else {
@@ -191,10 +193,11 @@ func loadDocumentsInBatches(task *GenericLoadingTask) {
 				}
 			}
 		}
-		if batchSize > (task.OperationConfig.End-task.OperationConfig.Start)/int64(MaxThreads) {
-			batchSize = (task.OperationConfig.End - task.OperationConfig.Start) / int64(MaxThreads)
+		if batchSize > (task.OperationConfig.End-task.OperationConfig.Start)/int64(tasks.MaxThreads) {
+			batchSize = (task.OperationConfig.End - task.OperationConfig.Start) / int64(tasks.MaxThreads)
 		}
 	}
+
 	if batchSize > 0 {
 		numOfBatches = (task.OperationConfig.End - task.OperationConfig.Start) / (batchSize)
 	}
@@ -263,8 +266,8 @@ func (t *GenericLoadingTask) PostTaskExceptionHandling() {
 	exceptionList := GetExceptions(t.Result, t.OperationConfig.Exceptions.RetryExceptions)
 
 	for _, exception := range exceptionList {
-		routineLimiter := make(chan struct{}, MaxRetryingRoutines)
-		dataChannel := make(chan int64, MaxRetryingRoutines)
+		routineLimiter := make(chan struct{}, tasks.MaxRetryingRoutines)
+		dataChannel := make(chan int64, tasks.MaxRetryingRoutines)
 
 		failedDocuments := t.Result.BulkError[exception]
 		delete(t.Result.BulkError, exception)

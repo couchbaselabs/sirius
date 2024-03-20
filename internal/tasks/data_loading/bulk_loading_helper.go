@@ -1,4 +1,4 @@
-package tasks
+package data_loading
 
 import (
 	"encoding/json"
@@ -10,8 +10,10 @@ import (
 	"github.com/couchbaselabs/sirius/internal/err_sirius"
 	"github.com/couchbaselabs/sirius/internal/task_result"
 	"github.com/couchbaselabs/sirius/internal/task_state"
+	"github.com/couchbaselabs/sirius/internal/tasks"
 	"github.com/shettyh/threadpool"
 	"log"
+	"reflect"
 	"time"
 )
 
@@ -75,15 +77,15 @@ func ConfigureOperationConfig(o *OperationConfig) error {
 func checkBulkWriteOperation(operation string, subDocFlag bool) bool {
 	if subDocFlag {
 		switch operation {
-		case SubDocInsertOperation, SubDocUpsertOperation, SubDocReplaceOperation:
+		case tasks.SubDocInsertOperation, tasks.SubDocUpsertOperation, tasks.SubDocReplaceOperation:
 			return true
 		default:
 			return false
 		}
 	} else {
 		switch operation {
-		case InsertOperation, UpsertOperation, TouchOperation, BulkUpsertOperation, BulkInsertOperation,
-			BulkTouchOperation:
+		case tasks.InsertOperation, tasks.UpsertOperation, tasks.TouchOperation, tasks.BulkUpsertOperation, tasks.BulkInsertOperation,
+			tasks.BulkTouchOperation:
 			return true
 		default:
 			return false
@@ -92,7 +94,7 @@ func checkBulkWriteOperation(operation string, subDocFlag bool) bool {
 }
 
 // retrieveLastConfig retrieves the OperationConfig for the offset for a successful Sirius operation.
-func retrieveLastConfig(r *Request, offset int64, subDocFlag bool) (OperationConfig, error) {
+func retrieveLastConfig(r *tasks.Request, offset int64, subDocFlag bool) (OperationConfig, error) {
 	if r == nil {
 		return OperationConfig{}, err_sirius.RequestIsNil
 	}
@@ -117,7 +119,7 @@ func retrieveLastConfig(r *Request, offset int64, subDocFlag bool) (OperationCon
 }
 
 // retracePreviousDeletions returns a lookup table representing the offsets which are successfully deleted.
-func retracePreviousDeletions(r *Request, collectionIdentifier string, resultSeed int64) (map[int64]struct{},
+func retracePreviousDeletions(r *tasks.Request, collectionIdentifier string, resultSeed int64) (map[int64]struct{},
 
 	error) {
 	if r == nil {
@@ -128,7 +130,7 @@ func retracePreviousDeletions(r *Request, collectionIdentifier string, resultSee
 	result := make(map[int64]struct{})
 	for i := range r.Tasks {
 		td := r.Tasks[i]
-		if td.Operation == DeleteOperation {
+		if td.Operation == tasks.DeleteOperation {
 			if task, ok := td.Task.(BulkTask); ok {
 				u, ok1 := task.(*GenericLoadingTask)
 				if ok1 {
@@ -152,7 +154,7 @@ func retracePreviousDeletions(r *Request, collectionIdentifier string, resultSee
 }
 
 // retracePreviousSubDocDeletions  returns a lookup table representing the offsets which are successfully deleted.
-func retracePreviousSubDocDeletions(r *Request, collectionIdentifier string,
+func retracePreviousSubDocDeletions(r *tasks.Request, collectionIdentifier string,
 
 	resultSeed int64) (map[int64]struct{}, error) {
 	if r == nil {
@@ -166,7 +168,7 @@ func retracePreviousSubDocDeletions(r *Request, collectionIdentifier string,
 	}
 	for i := range r.Tasks {
 		td := r.Tasks[i]
-		if td.Operation == SubDocDeleteOperation {
+		if td.Operation == tasks.SubDocDeleteOperation {
 			if task, ok := td.Task.(BulkTask); ok {
 				u, ok1 := task.(*GenericLoadingTask)
 				if ok1 {
@@ -190,7 +192,7 @@ func retracePreviousSubDocDeletions(r *Request, collectionIdentifier string,
 }
 
 // retracePreviousMutations returns an updated document after mutating the original documents.
-func retracePreviousMutations(r *Request, collectionIdentifier string, offset int64, doc interface{},
+func retracePreviousMutations(r *tasks.Request, collectionIdentifier string, offset int64, doc interface{},
 	gen *docgenerator.Generator, fake *faker.Faker, resultSeed int64) (interface{}, error) {
 	if r == nil {
 		return doc, err_sirius.RequestIsNil
@@ -199,7 +201,7 @@ func retracePreviousMutations(r *Request, collectionIdentifier string, offset in
 	r.Lock()
 	for i := range r.Tasks {
 		td := r.Tasks[i]
-		if td.Operation == UpsertOperation || td.Operation == BulkUpsertOperation {
+		if td.Operation == tasks.UpsertOperation || td.Operation == tasks.BulkUpsertOperation {
 			if tempX, ok := td.Task.(BulkTask); ok {
 				u, ok := tempX.(*GenericLoadingTask)
 				if ok {
@@ -224,7 +226,7 @@ func retracePreviousMutations(r *Request, collectionIdentifier string, offset in
 }
 
 // retracePreviousSubDocMutations retraces mutation in sub documents.
-func retracePreviousSubDocMutations(r *Request, collectionIdentifier string, offset int64,
+func retracePreviousSubDocMutations(r *tasks.Request, collectionIdentifier string, offset int64,
 	gen *docgenerator.Generator, fake *faker.Faker, resultSeed int64, subDocumentMap map[string]any) (map[string]any,
 	error) {
 	if r == nil {
@@ -235,7 +237,7 @@ func retracePreviousSubDocMutations(r *Request, collectionIdentifier string, off
 	var result map[string]any = subDocumentMap
 	for i := range r.Tasks {
 		td := r.Tasks[i]
-		if td.Operation == SubDocUpsertOperation {
+		if td.Operation == tasks.SubDocUpsertOperation {
 			if task, ok := td.Task.(BulkTask); ok {
 				u, ok1 := task.(*GenericLoadingTask)
 				if ok1 {
@@ -261,7 +263,7 @@ func retracePreviousSubDocMutations(r *Request, collectionIdentifier string, off
 }
 
 // countMutation return the number of mutation happened on an offset
-func countMutation(r *Request, collectionIdentifier string, offset int64, resultSeed int64) (int, error) {
+func countMutation(r *tasks.Request, collectionIdentifier string, offset int64, resultSeed int64) (int, error) {
 	if r == nil {
 		return 0, err_sirius.RequestIsNil
 	}
@@ -270,7 +272,7 @@ func countMutation(r *Request, collectionIdentifier string, offset int64, result
 	var result int = 0
 	for i := range r.Tasks {
 		td := r.Tasks[i]
-		if td.Operation == SubDocUpsertOperation {
+		if td.Operation == tasks.SubDocUpsertOperation {
 			if task, ok := td.Task.(BulkTask); ok {
 				u, ok1 := task.(*GenericLoadingTask)
 				if ok1 {
@@ -289,7 +291,7 @@ func countMutation(r *Request, collectionIdentifier string, offset int64, result
 					}
 				}
 			}
-		} else if td.Operation == SubDocDeleteOperation {
+		} else if td.Operation == tasks.SubDocDeleteOperation {
 			if task, ok := td.Task.(BulkTask); ok {
 				u, ok1 := task.(*GenericLoadingTask)
 				if ok1 {
@@ -308,7 +310,7 @@ func countMutation(r *Request, collectionIdentifier string, offset int64, result
 					}
 				}
 			}
-		} else if td.Operation == SubDocReplaceOperation {
+		} else if td.Operation == tasks.SubDocReplaceOperation {
 			if task, ok := td.Task.(BulkTask); ok {
 				u, ok1 := task.(*GenericLoadingTask)
 				if ok1 {
@@ -327,7 +329,7 @@ func countMutation(r *Request, collectionIdentifier string, offset int64, result
 					}
 				}
 			}
-		} else if td.Operation == SubDocInsertOperation {
+		} else if td.Operation == tasks.SubDocInsertOperation {
 			if task, ok := td.Task.(BulkTask); ok {
 				u, ok1 := task.(*GenericLoadingTask)
 				if ok1 {
@@ -407,7 +409,7 @@ func loadBatch(task *GenericLoadingTask, t *loadingTask, batchStart int64, batch
 
 	retryBatchCounter := 10
 	for ; retryBatchCounter > 0; retryBatchCounter-- {
-		if err := Pool.Execute(t); err == nil {
+		if err := tasks.Pool.Execute(t); err == nil {
 			break
 		}
 		time.Sleep(1 * time.Minute)
@@ -416,4 +418,43 @@ func loadBatch(task *GenericLoadingTask, t *loadingTask, batchStart int64, batch
 		task.Result.FailWholeBulkOperation(batchStart, batchEnd, errors.New("internal error, "+
 			"sirius is overloaded"), task.State, task.gen, task.MetaData.Seed)
 	}
+}
+
+func buildKeyAndValues(doc map[string]any, result map[string]any, startString string) {
+	for key, value := range doc {
+		if subDoc, ok := value.(map[string]any); ok {
+			buildKeyAndValues(subDoc, result, key+".")
+		} else {
+			result[startString+key] = value
+		}
+	}
+}
+
+func CompareDocumentsIsSame(host map[string]any, document1 map[string]any, document2 map[string]any) bool {
+
+	hostMap := make(map[string]any)
+	buildKeyAndValues(host, hostMap, "")
+
+	document1Map := make(map[string]any)
+	buildKeyAndValues(document1, document1Map, "")
+
+	document2Map := make(map[string]any)
+	buildKeyAndValues(document2, document2Map, "")
+
+	for key, value := range hostMap {
+		if v1, ok := document1Map[key]; ok {
+			if reflect.DeepEqual(value, v1) == false {
+				return false
+			}
+		} else if v2, ok := document2Map[key]; ok {
+			if reflect.DeepEqual(v2, value) == false {
+				return false
+			}
+		} else {
+			// TODO  fix_the_validation_of_missing_Keys
+			continue
+		}
+	}
+
+	return true
 }

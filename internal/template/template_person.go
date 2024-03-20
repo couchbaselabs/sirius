@@ -2,9 +2,10 @@ package template
 
 import (
 	"fmt"
-	"github.com/bgadrian/fastfaker/faker"
 	"reflect"
 	"strings"
+
+	"github.com/bgadrian/fastfaker/faker"
 )
 
 var maritalChoices = []string{"Single", "Married", "Divorcee"}
@@ -62,37 +63,37 @@ var city = []string{"Lake Penelop", "New Charlene", "Prosaccobury", "West Jasenm
 var gender = []string{"male", "female"}
 
 type Address struct {
-	City  string `json:"city,omitempty"`
-	State string `json:"state,omitempty"`
+	City  string `json:"city,omitempty" dynamodbav:"city"`
+	State string `json:"state,omitempty" dynamodbav:state"`
 }
 
 type Hair struct {
-	Type      string `json:"type,omitempty"`
-	Colour    string `json:"colour,omitempty"`
-	Length    string `json:"length,omitempty"`
-	Thickness string `json:"thickness,omitempty"`
+	Type      string `json:"type,omitempty"  dynamodbav:"type"`
+	Colour    string `json:"colour,omitempty" dynamodbav:"colour"`
+	Length    string `json:"length,omitempty" dynamodbav:"length"`
+	Thickness string `json:"thickness,omitempty" dynamodbav:"thickness"`
 }
 
 type Attribute struct {
-	Weight   float64 `json:"weight,omitempty"`
-	Height   float64 `json:"height,omitempty"`
-	Colour   string  `json:"colour,omitempty"`
-	Hair     Hair    `json:"hair,omitempty"`
-	BodyType string  `json:"bodyType,omitempty"`
+	Weight   float64 `json:"weight,omitempty" dynamodbav:"weight"`
+	Height   float64 `json:"height,omitempty" dynamodbav:"height"`
+	Colour   string  `json:"colour,omitempty" dynamodbav:"colour"`
+	Hair     Hair    `json:"hair,omitempty" dynamodbav:"hair"`
+	BodyType string  `json:"bodyType,omitempty" dynamodbav:"bodyType"`
 }
 
 type Person struct {
-	ID            string    `json:"_id" bson:"_id"`
-	FirstName     string    `json:"firstName,omitempty"`
-	Age           float64   `json:"age,omitempty"`
-	Email         string    `json:"email,omitempty"`
-	Address       Address   `json:"address,omitempty"`
-	Gender        string    `json:"gender,omitempty"`
-	MaritalStatus string    `json:"maritalStatus,omitempty"`
-	Hobbies       string    `json:"hobbies,omitempty"`
-	Attributes    Attribute `json:"attributes,omitempty"`
-	Mutated       float64   `json:"mutated"`
-	Padding       string    `json:"payload"`
+	ID            string    `json:"_id" bson:"_id" dynamodbav:"_id"`
+	FirstName     string    `json:"firstName,omitempty" dynamodbav:"firstName"`
+	Age           float64   `json:"age,omitempty" dynamodbav:"age"`
+	Email         string    `json:"email,omitempty" dynamodbav:"email"`
+	Address       Address   `json:"address,omitempty" dynamodbav:"address"`
+	Gender        string    `json:"gender,omitempty" dynamodbav:"gender"`
+	MaritalStatus string    `json:"maritalStatus,omitempty" dynamodbav:"maritalStatus"`
+	Hobbies       string    `json:"hobbies,omitempty" dynamodbav:"hobbies"`
+	Attributes    Attribute `json:"attributes,omitempty" dynamodbav:"attributes"`
+	Mutated       float64   `json:"mutated" dynamodbav:"mutated"`
+	Padding       string    `json:"payload" dynamodbav:"payload"`
 }
 
 func (p *Person) GenerateDocument(fake *faker.Faker, key string, documentSize int) interface{} {
@@ -124,7 +125,6 @@ func (p *Person) GenerateDocument(fake *faker.Faker, key string, documentSize in
 	}
 
 	currentDocSize := calculateSizeOfStruct(person)
-
 	if (currentDocSize) < int(documentSize) {
 		person.Padding = strings.Repeat("a", int(documentSize)-(currentDocSize))
 	}
@@ -192,7 +192,6 @@ func (p *Person) UpdateDocument(fieldsToChange []string, lastUpdatedDocument int
 	if _, ok := checkFields["attributes.bodyType"]; ok || (len(checkFields) == 0) {
 		person.Attributes.BodyType = fake.RandString(bodyType)
 	}
-
 	person.Padding = ""
 	currentDocSize := calculateSizeOfStruct(person)
 
@@ -219,4 +218,7 @@ func (p *Person) GenerateSubPathAndValue(fake *faker.Faker, subDocSize int) map[
 	return map[string]interface{}{
 		"_1": strings.Repeat(fake.Letter(), subDocSize),
 	}
+}
+func (p *Person) GetValues(document interface{}) (interface{}, error) {
+	return document, nil
 }

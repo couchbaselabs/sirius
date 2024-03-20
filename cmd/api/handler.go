@@ -2,11 +2,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/couchbaselabs/sirius/internal/task_result"
-	"github.com/couchbaselabs/sirius/internal/tasks"
-	"github.com/couchbaselabs/sirius/internal/tasks/util_sirius"
 	"log"
 	"net/http"
+
+	"github.com/couchbaselabs/sirius/internal/task_result"
+	"github.com/couchbaselabs/sirius/internal/tasks"
+	"github.com/couchbaselabs/sirius/internal/tasks/data_loading"
+	"github.com/couchbaselabs/sirius/internal/tasks/util_sirius"
 )
 
 // testServer supports GET method.
@@ -69,7 +71,7 @@ func (app *Config) taskResult(w http.ResponseWriter, r *http.Request) {
 
 // validateTask is validating the cluster's current state.
 func (app *Config) validateTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.GenericLoadingTask{}
+	task := &data_loading.GenericLoadingTask{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -106,7 +108,7 @@ func (app *Config) validateTask(w http.ResponseWriter, r *http.Request) {
 
 // insertTask is used to insert documents.
 func (app *Config) insertTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.GenericLoadingTask{}
+	task := &data_loading.GenericLoadingTask{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -148,7 +150,7 @@ func (app *Config) insertTask(w http.ResponseWriter, r *http.Request) {
 
 // bulkInsertTask is used to insert documents.
 func (app *Config) bulkInsertTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.GenericLoadingTask{}
+	task := &data_loading.GenericLoadingTask{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -190,7 +192,7 @@ func (app *Config) bulkInsertTask(w http.ResponseWriter, r *http.Request) {
 
 // deleteTask is used to delete documents.
 func (app *Config) deleteTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.GenericLoadingTask{}
+	task := &data_loading.GenericLoadingTask{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -232,7 +234,7 @@ func (app *Config) deleteTask(w http.ResponseWriter, r *http.Request) {
 
 // bulkDeleteTask is used to delete documents.
 func (app *Config) bulkDeleteTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.GenericLoadingTask{}
+	task := &data_loading.GenericLoadingTask{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -274,7 +276,7 @@ func (app *Config) bulkDeleteTask(w http.ResponseWriter, r *http.Request) {
 
 // upsertTask is used to update documents.
 func (app *Config) upsertTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.GenericLoadingTask{}
+	task := &data_loading.GenericLoadingTask{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -316,7 +318,7 @@ func (app *Config) upsertTask(w http.ResponseWriter, r *http.Request) {
 
 // bulkUpsertTask is used to update documents.
 func (app *Config) bulkUpsertTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.GenericLoadingTask{}
+	task := &data_loading.GenericLoadingTask{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -358,7 +360,7 @@ func (app *Config) bulkUpsertTask(w http.ResponseWriter, r *http.Request) {
 
 // touchTask is used to update the expiry of documents
 func (app *Config) touchTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.GenericLoadingTask{}
+	task := &data_loading.GenericLoadingTask{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -400,7 +402,7 @@ func (app *Config) touchTask(w http.ResponseWriter, r *http.Request) {
 
 // bulkTouchTask is used to update the expiry of documents
 func (app *Config) bulkTouchTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.GenericLoadingTask{}
+	task := &data_loading.GenericLoadingTask{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -442,7 +444,7 @@ func (app *Config) bulkTouchTask(w http.ResponseWriter, r *http.Request) {
 
 // readTask is to read documents.
 func (app *Config) readTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.GenericLoadingTask{}
+	task := &data_loading.GenericLoadingTask{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -484,7 +486,7 @@ func (app *Config) readTask(w http.ResponseWriter, r *http.Request) {
 
 // bulkReadTask is to read documents.
 func (app *Config) bulkReadTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.GenericLoadingTask{}
+	task := &data_loading.GenericLoadingTask{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -526,7 +528,7 @@ func (app *Config) bulkReadTask(w http.ResponseWriter, r *http.Request) {
 
 // SubDocInsertTask is used to load bulk sub documents into buckets
 func (app *Config) SubDocInsertTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.GenericLoadingTask{}
+	task := &data_loading.GenericLoadingTask{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -568,7 +570,7 @@ func (app *Config) SubDocInsertTask(w http.ResponseWriter, r *http.Request) {
 
 // SubDocUpsertTask is used to bulk updating sub documents into buckets
 func (app *Config) SubDocUpsertTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.GenericLoadingTask{}
+	task := &data_loading.GenericLoadingTask{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -610,7 +612,7 @@ func (app *Config) SubDocUpsertTask(w http.ResponseWriter, r *http.Request) {
 
 // SubDocDeleteTask is used to bulk updating sub documents into buckets
 func (app *Config) SubDocDeleteTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.GenericLoadingTask{}
+	task := &data_loading.GenericLoadingTask{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -652,7 +654,7 @@ func (app *Config) SubDocDeleteTask(w http.ResponseWriter, r *http.Request) {
 
 // SubDocReadTask is used to bulk updating sub documents into bucketsSubDocReadOperation
 func (app *Config) SubDocReadTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.GenericLoadingTask{}
+	task := &data_loading.GenericLoadingTask{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -695,7 +697,7 @@ func (app *Config) SubDocReadTask(w http.ResponseWriter, r *http.Request) {
 // SubDocReplaceTask is used to bulk updating sub documents into buckets
 
 func (app *Config) SubDocReplaceTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.GenericLoadingTask{}
+	task := &data_loading.GenericLoadingTask{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -737,7 +739,7 @@ func (app *Config) SubDocReplaceTask(w http.ResponseWriter, r *http.Request) {
 
 // RetryExceptionTask runs the query workload for a duration of time
 func (app *Config) RetryExceptionTask(w http.ResponseWriter, r *http.Request) {
-	task := &tasks.RetryExceptions{}
+	task := &data_loading.RetryExceptions{}
 	if err := app.readJSON(w, r, task); err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
 		return
@@ -775,7 +777,7 @@ func (app *Config) RetryExceptionTask(w http.ResponseWriter, r *http.Request) {
 // WarmUpBucket establish a connection to bucket
 func (app *Config) WarmUpBucket(w http.ResponseWriter, r *http.Request) {
 
-	task := &tasks.BucketWarmUpTask{}
+	task := &util_sirius.BucketWarmUpTask{}
 	if errSirius := app.readJSON(w, r, task); errSirius != nil {
 		_ = app.errorJSON(w, errSirius, http.StatusUnprocessableEntity)
 		return

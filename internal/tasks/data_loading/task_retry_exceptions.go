@@ -1,18 +1,19 @@
-package tasks
+package data_loading
 
 import (
 	"fmt"
 	"github.com/couchbaselabs/sirius/internal/err_sirius"
 	"github.com/couchbaselabs/sirius/internal/task_state"
+	"github.com/couchbaselabs/sirius/internal/tasks"
 )
 
 type RetryExceptions struct {
-	IdentifierToken string     `json:"identifierToken" doc:"true"`
-	ResultSeed      string     `json:"resultSeed" doc:"true"`
-	Exceptions      Exceptions `json:"exceptions" doc:"true"`
-	Operation       string     `json:"-" doc:"false"`
-	Task            BulkTask   `json:"-" doc:"false"`
-	req             *Request   `json:"-" doc:"false"`
+	IdentifierToken string         `json:"identifierToken" doc:"true"`
+	ResultSeed      string         `json:"resultSeed" doc:"true"`
+	Exceptions      Exceptions     `json:"exceptions" doc:"true"`
+	Operation       string         `json:"-" doc:"false"`
+	Task            BulkTask       `json:"-" doc:"false"`
+	req             *tasks.Request `json:"-" doc:"false"`
 }
 
 func (r *RetryExceptions) Describe() string {
@@ -30,7 +31,7 @@ func (r *RetryExceptions) Do() {
 	r.Task.PostTaskExceptionHandling()
 }
 
-func (r *RetryExceptions) Config(req *Request, reRun bool) (int64, error) {
+func (r *RetryExceptions) Config(req *tasks.Request, reRun bool) (int64, error) {
 	r.req = req
 	if r.req == nil {
 		return 0, err_sirius.RequestIsNil

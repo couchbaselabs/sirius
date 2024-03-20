@@ -1,15 +1,17 @@
-package tasks
+package data_loading
 
 import (
+	"sync"
+
 	"github.com/couchbaselabs/sirius/internal/db"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
 	"github.com/couchbaselabs/sirius/internal/task_result"
 	"github.com/couchbaselabs/sirius/internal/task_state"
-	"sync"
+	"github.com/couchbaselabs/sirius/internal/tasks"
 )
 
 type BulkTask interface {
-	Task
+	tasks.Task
 	PostTaskExceptionHandling()
 	MatchResultSeed(resultSeed string) (bool, error)
 	SetException(exceptions Exceptions)
@@ -27,17 +29,17 @@ type loadingTask struct {
 	gen             *docgenerator.Generator
 	state           *task_state.TaskState
 	result          *task_result.TaskResult
-	databaseInfo    DatabaseInformation
+	databaseInfo    tasks.DatabaseInformation
 	extra           db.Extras
-	req             *Request
+	req             *tasks.Request
 	identifier      string
 	wg              *sync.WaitGroup
 }
 
 func newLoadingTask(start, end, seed int64, operationConfig *OperationConfig,
 	operation string, rerun bool, gen *docgenerator.Generator,
-	state *task_state.TaskState, result *task_result.TaskResult, databaseInfo DatabaseInformation,
-	extra db.Extras, req *Request, identifier string, wg *sync.WaitGroup) *loadingTask {
+	state *task_state.TaskState, result *task_result.TaskResult, databaseInfo tasks.DatabaseInformation,
+	extra db.Extras, req *tasks.Request, identifier string, wg *sync.WaitGroup) *loadingTask {
 	return &loadingTask{
 		start:           start,
 		end:             end,
@@ -58,83 +60,83 @@ func newLoadingTask(start, end, seed int64, operationConfig *OperationConfig,
 
 func (l *loadingTask) Run() {
 	switch l.operation {
-	case InsertOperation:
+	case tasks.InsertOperation:
 		{
 			insertDocuments(l.start, l.end, l.seed, l.operationConfig, l.rerun, l.gen, l.state, l.result,
 				l.databaseInfo, l.extra, l.wg)
 		}
-	case UpsertOperation:
+	case tasks.UpsertOperation:
 		{
 			upsertDocuments(l.start, l.end, l.seed, l.operationConfig, l.rerun, l.gen, l.state, l.result,
 				l.databaseInfo, l.extra, l.req, l.identifier, l.wg)
 		}
-	case DeleteOperation:
+	case tasks.DeleteOperation:
 		{
 			deleteDocuments(l.start, l.end, l.seed, l.rerun, l.gen, l.state, l.result,
 				l.databaseInfo, l.extra, l.wg)
 		}
-	case ReadOperation:
+	case tasks.ReadOperation:
 		{
 			readDocuments(l.start, l.end, l.seed, l.rerun, l.gen, l.state, l.result,
 				l.databaseInfo, l.extra, l.wg)
 		}
-	case TouchOperation:
+	case tasks.TouchOperation:
 		{
 			touchDocuments(l.start, l.end, l.seed, l.rerun, l.gen, l.state, l.result,
 				l.databaseInfo, l.extra, l.wg)
 		}
-	case SubDocInsertOperation:
+	case tasks.SubDocInsertOperation:
 		{
 			subDocInsertDocuments(l.start, l.end, l.seed, l.operationConfig, l.rerun, l.gen, l.state, l.result,
 				l.databaseInfo, l.extra, l.wg)
 		}
-	case SubDocDeleteOperation:
+	case tasks.SubDocDeleteOperation:
 		{
 			subDocDeleteDocuments(l.start, l.end, l.seed, l.operationConfig, l.rerun, l.gen, l.state, l.result,
 				l.databaseInfo, l.extra, l.wg)
 		}
-	case SubDocReadOperation:
+	case tasks.SubDocReadOperation:
 		{
 			subDocReadDocuments(l.start, l.end, l.seed, l.operationConfig, l.rerun, l.gen, l.state, l.result,
 				l.databaseInfo, l.extra, l.wg)
 		}
-	case SubDocReplaceOperation:
+	case tasks.SubDocReplaceOperation:
 		{
 			subDocReplaceDocuments(l.start, l.end, l.seed, l.operationConfig, l.rerun, l.gen, l.state, l.result,
 				l.databaseInfo, l.extra, l.req, l.identifier, l.wg)
 		}
-	case SubDocUpsertOperation:
+	case tasks.SubDocUpsertOperation:
 		{
 			subDocUpsertDocuments(l.start, l.end, l.seed, l.operationConfig, l.rerun, l.gen, l.state, l.result,
 				l.databaseInfo, l.extra, l.req, l.identifier, l.wg)
 		}
 
-	case BulkInsertOperation:
+	case tasks.BulkInsertOperation:
 		{
 			bulkInsertDocuments(l.start, l.end, l.seed, l.operationConfig, l.rerun, l.gen, l.state, l.result,
 				l.databaseInfo, l.extra, l.wg)
 		}
-	case BulkUpsertOperation:
+	case tasks.BulkUpsertOperation:
 		{
 			bulkUpsertDocuments(l.start, l.end, l.seed, l.operationConfig, l.rerun, l.gen, l.state, l.result,
 				l.databaseInfo, l.extra, l.req, l.identifier, l.wg)
 		}
-	case BulkDeleteOperation:
+	case tasks.BulkDeleteOperation:
 		{
 			bulkDeleteDocuments(l.start, l.end, l.seed, l.operationConfig, l.rerun, l.gen, l.state, l.result,
 				l.databaseInfo, l.extra, l.wg)
 		}
-	case BulkReadOperation:
+	case tasks.BulkReadOperation:
 		{
 			bulkReadDocuments(l.start, l.end, l.seed, l.operationConfig, l.rerun, l.gen, l.state, l.result,
 				l.databaseInfo, l.extra, l.wg)
 		}
-	case BulkTouchOperation:
+	case tasks.BulkTouchOperation:
 		{
 			bulkTouchDocuments(l.start, l.end, l.seed, l.operationConfig, l.rerun, l.gen, l.state, l.result,
 				l.databaseInfo, l.extra, l.wg)
 		}
-	case ValidateOperation:
+	case tasks.ValidateOperation:
 		{
 			validateDocuments(l.start, l.end, l.seed, l.operationConfig, l.rerun, l.gen, l.state, l.result,
 				l.databaseInfo, l.extra, l.req, l.identifier, l.wg)
