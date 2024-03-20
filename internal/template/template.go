@@ -1,10 +1,11 @@
 package template
 
 import (
-	"github.com/bgadrian/fastfaker/faker"
 	"reflect"
 	"strings"
 	"unsafe"
+
+	"github.com/bgadrian/fastfaker/faker"
 )
 
 const (
@@ -22,6 +23,7 @@ type Template interface {
 	GenerateQueries(bucketName string, scopeName string, collectionName string) ([]string, error)
 	GenerateIndexesForSdk() (map[string][]string, error)
 	GenerateSubPathAndValue(fake *faker.Faker, subDocSize int) map[string]any
+	GetValues(interface{}) (interface{}, error)
 }
 
 // InitialiseTemplate returns a template as an interface defined by user request.
@@ -33,6 +35,12 @@ func InitialiseTemplate(template string) Template {
 		return &Hotel{}
 	case "small":
 		return &Small{}
+	case "person_sql":
+		return &PersonSql{}
+	case "hotel_sql":
+		return &HotelSql{}
+	case "small_sql":
+		return &SmallSql{}
 	default:
 		return &Person{}
 	}

@@ -3,17 +3,18 @@ package template
 import (
 	"errors"
 	"fmt"
-	"github.com/bgadrian/fastfaker/faker"
 	"reflect"
 	"strings"
+
+	"github.com/bgadrian/fastfaker/faker"
 )
 
 type Rating struct {
-	Value       float64 `json:"value,omitempty"`
-	Cleanliness float64 `json:"Cleanliness,omitempty"`
-	Overall     float64 `json:"Overall,omitempty"`
-	CheckIn     float64 `json:"Check in / front desk,omitempty"`
-	Rooms       float64 `json:"Rooms,omitempty"`
+	RatingValue float64 `json:"rating_value,omitempty"`
+	Cleanliness float64 `json:"cleanliness,omitempty"`
+	Overall     float64 `json:"overall,omitempty"`
+	CheckIn     float64 `json:"checkin,omitempty"`
+	Rooms       float64 `json:"rooms,omitempty"`
 }
 type Review struct {
 	Date   string `json:"date,omitempty"`
@@ -22,25 +23,30 @@ type Review struct {
 }
 
 type Hotel struct {
-	ID            string   `json:"_id" bson:"_id"`
-	Country       string   `json:"country,omitempty"`
-	Address       string   `json:"address,omitempty"`
-	FreeParking   bool     `json:"free_parking,omitempty"`
-	City          string   `json:"city,omitempty"`
-	Type          string   `json:"type"`
-	URL           string   `json:"url,omitempty"`
-	Reviews       []Review `json:"reviews,omitempty"`
-	Phone         string   `json:"phone,omitempty"`
-	Price         float64  `json:"price,omitempty"`
-	AvgRating     float64  `json:"avg_rating,omitempty"`
-	FreeBreakfast bool     `json:"free_breakfast,omitempty"`
-	Name          string   `json:"name,omitempty"`
-	PublicLikes   []string `json:"public_likes,omitempty"`
-	Email         string   `json:"email,omitempty"`
-	Mutated       float64  `json:"mutated"`
-	Padding       string   `json:"padding"`
+	ID            string   `json:"_id" bson:"_id" dynamodbav:"_id"`
+	Country       string   `json:"country,omitempty" dynamodbav:"country"`
+	Address       string   `json:"address,omitempty" dynamodbav:"address"`
+	FreeParking   bool     `json:"free_parking,omitempty" dynamodbav:"free_parking"`
+	City          string   `json:"city,omitempty" dynamodbav:"city"`
+	TemplateType  string   `json:"template_type" dynamodbav:"template_type"`
+	URL           string   `json:"url,omitempty" dynamodbav:"url"`
+	Reviews       []Review `json:"reviews,omitempty" dynamodbav:"reviews"`
+	Phone         string   `json:"phone,omitempty" dynamodbav:"phone"`
+	Price         float64  `json:"price,omitempty" dynamodbav:"price"`
+	AvgRating     float64  `json:"avg_rating,omitempty" dynamodbav:"avg_rating"`
+	FreeBreakfast bool     `json:"free_breakfast,omitempty" dynamodbav:"free_breakfast"`
+	Name          string   `json:"name,omitempty" dynamodbav:"name"`
+	PublicLikes   []string `json:"public_likes,omitempty" dynamodbav:"public_likes"`
+	Email         string   `json:"email,omitempty" dynamodbav:"email"`
+	Mutated       float64  `json:"mutated" dynamodbav:"mutated"`
+	Padding       string   `json:"padding" dynamodbav:"padding"`
 }
 
+// buildReview generates the Review slice to be added into Hotel struct
+/*
+ * length defines the number of reviews to be added to Review slice
+ * approximate size of 1 review is around 95bytes
+ */
 func buildReview(fake *faker.Faker, length int32) []Review {
 	var r []Review
 	for i := 0; i < int(length); i++ {
@@ -48,7 +54,7 @@ func buildReview(fake *faker.Faker, length int32) []Review {
 			Date:   fake.DateStr(),
 			Author: fake.Name(),
 			Rating: Rating{
-				Value:       float64(fake.Int32Range(0, 10)),
+				RatingValue: float64(fake.Int32Range(0, 10)),
 				Cleanliness: float64(fake.Int32Range(0, 10)),
 				Overall:     float64(fake.Int32Range(1, 10)),
 				CheckIn:     float64(fake.Int32Range(0, 100)),
@@ -68,13 +74,14 @@ func buildPublicLikes(fake *faker.Faker, length int32) []string {
 }
 
 func (h *Hotel) GenerateDocument(fake *faker.Faker, key string, documentSize int) interface{} {
-	hotel := &Hotel{
+	var hotel *Hotel
+	hotel = &Hotel{
 		ID:            key,
 		Country:       fake.Country(),
 		Address:       fake.Address().Address,
 		FreeParking:   fake.Bool(),
 		City:          fake.Address().City,
-		Type:          "Hotel",
+		TemplateType:  "Hotel",
 		URL:           fake.URL(),
 		Reviews:       buildReview(fake, fake.Int32Range(1, 3)),
 		Phone:         fake.Phone(),
@@ -86,10 +93,12 @@ func (h *Hotel) GenerateDocument(fake *faker.Faker, key string, documentSize int
 		Email:         fake.URL(),
 		Mutated:       MutatedPathDefaultValue,
 	}
-
 	currentDocSize := calculateSizeOfStruct(hotel)
 	if (currentDocSize) < int(documentSize) {
-		hotel.Padding = strings.Repeat("a", int(documentSize)-(currentDocSize))
+		remSize := int(documentSize) - (currentDocSize)
+		numOfReviews := int(remSize/(95*2)) + 1
+		rev := buildReview(fake, int32(numOfReviews))
+		hotel.Reviews = rev
 	}
 	return hotel
 
@@ -100,7 +109,7 @@ func (h *Hotel) UpdateDocument(fieldsToChange []string, lastUpdatedDocument inte
 
 	hotel, ok := lastUpdatedDocument.(*Hotel)
 	if !ok {
-		return nil, fmt.Errorf("unable to decode last updated document to person template")
+		return nil, fmt.Errorf("unable to decode last updated document to hotel template in update doc")
 	}
 
 	checkFields := make(map[string]struct{})
@@ -150,7 +159,10 @@ func (h *Hotel) UpdateDocument(fieldsToChange []string, lastUpdatedDocument inte
 	hotel.Padding = ""
 	currentDocSize := calculateSizeOfStruct(hotel)
 	if (currentDocSize) < int(documentSize) {
-		hotel.Padding = strings.Repeat("a", int(documentSize)-(currentDocSize))
+		remSize := int(documentSize) - (currentDocSize)
+		numOfReviews := int(remSize/(95*2)) + 1
+		rev := buildReview(fake, int32(numOfReviews))
+		hotel.Reviews = rev
 	}
 
 	return hotel, nil
@@ -159,11 +171,11 @@ func (h *Hotel) UpdateDocument(fieldsToChange []string, lastUpdatedDocument inte
 func (h *Hotel) Compare(document1 interface{}, document2 interface{}) (bool, error) {
 	p1, ok := document1.(*Hotel)
 	if !ok {
-		return false, fmt.Errorf("unable to decode first document to person template")
+		return false, fmt.Errorf("unable to decode first document to hotel template")
 	}
 	p2, ok := document2.(*Hotel)
 	if !ok {
-		return false, fmt.Errorf("unable to decode second document to person template")
+		return false, fmt.Errorf("unable to decode second document to hotel template")
 	}
 
 	return reflect.DeepEqual(p1, p2), nil
@@ -185,4 +197,7 @@ func (h *Hotel) GenerateSubPathAndValue(fake *faker.Faker, subDocSize int) map[s
 	return map[string]interface{}{
 		"_1": strings.Repeat(fake.Letter(), subDocSize),
 	}
+}
+func (h *Hotel) GetValues(document interface{}) (interface{}, error) {
+	return document, nil
 }

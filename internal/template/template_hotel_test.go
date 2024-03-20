@@ -2,9 +2,10 @@ package template
 
 import (
 	"fmt"
-	"github.com/bgadrian/fastfaker/faker"
 	"log"
 	"testing"
+
+	"github.com/bgadrian/fastfaker/faker"
 )
 
 func TestGenerateHotel(t *testing.T) {

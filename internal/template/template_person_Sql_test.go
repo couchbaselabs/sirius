@@ -8,7 +8,7 @@ import (
 	"github.com/bgadrian/fastfaker/faker"
 )
 
-func TestGeneratePerson(t *testing.T) {
+func TestGeneratePersonSql(t *testing.T) {
 	// Test to compare two same document generated from same seed
 	//fake1 := faker.NewWithSeed(rand.NewSource(1678693916037126000))
 	//fake2 := faker.NewWithSeed(rand.NewSource(1678693916037126000))
@@ -16,13 +16,14 @@ func TestGeneratePerson(t *testing.T) {
 	fake1.Seed(1678693916037126000)
 	fake2 := faker.NewFastFaker()
 	fake2.Seed(1678693916037126000)
-	personTemplate := InitialiseTemplate("person")
-	document1 := personTemplate.GenerateDocument(fake1, "1678693916037126000", 0)
-	document2 := personTemplate.GenerateDocument(fake2, "1678693916037126000", 0)
+	hotelTemplate := InitialiseTemplate("person_sql")
+	document1 := hotelTemplate.GenerateDocument(fake1, "1678693916037126000", 0)
+	document2 := hotelTemplate.GenerateDocument(fake2, "1678693916037126000", 0)
 
 	log.Println(document1)
 	log.Println(document2)
-	ok, err := personTemplate.Compare(document1, document2)
+
+	ok, err := hotelTemplate.Compare(document1, document2)
 
 	if err != nil {
 		log.Println(err)
@@ -35,7 +36,7 @@ func TestGeneratePerson(t *testing.T) {
 	}
 
 	// test to update the document1 and comparing it with original document
-	document3, err := personTemplate.UpdateDocument([]string{}, document1, 0, fake1)
+	document3, err := hotelTemplate.UpdateDocument([]string{}, document1, 0, fake1)
 	if err != nil {
 		log.Println(err)
 		t.Fail()
@@ -45,7 +46,7 @@ func TestGeneratePerson(t *testing.T) {
 	log.Println(document3)
 	log.Println()
 
-	document4, err := personTemplate.UpdateDocument([]string{}, document2, 0, fake2)
+	document4, err := hotelTemplate.UpdateDocument([]string{}, document2, 0, fake2)
 	if err != nil {
 		log.Println(err)
 		t.Fail()
@@ -55,7 +56,7 @@ func TestGeneratePerson(t *testing.T) {
 	log.Println(document4)
 	log.Println()
 
-	ok, err = personTemplate.Compare(document4, document3)
+	ok, err = hotelTemplate.Compare(document4, document3)
 	if !ok {
 		log.Println("test failed while comparing the document4 and document3")
 		t.Fatal("test failed while comparing the document4 and document3")
@@ -65,20 +66,5 @@ func TestGeneratePerson(t *testing.T) {
 		fmt.Println(err)
 		t.Fail()
 	}
-
-	//queries, err := personTemplate.GenerateQueries("bucket-1", "saurabh-1", "mishra-1")
-	//if err != nil {
-	//	fmt.Println(err)
-	//	t.Fail()
-	//} else {
-	//	log.Println(queries)
-	//}
-	//indexes, err := personTemplate.GenerateIndexes("bucket-1", "saurabh-1", "mishra-1")
-	//if err != nil {
-	//	fmt.Println(err)
-	//	t.Fail()
-	//} else {
-	//	log.Println(indexes)
-	//}
 
 }
