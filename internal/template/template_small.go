@@ -2,15 +2,16 @@ package template
 
 import (
 	"fmt"
-	"github.com/bgadrian/fastfaker/faker"
 	"reflect"
 	"strings"
+
+	"github.com/bgadrian/fastfaker/faker"
 )
 
 type Small struct {
-	ID         string  `json:"_id" bson:"_id"`
-	RandomData string  `json:"d,omitempty"`
-	Mutated    float64 `json:"mutated,omitempty"`
+	ID         string  `json:"_id" bson:"_id" dynamodbav:"_id"`
+	RandomData string  `json:"d,omitempty" dynamodbav:"d"`
+	Mutated    float64 `json:"mutated,omitempty" dynamodbav:"mutated"`
 }
 
 func (s *Small) GenerateDocument(fake *faker.Faker, key string, documentSize int) interface{} {
@@ -23,7 +24,6 @@ func (s *Small) GenerateDocument(fake *faker.Faker, key string, documentSize int
 
 func (s *Small) UpdateDocument(fieldsToChange []string, lastUpdatedDocument interface{}, documentSize int,
 	fake *faker.Faker) (interface{}, error) {
-
 	t, ok := lastUpdatedDocument.(*Small)
 	if !ok {
 		return nil, fmt.Errorf("unable to decode last updated document to person template")
@@ -61,4 +61,7 @@ func (s *Small) GenerateSubPathAndValue(fake *faker.Faker, subDocSize int) map[s
 	return map[string]interface{}{
 		"subDocData": fake.Sentence(subDocSize),
 	}
+}
+func (s *Small) GetValues(document interface{}) (interface{}, error) {
+	return document, nil
 }

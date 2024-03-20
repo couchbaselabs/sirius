@@ -2,6 +2,7 @@ package template
 
 import (
 	"fmt"
+
 	"github.com/bgadrian/fastfaker/faker"
 
 	"log"
