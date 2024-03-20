@@ -15,7 +15,7 @@ type HotelSql struct {
 	Address       string  `json:"address,omitempty"`
 	FreeParking   bool    `json:"free_parking,omitempty"`
 	City          string  `json:"city,omitempty"`
-	TemplateType  string  `json:"template_type"`
+	TemplateName  string  `json:"template_name"`
 	URL           string  `json:"url,omitempty"`
 	Phone         string  `json:"phone,omitempty"`
 	Price         float64 `json:"price,omitempty"`
@@ -30,25 +30,26 @@ type HotelSql struct {
 
 func (h *HotelSql) GenerateDocument(fake *faker.Faker, key string, documentSize int) interface{} {
 
-	hNew := HotelSql{}
-	hNew.ID = key
-	hNew.Country = fake.Country()
-	hNew.Address = fake.Address().Address
-	hNew.FreeParking = fake.Bool()
-	hNew.City = fake.Address().City
-	hNew.TemplateType = "hotel_sql"
-	hNew.URL = fake.URL()
-	hNew.Phone = fake.Phone()
-	hNew.Price = fake.Price(1000, 100000)
-	hNew.AvgRating = fake.Float64Range(1, 5)
-	hNew.FreeBreakfast = fake.Bool()
-	hNew.Name = fake.BeerName()
-	hNew.Email = fake.URL()
-	hNew.Mutated = MutatedPathDefaultValue
-	hNew.Value = []interface{}{&hNew.ID, &hNew.Address, &hNew.FreeParking, &hNew.City, &hNew.URL, &hNew.Phone, &hNew.Price, &hNew.AvgRating, &hNew.FreeBreakfast, &hNew.Name,
-		&hNew.Email, &hNew.Padding, &hNew.Mutated}
+	hotelSQL := HotelSql{}
+	hotelSQL.ID = key
+	hotelSQL.Country = fake.Country()
+	hotelSQL.Address = fake.Address().Address
+	hotelSQL.FreeParking = fake.Bool()
+	hotelSQL.City = fake.Address().City
+	hotelSQL.TemplateName = "hotel_sql"
+	hotelSQL.URL = fake.URL()
+	hotelSQL.Phone = fake.Phone()
+	hotelSQL.Price = fake.Price(1000, 100000)
+	hotelSQL.AvgRating = fake.Float64Range(1, 5)
+	hotelSQL.FreeBreakfast = fake.Bool()
+	hotelSQL.Name = fake.BeerName()
+	hotelSQL.Email = fake.URL()
+	hotelSQL.Mutated = MutatedPathDefaultValue
+	hotelSQL.Value = []interface{}{&hotelSQL.ID, &hotelSQL.Address, &hotelSQL.FreeParking, &hotelSQL.City, &hotelSQL.URL,
+		&hotelSQL.Phone, &hotelSQL.Price, &hotelSQL.AvgRating, &hotelSQL.FreeBreakfast, &hotelSQL.Name, &hotelSQL.Email,
+		&hotelSQL.Padding, &hotelSQL.Mutated}
 
-	return &hNew
+	return &hotelSQL
 }
 
 func (h *HotelSql) UpdateDocument(fieldsToChange []string, lastUpdatedDocument interface{}, documentSize int,
@@ -98,12 +99,15 @@ func (h *HotelSql) UpdateDocument(fieldsToChange []string, lastUpdatedDocument i
 		hotel.Email = fake.URL()
 	}
 	hotel.Padding = ""
+
 	currentDocSize := calculateSizeOfStruct(hotel)
-	if (currentDocSize) < int(documentSize) {
-		hotel.Padding = strings.Repeat("a", int(documentSize)-(currentDocSize))
+	if currentDocSize < documentSize {
+		hotel.Padding = strings.Repeat("a", documentSize-currentDocSize)
 	}
-	values := []interface{}{&hotel.ID, &hotel.Address, &hotel.FreeParking, &hotel.City, &hotel.URL, &hotel.Phone, &hotel.Price, &hotel.AvgRating, &hotel.FreeBreakfast, &hotel.Name,
-		&hotel.Email, &hotel.Padding, &hotel.Mutated}
+
+	values := []interface{}{&hotel.ID, &hotel.Address, &hotel.FreeParking, &hotel.City, &hotel.URL, &hotel.Phone,
+		&hotel.Price, &hotel.AvgRating, &hotel.FreeBreakfast, &hotel.Name, &hotel.Email, &hotel.Padding, &hotel.Mutated}
+
 	hotel.Value = values
 	return hotel, nil
 }
