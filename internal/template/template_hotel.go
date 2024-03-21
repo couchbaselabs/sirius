@@ -10,12 +10,14 @@ import (
 )
 
 type Rating struct {
+
 	RatingValue float64 `json:"rating_value,omitempty" dynamodbav:"rating_value" parquet:"name=rating_value, type=DOUBLE"`
 	Cleanliness float64 `json:"cleanliness,omitempty" dynamodbav:"cleanliness" parquet:"name=cleanliness, type=DOUBLE"`
 	Overall     float64 `json:"overall,omitempty" dynamodbav:"overall" parquet:"name=overall, type=DOUBLE"`
 	CheckIn     float64 `json:"checkin,omitempty" dynamodbav:"checkin" parquet:"name=checkin, type=DOUBLE"`
 	Rooms       float64 `json:"rooms,omitempty" dynamodbav:"rooms" parquet:"name=rooms, type=DOUBLE"`
 }
+
 type Review struct {
 	Date   string `json:"date,omitempty" dynamodbav:"date" parquet:"name=date, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
 	Author string `json:"author,omitempty" dynamodbav:"author" parquet:"name=author, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
@@ -23,6 +25,7 @@ type Review struct {
 }
 
 type Hotel struct {
+
 	ID            string   `json:"id" bson:"_id" dynamodbav:"id" parquet:"name=id, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
 	Country       string   `json:"country,omitempty" dynamodbav:"country" parquet:"name=country, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
 	Address       string   `json:"address,omitempty" dynamodbav:"address" parquet:"name=address, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
@@ -40,6 +43,7 @@ type Hotel struct {
 	Email         string   `json:"email,omitempty" dynamodbav:"email" parquet:"name=email, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
 	Mutated       float64  `json:"mutated" dynamodbav:"mutated" parquet:"name=mutated, type=DOUBLE"`
 	Padding       string   `json:"padding" dynamodbav:"padding" parquet:"name=padding, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+
 }
 
 // buildReview generates the Review slice to be added into Hotel struct
@@ -74,7 +78,8 @@ func buildPublicLikes(fake *faker.Faker, length int32) []string {
 }
 
 func (h *Hotel) GenerateDocument(fake *faker.Faker, key string, documentSize int) interface{} {
-	hotel := &Hotel{
+	var hotel *Hotel
+	hotel = &Hotel{
 		ID:            key,
 		Country:       fake.Country(),
 		Address:       fake.Address().Address,
@@ -92,7 +97,6 @@ func (h *Hotel) GenerateDocument(fake *faker.Faker, key string, documentSize int
 		Email:         fake.URL(),
 		Mutated:       MutatedPathDefaultValue,
 	}
-
 	currentDocSize := calculateSizeOfStruct(hotel)
 	if currentDocSize < documentSize {
 		remSize := documentSize - currentDocSize
@@ -159,6 +163,7 @@ func (h *Hotel) UpdateDocument(fieldsToChange []string, lastUpdatedDocument inte
 	hotel.Padding = ""
 
 	currentDocSize := calculateSizeOfStruct(hotel)
+
 	if currentDocSize < documentSize {
 		remSize := documentSize - currentDocSize
 		numOfReviews := int(remSize/(95*2)) + 1
@@ -400,4 +405,7 @@ func StringMapToHotel(data map[string]interface{}) *Hotel {
 	}
 
 	return hotel
+}
+func (h *Hotel) GetValues(document interface{}) (interface{}, error) {
+	return document, nil
 }
