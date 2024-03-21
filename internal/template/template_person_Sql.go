@@ -10,7 +10,7 @@ import (
 )
 
 type PersonSql struct {
-	ID            string  `json:"_id" bson:"_id"`
+	ID            string  `json:"id" bson:"_id"`
 	FirstName     string  `json:"firstName,omitempty"`
 	Age           float64 `json:"age,omitempty"`
 	Email         string  `json:"email,omitempty"`
@@ -19,6 +19,7 @@ type PersonSql struct {
 	Hobbies       string  `json:"hobbies,omitempty"`
 	Value         []interface{}
 	Mutated       float64 `json:"mutated"`
+	TemplateName  string  `json:"template_name" dynamodbav:"template_type"`
 	Padding       string  `json:"payload"`
 }
 
@@ -32,13 +33,16 @@ func (p *PersonSql) GenerateDocument(fake *faker.Faker, key string, documentSize
 		MaritalStatus: fake.RandString(maritalChoices),
 		Hobbies:       fake.RandString(hobbyChoices),
 		Mutated:       MutatedPathDefaultValue,
+		TemplateName:  "person_sql",
 	}
-	currentDocSize := calculateSizeOfStruct(person)
 
+	currentDocSize := calculateSizeOfStruct(person)
 	if (currentDocSize) < int(documentSize) {
 		person.Padding = strings.Repeat("a", int(documentSize)-(currentDocSize))
 	}
-	values := []interface{}{&person.ID, &person.FirstName, &person.Age, &person.Email, &person.Gender, &person.MaritalStatus, &person.Hobbies, &person.Padding, &person.Mutated}
+
+	values := []interface{}{&person.TemplateName, &person.ID, &person.FirstName, &person.Age, &person.Email, &person.Gender, &person.MaritalStatus, &person.Hobbies, &person.Padding, &person.Mutated}
+
 	person.Value = values
 	return person
 }
@@ -79,7 +83,9 @@ func (p *PersonSql) UpdateDocument(fieldsToChange []string, lastUpdatedDocument 
 	if (currentDocSize) < int(documentSize) {
 		person.Padding = strings.Repeat("a", int(documentSize)-(currentDocSize))
 	}
-	values := []interface{}{&person.ID, &person.FirstName, &person.Age, &person.Email, &person.Gender, &person.MaritalStatus, &person.Hobbies, &person.Padding, &person.Mutated}
+
+	values := []interface{}{&person.TemplateName, &person.ID, &person.FirstName, &person.Age, &person.Email, &person.Gender, &person.MaritalStatus, &person.Hobbies, &person.Padding, &person.Mutated}
+
 	person.Value = values
 	return person, nil
 }

@@ -867,7 +867,7 @@ func (c *Couchbase) Warmup(connStr, username, password string, extra Extras) err
 	return err1
 }
 
-func (c *Couchbase) Close(connStr string) error {
+func (c *Couchbase) Close(connStr string, extras Extras) error {
 	return c.connectionManager.Disconnect(connStr)
 }
 
@@ -1214,4 +1214,20 @@ func (c *Couchbase) TouchBulk(connStr, username, password string, keyValues []Ke
 		}
 	}
 	return result
+}
+func (c *Couchbase) CreateDatabase(connStr, username, password string, extra Extras, templateName string, docSize int) (string, error) {
+	// TODO
+	panic("Implement the function")
+}
+func (c *Couchbase) DeleteDatabase(connStr, username, password string, extra Extras) (string, error) {
+	// TODO
+	panic("Implement the function")
+}
+func (c *Couchbase) Count(connStr, username, password string, extra Extras) (int64, error) {
+	// TODO
+	panic("Implement the function")
+}
+func (c *Couchbase) ListDatabase(connStr, username, password string, extra Extras) (any, error) {
+	// TODO
+	panic("Implement the function")
 }
