@@ -2,6 +2,10 @@ package data_loading
 
 import (
 	"encoding/json"
+	"log"
+	"sync"
+	"time"
+
 	"github.com/bgadrian/fastfaker/faker"
 	"github.com/couchbaselabs/sirius/internal/db"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
@@ -10,9 +14,6 @@ import (
 	"github.com/couchbaselabs/sirius/internal/task_state"
 	"github.com/couchbaselabs/sirius/internal/tasks"
 	"github.com/couchbaselabs/sirius/internal/template"
-	"log"
-	"sync"
-	"time"
 )
 
 func validateDocuments(start, end, seed int64, operationConfig *OperationConfig,

@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"net/http"
+
 	"github.com/couchbaselabs/sirius/internal/task_result"
 	"github.com/couchbaselabs/sirius/internal/tasks"
 	"github.com/couchbaselabs/sirius/internal/tasks/data_loading"
 	"github.com/couchbaselabs/sirius/internal/tasks/util_sirius"
-	"log"
-	"net/http"
 )
 
 // testServer supports GET method.

@@ -9,9 +9,9 @@ import (
 )
 
 type SmallSql struct {
-	ID         string  `json:"_id" bson:"_id"`
-	RandomData string  `json:"d,omitempty"`
-	Mutated    float64 `json:"mutated,omitempty"`
+	ID         string  `json:"id" bson:"_id" dynamodbav:"id" parquet:"name=id, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	RandomData string  `json:"random_data,omitempty" dynamodbav:"random_data" parquet:"name=random_data, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	Mutated    float64 `json:"mutated,omitempty" dynamodbav:"mutated" parquet:"name=mutated, type=DOUBLE"`
 	Value      []interface{}
 }
 

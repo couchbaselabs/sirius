@@ -2,6 +2,13 @@ package data_loading
 
 import (
 	"fmt"
+	"log"
+	"os"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/couchbaselabs/sirius/internal/db"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
 	"github.com/couchbaselabs/sirius/internal/err_sirius"
@@ -11,12 +18,6 @@ import (
 	"github.com/couchbaselabs/sirius/internal/tasks"
 	"github.com/couchbaselabs/sirius/internal/template"
 	"golang.org/x/sync/errgroup"
-	"log"
-	"os"
-	"strconv"
-	"strings"
-	"sync"
-	"time"
 )
 
 type GenericLoadingTask struct {

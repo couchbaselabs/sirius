@@ -1,12 +1,13 @@
 package data_loading
 
 import (
+	"sync"
+
 	"github.com/couchbaselabs/sirius/internal/db"
 	"github.com/couchbaselabs/sirius/internal/docgenerator"
 	"github.com/couchbaselabs/sirius/internal/task_result"
 	"github.com/couchbaselabs/sirius/internal/task_state"
 	"github.com/couchbaselabs/sirius/internal/tasks"
-	"sync"
 )
 
 type BulkTask interface {
