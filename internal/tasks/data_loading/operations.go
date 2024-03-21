@@ -2,6 +2,7 @@ package data_loading
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"sync"
 	"time"
@@ -90,6 +91,13 @@ func validateDocuments(start, end, seed int64, operationConfig *OperationConfig,
 
 		originalDoc, err5 := retracePreviousMutations(req, identifier, offset, originalDoc, genDoc, fake,
 			result.ResultSeed)
+
+		//originalDoc, err5 = gen.Template.GetValues(originalDoc)
+		//if err5 != nil {
+		//	result.IncrementFailure(initTime, docId, errors.New("unable to decode template"), false, nil, offset)
+		//	state.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
+		//	continue
+		//}
 
 		if err5 != nil {
 			state.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
@@ -180,12 +188,19 @@ func insertDocuments(start, end, seed int64, operationConfig *OperationConfig,
 			continue
 		}
 
+		var err error
 		key := offset + seed
 		docId := gen.BuildKey(key)
 		fake := faker.NewFastFaker()
 		fake.Seed(key)
-		doc := gen.Template.GenerateDocument(fake, docId, operationConfig.DocSize)
 		initTime := time.Now().UTC().Format(time.RFC850)
+		doc := gen.Template.GenerateDocument(fake, docId, operationConfig.DocSize)
+		doc, err = gen.Template.GetValues(doc)
+		if err != nil {
+			result.IncrementFailure(initTime, docId, errors.New("unable to decode template"), false, nil, offset)
+			state.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
+			continue
+		}
 		operationResult := database.Create(databaseInfo.ConnStr, databaseInfo.Username, databaseInfo.Password, db.KeyValue{
 			Key:    docId,
 			Doc:    doc,
@@ -245,9 +260,16 @@ func upsertDocuments(start, end, seed int64, operationConfig *OperationConfig,
 
 		var err error
 		originalDoc := gen.Template.GenerateDocument(fake, docId, operationConfig.DocSize)
-
 		originalDoc, err = retracePreviousMutations(req, identifier, offset, originalDoc, gen, fake,
 			result.ResultSeed)
+
+		originalDoc, err = gen.Template.GetValues(originalDoc)
+		if err != nil {
+			result.IncrementFailure(initTime, docId, errors.New("unable to decode template"), false, nil, offset)
+			state.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
+			continue
+		}
+
 		if err != nil {
 			state.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
 			result.IncrementFailure(initTime, docId, err, false, nil, offset)
@@ -752,16 +774,24 @@ func bulkInsertDocuments(start, end, seed int64, operationConfig *OperationConfi
 	}
 
 	var keyValues []db.KeyValue
+	initTime := time.Now().UTC().Format(time.RFC850)
 	for offset := start; offset < end; offset++ {
 		if _, ok := skip[offset]; ok {
 			continue
 		}
 
+		var err error
 		key := offset + seed
 		docId := gen.BuildKey(key)
 		fake := faker.NewFastFaker()
 		fake.Seed(key)
 		doc := gen.Template.GenerateDocument(fake, docId, operationConfig.DocSize)
+		doc, err = gen.Template.GetValues(doc)
+		if err != nil {
+			result.IncrementFailure(initTime, docId, errors.New("unable to decode template"), false, nil, offset)
+			state.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
+			continue
+		}
 		keyValues = append(keyValues, db.KeyValue{
 			Key:    docId,
 			Doc:    doc,
@@ -769,7 +799,6 @@ func bulkInsertDocuments(start, end, seed int64, operationConfig *OperationConfi
 		})
 	}
 
-	initTime := time.Now().UTC().Format(time.RFC850)
 	bulkResult := database.CreateBulk(databaseInfo.ConnStr, databaseInfo.Username, databaseInfo.Password, keyValues,
 		extra)
 
@@ -814,11 +843,13 @@ func bulkUpsertDocuments(start int64, end int64, seed int64, operationConfig *Op
 	}
 
 	var keyValues []db.KeyValue
+	initTime := time.Now().UTC().Format(time.RFC850)
 	for offset := start; offset < end; offset++ {
 		if _, ok := skip[offset]; ok {
 			continue
 		}
 
+		var err error
 		key := offset + seed
 		docId := gen.BuildKey(key)
 		fake := faker.NewFastFaker()
@@ -831,6 +862,13 @@ func bulkUpsertDocuments(start int64, end int64, seed int64, operationConfig *Op
 		originalDoc, _ = gen.Template.UpdateDocument(operationConfig.FieldsToChange, originalDoc,
 			operationConfig.DocSize, fake)
 
+		originalDoc, err = gen.Template.GetValues(originalDoc)
+		if err != nil {
+			result.IncrementFailure(initTime, docId, errors.New("unable to decode template"), false, nil, offset)
+			state.StateChannel <- task_state.StateHelper{Status: task_state.ERR, Offset: offset}
+			continue
+		}
+
 		keyValues = append(keyValues, db.KeyValue{
 			Key:    docId,
 			Doc:    originalDoc,
@@ -838,7 +876,6 @@ func bulkUpsertDocuments(start int64, end int64, seed int64, operationConfig *Op
 		})
 	}
 
-	initTime := time.Now().UTC().Format(time.RFC850)
 	bulkResult := database.UpdateBulk(databaseInfo.ConnStr, databaseInfo.Username, databaseInfo.Password, keyValues,
 		extra)
 

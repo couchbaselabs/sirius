@@ -6,8 +6,12 @@ import (
 )
 
 const (
-	CouchbaseDb = "couchbase"
-	MongoDb     = "mongo"
+	CouchbaseDb       = "couchbase"
+	MongoDb           = "mongodb"
+	CouchbaseColumnar = "columnar"
+	DynamoDb          = "dynamodb"
+	CassandraDb       = "cassandra"
+	MySql             = "mysql"
 )
 
 type OperationResult interface {
@@ -56,24 +60,32 @@ type Database interface {
 	DeleteBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult
 	TouchBulk(connStr, username, password string, keyValues []KeyValue, extra Extras) BulkOperationResult
 	Warmup(connStr, username, password string, extra Extras) error
-	Close(connStr string) error
+	CreateDatabase(connStr, username, password string, extra Extras, templateName string, docSize int) (string, error)
+	DeleteDatabase(connStr, username, password string, extra Extras) (string, error)
+	Count(connStr, username, password string, extra Extras) (int64, error)
+	ListDatabase(connStr, username, password string, extra Extras) (any, error)
+	Close(connStr string, extra Extras) error
 }
 
 var couchbase *Couchbase
-var mongo *Mongo
+var mongodb *Mongo
+var cbcolumnar *Columnar
+var dynamo *Dynamo
+var mysql *Sql
+
 var lock = &sync.Mutex{}
 
 func ConfigDatabase(dbType string) (Database, error) {
 	switch dbType {
 	case MongoDb:
-		if mongo == nil {
+		if mongodb == nil {
 			lock.Lock()
 			defer lock.Unlock()
-			if mongo == nil {
-				mongo = &Mongo{}
+			if mongodb == nil {
+				mongodb = NewMongoConnectionManager()
 			}
 		}
-		return mongo, nil
+		return mongodb, nil
 	case CouchbaseDb:
 		if couchbase == nil {
 			lock.Lock()
@@ -83,6 +95,33 @@ func ConfigDatabase(dbType string) (Database, error) {
 			}
 		}
 		return couchbase, nil
+	case CouchbaseColumnar:
+		if cbcolumnar == nil {
+			lock.Lock()
+			defer lock.Unlock()
+			if cbcolumnar == nil {
+				cbcolumnar = NewColumnarConnectionManager()
+			}
+		}
+		return cbcolumnar, nil
+	case DynamoDb:
+		if dynamo == nil {
+			lock.Lock()
+			defer lock.Unlock()
+			if dynamo == nil {
+				dynamo = NewDynamoConnectionManager()
+			}
+		}
+		return dynamo, nil
+	case MySql:
+		if mysql == nil {
+			lock.Lock()
+			defer lock.Unlock()
+			if mysql == nil {
+				mysql = NewSqlConnectionManager()
+			}
+		}
+		return mysql, nil
 	default:
 		return nil, err_sirius.InvalidDatabase
 	}

@@ -45,7 +45,7 @@ func (h *HotelSql) GenerateDocument(fake *faker.Faker, key string, documentSize 
 	hotelSQL.Name = fake.BeerName()
 	hotelSQL.Email = fake.URL()
 	hotelSQL.Mutated = MutatedPathDefaultValue
-	hotelSQL.Value = []interface{}{&hotelSQL.ID, &hotelSQL.Address, &hotelSQL.FreeParking, &hotelSQL.City, &hotelSQL.URL,
+	hotelSQL.Value = []interface{}{&hotelSQL.TemplateName, &hotelSQL.ID, &hotelSQL.Address, &hotelSQL.FreeParking, &hotelSQL.City, &hotelSQL.URL,
 		&hotelSQL.Phone, &hotelSQL.Price, &hotelSQL.AvgRating, &hotelSQL.FreeBreakfast, &hotelSQL.Name, &hotelSQL.Email,
 		&hotelSQL.Padding, &hotelSQL.Mutated}
 
@@ -105,7 +105,7 @@ func (h *HotelSql) UpdateDocument(fieldsToChange []string, lastUpdatedDocument i
 		hotel.Padding = strings.Repeat("a", documentSize-currentDocSize)
 	}
 
-	values := []interface{}{&hotel.ID, &hotel.Address, &hotel.FreeParking, &hotel.City, &hotel.URL, &hotel.Phone,
+	values := []interface{}{&hotel.TemplateName, &hotel.ID, &hotel.Address, &hotel.FreeParking, &hotel.City, &hotel.URL, &hotel.Phone,
 		&hotel.Price, &hotel.AvgRating, &hotel.FreeBreakfast, &hotel.Name, &hotel.Email, &hotel.Padding, &hotel.Mutated}
 
 	hotel.Value = values

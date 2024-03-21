@@ -1,15 +1,14 @@
 package template
 
 import (
-
 	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 	"unsafe"
 
 	"github.com/bgadrian/fastfaker/faker"
 	"github.com/iancoleman/strcase"
-
 )
 
 const (
@@ -353,7 +352,158 @@ func GetAvroSchema(templateName string) (string, error) {
 			]
 		}`
 		return productAvroSchema, nil
+	case "small":
+		smallAvroSchema := `{
+			"name": "Small",
+			"type": "record",
+			"fields": [
+				{"name": "id", "type": "string"},
+				{"name": "random_data", "type": "string", "default": ""},
+				{"name": "mutated", "type": "double", "default": 0.0}
+			]
+		}`
+		return smallAvroSchema, nil
 	default:
 		return "", errors.New("invalid template name OR avro schema not defined for given template name")
+	}
+}
+
+func GetSQLSchema(templateName string, table string, size int) string {
+	var query string
+	switch strings.ToLower(templateName) {
+	case "hotel_sql":
+		query = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (template_name VARCHAR(20),id VARCHAR(30) PRIMARY KEY,address VARCHAR(100) NOT NULL,free_parking Bool,city VARCHAR(50),url VARCHAR(50),phone VARCHAR(20),price DOUBLE,avg_rating DOUBLE,free_breakfast Bool,name VARCHAR(50),email VARCHAR(100),padding VARCHAR(%d),mutated DOUBLE)`, table, size)
+	case "":
+		fallthrough
+	case "person_sql":
+		query = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s(template_name VARCHAR(20),id VARCHAR(30) PRIMARY KEY,first_name VARCHAR(100),age DOUBLE,email VARCHAR(255),gender VARCHAR(10),marital_status VARCHAR(20),hobbies VARCHAR(50),padding VARCHAR(%d),mutated DOUBLE)`, table, size)
+	case "small_sql":
+		query = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s(template_name VARCHAR(20),id VARCHAR(30) PRIMARY KEY,d VARCHAR(%d),mutated DOUBLE')`, table, size)
+	case "product_sql":
+		query = fmt.Sprintf(`CREATE TABLE  IF NOT EXISTS %s(template_type VARCHAR(20), id VARCHAR(30) PRIMARY KEY, product_name VARCHAR(255), product_link VARCHAR(255), price DECIMAL(10, 2), avg_rating DECIMAL(5, 2), num_sold BIGINT, upload_date DATE, weight DECIMAL(10, 2), quantity BIGINT, seller_name VARCHAR(255), seller_location VARCHAR(255), seller_verified BOOLEAN, value JSONB, mutated DECIMAL(10, 2), padding VARCHAR(%d))`, table, size)
+
+	}
+	return query
+}
+func GetCassandraSchema(templateName, tableName string) ([]string, error) {
+	templateName = strings.ToLower(templateName)
+	var cassSchemeDefinitions []string
+
+	switch templateName {
+	case "hotel":
+		udtRatingQuery := `CREATE TYPE rating (
+									rating_value DOUBLE,
+									cleanliness DOUBLE,
+									overall DOUBLE, 
+									checkin DOUBLE,  
+									rooms DOUBLE
+								);`
+		udtReviewQuery := `CREATE TYPE review (
+									date TEXT,
+									author TEXT,
+									rating frozen <rating>
+								);`
+		createTableQuery := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+									id TEXT PRIMARY KEY,
+									country TEXT,
+									address TEXT,
+									free_parking BOOLEAN,
+									city TEXT,
+									template_type TEXT,
+									url TEXT,
+									reviews LIST<frozen <review>>,
+									phone TEXT,
+									price DOUBLE,
+									avg_rating DOUBLE,
+									free_breakfast BOOLEAN,
+									name TEXT,
+									public_likes LIST<TEXT>,
+									email TEXT,
+									mutated DOUBLE,
+									padding TEXT
+								);`, tableName)
+		cassSchemeDefinitions = []string{udtRatingQuery, udtReviewQuery, createTableQuery}
+		return cassSchemeDefinitions, nil
+	case "person":
+		udtAddressQuery := `CREATE TYPE IF NOT EXISTS address (
+									city TEXT,
+									state TEXT
+								);`
+		udtHairQuery := `CREATE TYPE IF NOT EXISTS hair (
+									hair_type TEXT,
+									hair_colour TEXT,
+									length TEXT, 
+									thickness TEXT
+								);`
+		udtAttributesQuery := `CREATE TYPE IF NOT EXISTS attributes (
+									weight DOUBLE,
+									height DOUBLE,
+									colour TEXT, 
+									hair frozen <hair>,  
+									body_type TEXT
+								);`
+		createTableQuery := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+									id TEXT PRIMARY KEY,
+									template_name TEXT,
+									first_name TEXT,
+									age DOUBLE,
+									email TEXT,
+									address frozen <address>,
+									gender TEXT,
+									marital_status TEXT,
+									hobbies TEXT,
+									attributes frozen <attributes>,
+									mutated DOUBLE,
+									padding TEXT
+								);`, tableName)
+		cassSchemeDefinitions = []string{udtAddressQuery, udtHairQuery, udtAttributesQuery, createTableQuery}
+		return cassSchemeDefinitions, nil
+	case "product":
+		udtProductRatingQuery := `CREATE TYPE product_rating_type (
+									rating_value DOUBLE,
+									performance DOUBLE,
+									utility DOUBLE,
+									pricing DOUBLE,
+									build_quality DOUBLE
+								);`
+		udtProductReviewQuery := `CREATE TYPE product_review (
+									date TEXT,
+									author TEXT,
+									product_rating frozen <product_rating_type>
+								);`
+		createTableQuery := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+									id TEXT PRIMARY KEY,
+									product_name TEXT,
+									product_link TEXT,
+									product_features LIST<TEXT>,
+									product_specs MAP<TEXT, TEXT>,
+									product_image_links LIST<TEXT>,
+									product_reviews LIST<frozen <product_review>>,
+									product_category LIST<TEXT>,
+									price DOUBLE,
+									avg_rating DOUBLE,
+									num_sold BIGINT,
+									upload_date TEXT,
+									weight DOUBLE,
+                              		quantity BIGINT,
+                              		seller_name TEXT,
+                              		seller_location TEXT,
+                              		seller_verified BOOLEAN,
+                              		template_name TEXT,
+									mutated DOUBLE,
+									padding TEXT
+								);`, tableName)
+		cassSchemeDefinitions = []string{udtProductRatingQuery, udtProductReviewQuery, createTableQuery}
+		return cassSchemeDefinitions, nil
+	case "small":
+		createTableQuery := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+									id TEXT PRIMARY KEY,
+									random_data TEXT,
+									mutated DOUBLE
+								);`, tableName)
+		cassSchemeDefinitions = []string{createTableQuery}
+		return cassSchemeDefinitions, nil
+	default:
+		return nil, errors.New("invalid template name OR cassandra schema not defined for given template name")
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/couchbaselabs/sirius/internal/meta_data"
 	"github.com/couchbaselabs/sirius/internal/template"
 	"log"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -28,24 +29,38 @@ func TestCouchbase(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	connStr := "couchbase://172.23.100.12"
-	username := "Administrator"
-	password := "password"
+	connStr, ok := os.LookupEnv("sirius_couchbase_connStr")
+	if !ok {
+		t.Error("connStr not found")
+		t.FailNow()
+	}
+	username, ok := os.LookupEnv("sirius_couchbase_username")
+	if !ok {
+		t.Error("username not found")
+		t.FailNow()
+	}
+	password, ok := os.LookupEnv("sirius_couchbase_password")
+	if !ok {
+		t.Error("password not found")
+		t.FailNow()
+	}
+
 	if err := db.Connect(connStr, username, password, Extras{}); err != nil {
 		t.Error(err)
+		t.FailNow()
 	}
 
 	m := meta_data.NewMetaData()
 	cm1 := m.GetCollectionMetadata("x")
 
-	temp := template.InitialiseTemplate("person")
+	temp := template.InitialiseTemplate("hotel")
 	g := docgenerator.Generator{
 		Template: temp,
 	}
 	gen := &docgenerator.Generator{
 		KeySize:  0,
 		DocType:  "json",
-		Template: template.InitialiseTemplate("person"),
+		Template: template.InitialiseTemplate("hotel"),
 	}
 	// update
 	for i := int64(0); i < int64(10); i++ {
@@ -54,6 +69,11 @@ func TestCouchbase(t *testing.T) {
 		fake := faker.NewFastFaker()
 		fake.Seed(key)
 		doc := g.Template.GenerateDocument(fake, docId, 10)
+		doc, err = g.Template.GetValues(doc)
+		if err != nil {
+			t.Error(err)
+		}
+		log.Println(docId, doc)
 		x := db.Update(connStr, username, password, KeyValue{
 			Key:    docId,
 			Doc:    doc,
@@ -69,13 +89,13 @@ func TestCouchbase(t *testing.T) {
 
 	}
 	//update
+	//update
 	for i := int64(0); i < int64(10); i++ {
 		key := i + cm1.Seed
 		docId := gen.BuildKey(key)
 		fake := faker.NewFastFaker()
 		fake.Seed(key)
 		doc := g.Template.GenerateDocument(fake, docId, 10)
-		//log.Println(docId, Doc)
 		x := db.Update(connStr, username, password, KeyValue{
 			Key:    docId,
 			Doc:    doc,
@@ -86,7 +106,7 @@ func TestCouchbase(t *testing.T) {
 		if x.GetError() != nil {
 			t.Error(x.GetError())
 		} else {
-			log.Println("Update", x.Key())
+			log.Println("Update", x.Key(), " ", x.Value())
 		}
 	}
 
@@ -137,6 +157,7 @@ func TestCouchbase(t *testing.T) {
 		docId := gen.BuildKey(key)
 		fake := faker.NewFastFaker()
 		fake.Seed(key)
+
 		var keyValues []KeyValue
 		offsetCount := int64(0)
 		for path, _ := range gen.Template.GenerateSubPathAndValue(fake, 10) {
@@ -199,7 +220,7 @@ func TestCouchbase(t *testing.T) {
 		}
 	}
 
-	if err = db.Close(connStr); err != nil {
+	if err = db.Close(connStr, Extras{}); err != nil {
 		t.Error(err)
 		t.Fail()
 	}
@@ -210,9 +231,21 @@ func TestCouchbase_CreateBulk(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	connStr := "couchbase://172.23.100.12"
-	username := "Administrator"
-	password := "password"
+	connStr, ok := os.LookupEnv("sirius_couchbase_connStr")
+	if !ok {
+		t.Error("connStr not found")
+		t.FailNow()
+	}
+	username, ok := os.LookupEnv("sirius_couchbase_username")
+	if !ok {
+		t.Error("username not found")
+		t.FailNow()
+	}
+	password, ok := os.LookupEnv("sirius_couchbase_password")
+	if !ok {
+		t.Error("password not found")
+		t.FailNow()
+	}
 	if err := db.Connect(connStr, username, password, Extras{}); err != nil {
 		t.Error(err)
 	}
@@ -242,6 +275,7 @@ func TestCouchbase_CreateBulk(t *testing.T) {
 				fake := faker.NewFastFaker()
 				fake.Seed(key)
 				doc := gen.Template.GenerateDocument(fake, docId, 10)
+
 				keyValue = append(keyValue, KeyValue{
 					Key:    docId,
 					Doc:    doc,
@@ -252,11 +286,11 @@ func TestCouchbase_CreateBulk(t *testing.T) {
 			result := db.CreateBulk(connStr, username, password, keyValue, Extras{
 				Bucket: "default",
 			})
-			bulkResult, ok := result.(*couchbaseBulkOperationResult)
+			_, ok := result.(*couchbaseBulkOperationResult)
 			if !ok {
 				t.Fatal("error decoding bulkResult")
 			}
-			log.Println(len(bulkResult.keyValues))
+			//log.Println(len(bulkResult.keyValues))
 
 		}(i)
 	}
