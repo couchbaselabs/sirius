@@ -57,6 +57,8 @@ func (app *Config) routes() http.Handler {
 	mux.Post("/delete-database", app.deleteDBTask)
 	mux.Post("/count", app.CountTask)
 
+	mux.Post("/validate-columnar", app.validateColumnarTask)
+
 	return mux
 }
 

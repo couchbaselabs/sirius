@@ -15,6 +15,7 @@ const (
 	TouchOperation          string = "touch"
 	BulkTouchOperation      string = "bulkTouch"
 	ValidateOperation       string = "validate"
+	ValidateDocOperation    string = "validateDoc"
 	CreatePrimaryIndex      string = "createPrimaryIndex"
 	CreateIndex             string = "createIndex"
 	BuildIndex              string = "buildIndex"
