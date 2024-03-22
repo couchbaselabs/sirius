@@ -94,6 +94,7 @@ func (h *Hotel) GenerateDocument(fake *faker.Faker, key string, documentSize int
 		Email:         fake.URL(),
 		Mutated:       MutatedPathDefaultValue,
 	}
+
 	currentDocSize := calculateSizeOfStruct(hotel)
 	if currentDocSize < documentSize {
 		remSize := documentSize - currentDocSize
@@ -160,7 +161,6 @@ func (h *Hotel) UpdateDocument(fieldsToChange []string, lastUpdatedDocument inte
 	hotel.Padding = ""
 
 	currentDocSize := calculateSizeOfStruct(hotel)
-
 	if currentDocSize < documentSize {
 		remSize := documentSize - currentDocSize
 		numOfReviews := int(remSize/(95*2)) + 1
@@ -200,6 +200,10 @@ func (h *Hotel) GenerateSubPathAndValue(fake *faker.Faker, subDocSize int) map[s
 	return map[string]interface{}{
 		"SubDoc": strings.Repeat(fake.Letter(), subDocSize),
 	}
+}
+
+func (h *Hotel) GetValues(document interface{}) (interface{}, error) {
+	return document, nil
 }
 
 // ToStringMap is used to convert the Hotel Struct into a map[string]interface{} form
@@ -398,7 +402,4 @@ func StringMapToHotel(data map[string]interface{}) *Hotel {
 	}
 
 	return hotel
-}
-func (h *Hotel) GetValues(document interface{}) (interface{}, error) {
-	return document, nil
 }

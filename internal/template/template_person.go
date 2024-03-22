@@ -223,6 +223,7 @@ func (p *Person) GenerateSubPathAndValue(fake *faker.Faker, subDocSize int) map[
 		"SubDoc": strings.Repeat(fake.Letter(), subDocSize),
 	}
 }
+
 func (p *Person) GetValues(document interface{}) (interface{}, error) {
 	return document, nil
 }

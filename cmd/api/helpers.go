@@ -4,6 +4,8 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"errors"
+	"net/http"
+
 	"github.com/couchbaselabs/sirius/internal/meta_data"
 	"github.com/couchbaselabs/sirius/internal/server_requests"
 	"github.com/couchbaselabs/sirius/internal/sirius_documentation"
@@ -13,7 +15,6 @@ import (
 	"github.com/couchbaselabs/sirius/internal/tasks/data_loading"
 	"github.com/couchbaselabs/sirius/internal/tasks/util_sirius"
 	"github.com/couchbaselabs/sirius/internal/template"
-	"net/http"
 )
 
 type jsonResponse struct {
@@ -82,6 +83,7 @@ func registerInterfaces() {
 	gob.Register(&tasks.Request{})
 	gob.Register(&meta_data.MetaData{})
 	gob.Register(&template.Person{})
+	gob.Register(&template.Product{})
 	gob.Register(&template.Hotel{})
 	gob.Register(&template.Small{})
 	gob.Register(&server_requests.ServerRequests{})

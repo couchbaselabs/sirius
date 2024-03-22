@@ -382,6 +382,7 @@ Description : Warming up a connection to database.
 | `MaxOpenConnections` | `int` | `json:maxOpenConnections,omitempty`  |
 | `MaxIdleTime` | `int` | `json:maxIdleTime,omitempty`  |
 | `MaxLifeTime` | `int` | `json:maxLifeTime,omitempty`  |
+| `DbOnLocal` | `string` | `json:dbOnLocal,omitempty`  |
 
 ---
 Possible values for durability :-

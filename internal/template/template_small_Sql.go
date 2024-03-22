@@ -12,8 +12,8 @@ type SmallSql struct {
 	ID           string  `json:"id" bson:"_id" dynamodbav:"id" parquet:"name=id, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
 	RandomData   string  `json:"random_data,omitempty" dynamodbav:"random_data" parquet:"name=random_data, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
 	Mutated      float64 `json:"mutated,omitempty" dynamodbav:"mutated" parquet:"name=mutated, type=DOUBLE"`
+	TemplateName string  `json:"template_name" dynamodbav:"template_name" parquet:"name=template_name, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
 	Value        []interface{}
-	TemplateName string `json:"template_name" dynamodbav:"template_name" parquet:"name=template_name, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
 }
 
 func (s *SmallSql) GenerateDocument(fake *faker.Faker, key string, documentSize int) interface{} {
@@ -72,6 +72,7 @@ func (s *SmallSql) GenerateSubPathAndValue(fake *faker.Faker, subDocSize int) ma
 		"subDocData": fake.Sentence(subDocSize),
 	}
 }
+
 func (s *SmallSql) GetValues(document interface{}) (interface{}, error) {
 	small, ok := document.(*SmallSql)
 	if !ok {
