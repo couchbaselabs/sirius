@@ -71,6 +71,7 @@ var couchbase *Couchbase
 var mongodb *Mongo
 var cbcolumnar *Columnar
 var dynamo *Dynamo
+var cassandra *Cassandra
 var mysql *Sql
 
 var lock = &sync.Mutex{}
@@ -113,6 +114,15 @@ func ConfigDatabase(dbType string) (Database, error) {
 			}
 		}
 		return dynamo, nil
+	case CassandraDb:
+		if cassandra == nil {
+			lock.Lock()
+			defer lock.Unlock()
+			if cassandra == nil {
+				cassandra = NewCassandraConnectionManager()
+			}
+		}
+		return cassandra, nil
 	case MySql:
 		if mysql == nil {
 			lock.Lock()
