@@ -15,6 +15,7 @@ const (
 	TouchOperation          string = "touch"
 	BulkTouchOperation      string = "bulkTouch"
 	ValidateOperation       string = "validate"
+	ValidateDocOperation    string = "validateDoc"
 	CreatePrimaryIndex      string = "createPrimaryIndex"
 	CreateIndex             string = "createIndex"
 	BuildIndex              string = "buildIndex"
@@ -25,6 +26,10 @@ const (
 	SubDocReadOperation     string = "subDocRead"
 	SubDocReplaceOperation  string = "subDocReplace"
 	BucketWarmUpOperation   string = "BucketWarmUp"
+	CreateDBOperation       string = "createDatabase"
+	DeleteDBOperation       string = "deleteCollection"
+	ListDBOperation         string = "createDatabase"
+	CountOperation          string = "countDocuments"
 )
 
 func CheckBulkOperation(operation string) bool {

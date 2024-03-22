@@ -1,13 +1,14 @@
 package main
 
 import (
-	"github.com/couchbaselabs/sirius/internal/tasks"
-	"github.com/go-chi/chi/v5"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 
+	"github.com/couchbaselabs/sirius/internal/tasks"
+
+	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 )
@@ -49,7 +50,14 @@ func (app *Config) routes() http.Handler {
 	mux.Post("/sub-doc-delete", app.SubDocDeleteTask)
 	mux.Post("/sub-doc-read", app.SubDocReadTask)
 	mux.Post("/sub-doc-replace", app.SubDocReplaceTask)
+
 	mux.Post("/warmup-bucket", app.WarmUpBucket)
+	mux.Post("/list-database", app.listDBTask)
+	mux.Post("/create-database", app.createDBTask)
+	mux.Post("/delete-database", app.deleteDBTask)
+	mux.Post("/count", app.CountTask)
+
+	mux.Post("/validate-columnar", app.validateColumnarTask)
 
 	return mux
 }

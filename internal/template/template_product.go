@@ -2,7 +2,6 @@ package template
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 	"strings"
 
@@ -199,7 +198,7 @@ func (p *Product) UpdateDocument(fieldsToChange []string, lastUpdatedDocument in
 	}
 
 	currentDocSize := calculateSizeOfStruct(product)
-	log.Println("Size of doc before appends:", currentDocSize)
+	//log.Println("Size of doc before appends:", currentDocSize)
 	if currentDocSize < documentSize {
 		remSize := documentSize - currentDocSize
 		numOfReviews := int(remSize/(95*2)) + 1
@@ -244,7 +243,6 @@ func (p *Product) GenerateSubPathAndValue(fake *faker.Faker, subDocSize int) map
 	}
 }
 
-func (p *Product) GetValues(interface{}) (interface{}, error) {
-	// TODO
-	panic("In template_product.go, to be implemented")
+func (p *Product) GetValues(document interface{}) (interface{}, error) {
+	return document, nil
 }

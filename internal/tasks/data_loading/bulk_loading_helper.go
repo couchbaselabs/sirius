@@ -70,6 +70,9 @@ func ConfigureOperationConfig(o *OperationConfig) error {
 		o.End = o.Start
 		return err_sirius.MalformedOperationRange
 	}
+	if o.TemplateName == "" {
+		return err_sirius.InvalidTemplateName
+	}
 	return nil
 }
 

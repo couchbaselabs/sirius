@@ -59,6 +59,7 @@ type Extras struct {
 	MaxOpenConnections  int     `json:"maxOpenConnections,omitempty" doc:"true"`
 	MaxIdleTime         int     `json:"maxIdleTime,omitempty" doc:"true"`
 	MaxLifeTime         int     `json:"maxLifeTime,omitempty" doc:"true"`
+	DbOnLocal           string  `json:"dbOnLocal,omitempty" doc:"true"`
 }
 
 func validateStrings(values ...string) error {
