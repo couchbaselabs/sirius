@@ -46,6 +46,19 @@ func TestMongoDB(t *testing.T) {
 	}
 	if err := db.Connect(connStr, username, password, Extras{}); err != nil {
 		t.Error(err)
+		t.FailNow()
+	}
+
+	// Creating the Database and Collection
+	resultString, err := db.CreateDatabase(connStr, username, password, Extras{
+		Database:   "TestMongoDatabase",
+		Collection: "TestingMongoSirius",
+	}, "", 0)
+	if err != nil {
+		log.Println("creating database and collection:", err)
+		t.Error("creating database and collection:", err)
+	} else {
+		log.Println(resultString)
 	}
 
 	m := meta_data.NewMetaData()
@@ -228,6 +241,18 @@ func TestMongoDB(t *testing.T) {
 		} else {
 			log.Println("Bulk Deleting, Deleted Key:", i.Key)
 		}
+	}
+
+	// Deleting the Collection
+	resultString, err = db.DeleteDatabase(connStr, username, password, Extras{
+		Database:   "TestMongoDatabase",
+		Collection: "TestingMongoSirius",
+	})
+	if err != nil {
+		log.Println("deleting database and collection:", err)
+		t.Error("deleting database and collection:", err)
+	} else {
+		log.Println(resultString)
 	}
 
 	// Closing the Connection to MongoDB

@@ -45,6 +45,7 @@ func TestDynamoDB(t *testing.T) {
 	}
 	if err := db.Connect(connStr, username, password, Extras{}); err != nil {
 		t.Error(err)
+		t.FailNow()
 	}
 	extra := Extras{
 		Table: "testing_sirius",

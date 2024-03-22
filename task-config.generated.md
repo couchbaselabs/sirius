@@ -10,8 +10,12 @@ configuration that is also available on a per-task basis:
  * [/bulk-touch](#bulk-touch)
  * [/bulk-upsert](#bulk-upsert)
  * [/clear_data](#clear_data)
+ * [/count](#count)
  * [/create](#create)
+ * [/create-database](#create-database)
  * [/delete](#delete)
+ * [/delete-database](#delete-database)
+ * [/list-database](#list-database)
  * [/read](#read)
  * [/result](#result)
  * [/retry-exceptions](#retry-exceptions)
@@ -23,6 +27,7 @@ configuration that is also available on a per-task basis:
  * [/touch](#touch)
  * [/upsert](#upsert)
  * [/validate](#validate)
+ * [/validate-columnar](#validate-columnar)
  * [/warmup-bucket](#warmup-bucket)
 
 ---
@@ -111,6 +116,23 @@ Description : Do operation between range from [start,end)
 | `Extra` | `struct` | `json:extra`  |
 
 ---
+#### /count
+
+ REST : POST
+
+Description : Do operation between range from [start,end)
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `OperationConfig` | `ptr` | `json:operationConfig`  |
+| `DBType` | `string` | `json:dbType`  |
+| `ConnStr` | `string` | `json:connectionString`  |
+| `Username` | `string` | `json:username`  |
+| `Password` | `string` | `json:password`  |
+| `Extra` | `struct` | `json:extra`  |
+
+---
 #### /create
 
  REST : POST
@@ -128,7 +150,58 @@ Description : Do operation between range from [start,end)
 | `Extra` | `struct` | `json:extra`  |
 
 ---
+#### /create-database
+
+ REST : POST
+
+Description : Do operation between range from [start,end)
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `OperationConfig` | `ptr` | `json:operationConfig`  |
+| `DBType` | `string` | `json:dbType`  |
+| `ConnStr` | `string` | `json:connectionString`  |
+| `Username` | `string` | `json:username`  |
+| `Password` | `string` | `json:password`  |
+| `Extra` | `struct` | `json:extra`  |
+
+---
 #### /delete
+
+ REST : POST
+
+Description : Do operation between range from [start,end)
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `OperationConfig` | `ptr` | `json:operationConfig`  |
+| `DBType` | `string` | `json:dbType`  |
+| `ConnStr` | `string` | `json:connectionString`  |
+| `Username` | `string` | `json:username`  |
+| `Password` | `string` | `json:password`  |
+| `Extra` | `struct` | `json:extra`  |
+
+---
+#### /delete-database
+
+ REST : POST
+
+Description : Do operation between range from [start,end)
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `OperationConfig` | `ptr` | `json:operationConfig`  |
+| `DBType` | `string` | `json:dbType`  |
+| `ConnStr` | `string` | `json:connectionString`  |
+| `Username` | `string` | `json:username`  |
+| `Password` | `string` | `json:password`  |
+| `Extra` | `struct` | `json:extra`  |
+
+---
+#### /list-database
 
  REST : POST
 
@@ -304,6 +377,23 @@ Description : Do operation between range from [start,end)
 
 ---
 #### /validate
+
+ REST : POST
+
+Description : Do operation between range from [start,end)
+
+| Name | Type | JSON Tag |
+| ---- | ---- | -------- |
+| `IdentifierToken` | `string` | `json:identifierToken`  |
+| `OperationConfig` | `ptr` | `json:operationConfig`  |
+| `DBType` | `string` | `json:dbType`  |
+| `ConnStr` | `string` | `json:connectionString`  |
+| `Username` | `string` | `json:username`  |
+| `Password` | `string` | `json:password`  |
+| `Extra` | `struct` | `json:extra`  |
+
+---
+#### /validate-columnar
 
  REST : POST
 

@@ -204,15 +204,15 @@ func GetSQLSchema(templateName string, table string, size int) string {
 	var query string
 	switch templateName {
 	case "hotel_sql":
-		query = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (template_name VARCHAR(20),_id VARCHAR(30) PRIMARY KEY,address VARCHAR(100) NOT NULL,free_parking Bool,city VARCHAR(50),url VARCHAR(50),phone VARCHAR(20),price DOUBLE,avg_rating DOUBLE,free_breakfast Bool,name VARCHAR(50),email VARCHAR(100),padding VARCHAR(%d),mutated DOUBLE)`, table, size)
+		query = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (template_name VARCHAR(20),id VARCHAR(30) PRIMARY KEY,address VARCHAR(100) NOT NULL,free_parking Bool,city VARCHAR(50),url VARCHAR(50),phone VARCHAR(20),price DOUBLE,avg_rating DOUBLE,free_breakfast Bool,name VARCHAR(50),email VARCHAR(100),padding VARCHAR(%d),mutated DOUBLE)`, table, size)
 	case "":
 		fallthrough
 	case "person_sql":
-		query = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s(template_name VARCHAR(20),_id VARCHAR(30) PRIMARY KEY,first_name VARCHAR(100),age DOUBLE,email VARCHAR(255),gender VARCHAR(10),marital_status VARCHAR(20),hobbies VARCHAR(50),padding VARCHAR(%d),mutated DOUBLE)`, table, size)
+		query = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s(template_name VARCHAR(20),id VARCHAR(30) PRIMARY KEY,first_name VARCHAR(100),age DOUBLE,email VARCHAR(255),gender VARCHAR(10),marital_status VARCHAR(20),hobbies VARCHAR(50),padding VARCHAR(%d),mutated DOUBLE)`, table, size)
 	case "small_sql":
-		query = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s(template_name VARCHAR(20),_id VARCHAR(30) PRIMARY KEY,d VARCHAR(%d),mutated DOUBLE')`, table, size)
+		query = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s(template_name VARCHAR(20),id VARCHAR(30) PRIMARY KEY,d VARCHAR(%d),mutated DOUBLE')`, table, size)
 	case "product_sql":
-		query = fmt.Sprintf(`CREATE TABLE  IF NOT EXISTS %s(template_name VARCHAR(20), _id VARCHAR(30) PRIMARY KEY, product_name VARCHAR(255), product_link VARCHAR(255), price DECIMAL(10, 2), avg_rating DECIMAL(5, 2), num_sold BIGINT, upload_date DATE, weight DECIMAL(10, 2), quantity BIGINT, seller_name VARCHAR(255), seller_location VARCHAR(255), seller_verified BOOLEAN, value JSONB, mutated DECIMAL(10, 2), padding VARCHAR(%d))`, table, size)
+		query = fmt.Sprintf(`CREATE TABLE  IF NOT EXISTS %s(template_name VARCHAR(20), id VARCHAR(30) PRIMARY KEY, product_name VARCHAR(255), product_link VARCHAR(255), price DECIMAL(10, 2), avg_rating DECIMAL(5, 2), num_sold BIGINT, upload_date DATE, weight DECIMAL(10, 2), quantity BIGINT, seller_name VARCHAR(255), seller_location VARCHAR(255), seller_verified BOOLEAN, value JSONB, mutated DECIMAL(10, 2), padding VARCHAR(%d))`, table, size)
 
 	}
 	return query

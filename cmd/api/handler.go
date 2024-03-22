@@ -459,6 +459,12 @@ func (app *Config) createDBTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, dbErr, http.StatusUnprocessableEntity)
 		return
 	}
+
+	if err := data_loading.ConfigureOperationConfig(task.OperationConfig); err != nil {
+		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+
 	result, err := database.CreateDatabase(task.ConnStr, task.Username, task.Password, task.Extra, task.OperationConfig.TemplateName, task.OperationConfig.DocSize)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
@@ -466,9 +472,10 @@ func (app *Config) createDBTask(w http.ResponseWriter, r *http.Request) {
 	}
 	resPayload := jsonResponse{
 		Error:   false,
-		Message: "Successfully started creation",
+		Message: "Create Database Operation Successful",
 		Data:    result,
 	}
+
 	log.Println("completed :- ", task.Operation, task.IdentifierToken, resPayload)
 	_ = app.writeJSON(w, http.StatusOK, resPayload)
 }
@@ -490,6 +497,7 @@ func (app *Config) deleteDBTask(w http.ResponseWriter, r *http.Request) {
 		_ = app.errorJSON(w, dbErr, http.StatusUnprocessableEntity)
 		return
 	}
+
 	result, err := database.DeleteDatabase(task.ConnStr, task.Username, task.Password, task.Extra)
 	if err != nil {
 		_ = app.errorJSON(w, err, http.StatusUnprocessableEntity)
