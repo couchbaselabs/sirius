@@ -9,40 +9,40 @@ import (
 )
 
 type ProductRating struct {
-	RatingValue  float64 `json:"rating_value,omitempty" dynamodbav:"rating_value" parquet:"name=rating_value, type=DOUBLE"`
-	Performance  float64 `json:"performance,omitempty" dynamodbav:"performance" parquet:"name=performance, type=DOUBLE"`
-	Utility      float64 `json:"utility,omitempty" dynamodbav:"utility" parquet:"name=utility, type=DOUBLE"`
-	Pricing      float64 `json:"pricing,omitempty" dynamodbav:"pricing" parquet:"name=pricing, type=DOUBLE"`
-	BuildQuality float64 `json:"build_quality,omitempty" dynamodbav:"build_quality" parquet:"name=build_quality, type=DOUBLE"`
+	RatingValue  float64 `json:"rating_value,omitempty" bson:"rating_value" dynamodbav:"rating_value" parquet:"name=rating_value, type=DOUBLE"`
+	Performance  float64 `json:"performance,omitempty" bson:"performance" dynamodbav:"performance" parquet:"name=performance, type=DOUBLE"`
+	Utility      float64 `json:"utility,omitempty" bson:"utility" dynamodbav:"utility" parquet:"name=utility, type=DOUBLE"`
+	Pricing      float64 `json:"pricing,omitempty" bson:"pricing" dynamodbav:"pricing" parquet:"name=pricing, type=DOUBLE"`
+	BuildQuality float64 `json:"build_quality,omitempty" bson:"build_quality" dynamodbav:"build_quality" parquet:"name=build_quality, type=DOUBLE"`
 }
 
 type ProductReview struct {
-	Date          string        `json:"date,omitempty" dynamodbav:"date" parquet:"name=date, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
-	Author        string        `json:"author,omitempty" dynamodbav:"author" parquet:"name=author, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
-	ProductRating ProductRating `json:"product_rating,omitempty" dynamodbav:"product_rating" parquet:"name=product_rating"`
+	Date          string        `json:"date,omitempty" bson:"date" dynamodbav:"date" parquet:"name=date, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	Author        string        `json:"author,omitempty" bson:"author" dynamodbav:"author" parquet:"name=author, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	ProductRating ProductRating `json:"product_rating,omitempty" bson:"product_rating" dynamodbav:"product_rating" parquet:"name=product_rating"`
 }
 
 type Product struct {
 	ID                string            `json:"id" bson:"_id" dynamodbav:"id" parquet:"name=id, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
-	ProductName       string            `json:"product_name,omitempty" dynamodbav:"product_name" parquet:"name=product_name, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
-	ProductLink       string            `json:"product_link,omitempty" dynamodbav:"product_link" parquet:"name=product_link, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
-	ProductFeatures   []string          `json:"product_features,omitempty" dynamodbav:"product_features" parquet:"name=product_features, type=LIST"`
-	ProductSpecs      map[string]string `json:"product_specs,omitempty" dynamodbav:"product_specs" parquet:"name=product_specs, type=MAP"`
-	ProductImageLinks []string          `json:"product_image_links,omitempty" dynamodbav:"product_image_links" parquet:"name=product_image_links, type=LIST"`
-	ProductReviews    []ProductReview   `json:"product_reviews,omitempty" dynamodbav:"product_reviews" parquet:"name=product_reviews, type=LIST"`
-	ProductCategory   []string          `json:"product_category,omitempty" dynamodbav:"product_category" parquet:"name=product_category, type=LIST"`
-	Price             float64           `json:"price,omitempty" dynamodbav:"price" parquet:"name=price, type=DOUBLE"`
-	AvgRating         float64           `json:"avg_rating,omitempty" dynamodbav:"avg_rating" parquet:"name=avg_rating, type=DOUBLE"`
-	NumSold           int64             `json:"num_sold,omitempty" dynamodbav:"num_sold" parquet:"name=num_sold, type=INT64"`
-	UploadDate        string            `json:"upload_date,omitempty" dynamodbav:"upload_date" parquet:"name=upload_date, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
-	Weight            float64           `json:"weight,omitempty" dynamodbav:"weight" parquet:"name=weight, type=DOUBLE"`
-	Quantity          int64             `json:"quantity,omitempty" dynamodbav:"quantity" parquet:"name=quantity, type=INT64"`
-	SellerName        string            `json:"seller_name,omitempty" dynamodbav:"seller_name" parquet:"name=seller_name, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
-	SellerLocation    string            `json:"seller_location,omitempty" dynamodbav:"seller_location" parquet:"name=seller_location, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
-	SellerVerified    bool              `json:"seller_verified,omitempty" dynamodbav:"seller_verified" parquet:"name=seller_verified, type=BOOLEAN"`
-	TemplateName      string            `json:"template_name" dynamodbav:"template_name" parquet:"name=template_name, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
-	Mutated           float64           `json:"mutated" dynamodbav:"mutated" parquet:"name=mutated, type=DOUBLE"`
-	Padding           string            `json:"padding" dynamodbav:"padding" parquet:"name=padding, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	ProductName       string            `json:"product_name,omitempty" bson:"product_name" dynamodbav:"product_name" parquet:"name=product_name, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	ProductLink       string            `json:"product_link,omitempty" bson:"product_link" dynamodbav:"product_link" parquet:"name=product_link, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	ProductFeatures   []string          `json:"product_features,omitempty" bson:"product_features" dynamodbav:"product_features" parquet:"name=product_features, type=LIST"`
+	ProductSpecs      map[string]string `json:"product_specs,omitempty" bson:"product_specs" dynamodbav:"product_specs" parquet:"name=product_specs, type=MAP"`
+	ProductImageLinks []string          `json:"product_image_links,omitempty" bson:"product_image_links" dynamodbav:"product_image_links" parquet:"name=product_image_links, type=LIST"`
+	ProductReviews    []ProductReview   `json:"product_reviews,omitempty" bson:"product_reviews" dynamodbav:"product_reviews" parquet:"name=product_reviews, type=LIST"`
+	ProductCategory   []string          `json:"product_category,omitempty" bson:"product_category" dynamodbav:"product_category" parquet:"name=product_category, type=LIST"`
+	Price             float64           `json:"price,omitempty" bson:"price" dynamodbav:"price" parquet:"name=price, type=DOUBLE"`
+	AvgRating         float64           `json:"avg_rating,omitempty" bson:"avg_rating" dynamodbav:"avg_rating" parquet:"name=avg_rating, type=DOUBLE"`
+	NumSold           int64             `json:"num_sold,omitempty" bson:"num_sold" dynamodbav:"num_sold" parquet:"name=num_sold, type=INT64"`
+	UploadDate        string            `json:"upload_date,omitempty" bson:"upload_date" dynamodbav:"upload_date" parquet:"name=upload_date, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	Weight            float64           `json:"weight,omitempty" bson:"weight" dynamodbav:"weight" parquet:"name=weight, type=DOUBLE"`
+	Quantity          int64             `json:"quantity,omitempty" bson:"quantity" dynamodbav:"quantity" parquet:"name=quantity, type=INT64"`
+	SellerName        string            `json:"seller_name,omitempty" bson:"seller_name" dynamodbav:"seller_name" parquet:"name=seller_name, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	SellerLocation    string            `json:"seller_location,omitempty" bson:"seller_location" dynamodbav:"seller_location" parquet:"name=seller_location, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	SellerVerified    bool              `json:"seller_verified,omitempty" bson:"seller_verified" dynamodbav:"seller_verified" parquet:"name=seller_verified, type=BOOLEAN"`
+	TemplateName      string            `json:"template_name" bson:"template_name" dynamodbav:"template_name" parquet:"name=template_name, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	Mutated           float64           `json:"mutated" bson:"mutated" dynamodbav:"mutated" parquet:"name=mutated, type=DOUBLE"`
+	Padding           string            `json:"padding" bson:"padding" dynamodbav:"padding" parquet:"name=padding, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
 }
 
 // buildReview generates the Review slice to be added into Product struct

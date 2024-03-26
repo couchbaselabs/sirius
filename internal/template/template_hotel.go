@@ -10,37 +10,37 @@ import (
 )
 
 type Rating struct {
-	RatingValue float64 `json:"rating_value,omitempty" dynamodbav:"rating_value" parquet:"name=rating_value, type=DOUBLE"`
-	Cleanliness float64 `json:"cleanliness,omitempty" dynamodbav:"cleanliness" parquet:"name=cleanliness, type=DOUBLE"`
-	Overall     float64 `json:"overall,omitempty" dynamodbav:"overall" parquet:"name=overall, type=DOUBLE"`
-	CheckIn     float64 `json:"checkin,omitempty" dynamodbav:"checkin" parquet:"name=checkin, type=DOUBLE"`
-	Rooms       float64 `json:"rooms,omitempty" dynamodbav:"rooms" parquet:"name=rooms, type=DOUBLE"`
+	RatingValue float64 `json:"rating_value,omitempty" bson:"rating_value" dynamodbav:"rating_value" parquet:"name=rating_value, type=DOUBLE"`
+	Cleanliness float64 `json:"cleanliness,omitempty" bson:"cleanliness" dynamodbav:"cleanliness" parquet:"name=cleanliness, type=DOUBLE"`
+	Overall     float64 `json:"overall,omitempty" bson:"overall" dynamodbav:"overall" parquet:"name=overall, type=DOUBLE"`
+	CheckIn     float64 `json:"checkin,omitempty" bson:"checkin" dynamodbav:"checkin" parquet:"name=checkin, type=DOUBLE"`
+	Rooms       float64 `json:"rooms,omitempty" bson:"rooms" dynamodbav:"rooms" parquet:"name=rooms, type=DOUBLE"`
 }
 
 type Review struct {
-	Date   string `json:"date,omitempty" dynamodbav:"date" parquet:"name=date, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
-	Author string `json:"author,omitempty" dynamodbav:"author" parquet:"name=author, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
-	Rating Rating `json:"rating,omitempty" dynamodbav:"rating" parquet:"name=rating"`
+	Date   string `json:"date,omitempty" bson:"date" dynamodbav:"date" parquet:"name=date, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	Author string `json:"author,omitempty" bson:"author" dynamodbav:"author" parquet:"name=author, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	Rating Rating `json:"rating,omitempty" bson:"rating" dynamodbav:"rating" parquet:"name=rating"`
 }
 
 type Hotel struct {
 	ID            string   `json:"id" bson:"_id" dynamodbav:"id" parquet:"name=id, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
-	Country       string   `json:"country,omitempty" dynamodbav:"country" parquet:"name=country, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
-	Address       string   `json:"address,omitempty" dynamodbav:"address" parquet:"name=address, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
-	FreeParking   bool     `json:"free_parking,omitempty" dynamodbav:"free_parking" parquet:"name=free_parking, type=BOOLEAN"`
-	City          string   `json:"city,omitempty" dynamodbav:"city" parquet:"name=city, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
-	TemplateName  string   `json:"template_name" dynamodbav:"template_name" parquet:"name=template_name, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
-	URL           string   `json:"url,omitempty" dynamodbav:"url" parquet:"name=url, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
-	Reviews       []Review `json:"reviews,omitempty" dynamodbav:"reviews" parquet:"name=reviews, type=LIST"`
-	Phone         string   `json:"phone,omitempty" dynamodbav:"phone" parquet:"name=phone, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
-	Price         float64  `json:"price,omitempty" dynamodbav:"price" parquet:"name=price, type=DOUBLE"`
-	AvgRating     float64  `json:"avg_rating,omitempty" dynamodbav:"avg_rating" parquet:"name=avg_rating, type=DOUBLE"`
-	FreeBreakfast bool     `json:"free_breakfast,omitempty" dynamodbav:"free_breakfast" parquet:"name=free_breakfast, type=BOOLEAN"`
-	Name          string   `json:"name,omitempty" dynamodbav:"name" parquet:"name=name, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
-	PublicLikes   []string `json:"public_likes,omitempty" dynamodbav:"public_likes" parquet:"name=public_likes, type=LIST"`
-	Email         string   `json:"email,omitempty" dynamodbav:"email" parquet:"name=email, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
-	Mutated       float64  `json:"mutated" dynamodbav:"mutated" parquet:"name=mutated, type=DOUBLE"`
-	Padding       string   `json:"padding" dynamodbav:"padding" parquet:"name=padding, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	Country       string   `json:"country,omitempty" bson:"country" dynamodbav:"country" parquet:"name=country, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	Address       string   `json:"address,omitempty" bson:"address" dynamodbav:"address" parquet:"name=address, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	FreeParking   bool     `json:"free_parking,omitempty" bson:"free_parking" dynamodbav:"free_parking" parquet:"name=free_parking, type=BOOLEAN"`
+	City          string   `json:"city,omitempty" bson:"city" dynamodbav:"city" parquet:"name=city, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	TemplateName  string   `json:"template_name" bson:"template_name" dynamodbav:"template_name" parquet:"name=template_name, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	URL           string   `json:"url,omitempty" bson:"url" dynamodbav:"url" parquet:"name=url, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	Reviews       []Review `json:"reviews,omitempty" bson:"reviews" dynamodbav:"reviews" parquet:"name=reviews, type=LIST"`
+	Phone         string   `json:"phone,omitempty" bson:"phone" dynamodbav:"phone" parquet:"name=phone, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	Price         float64  `json:"price,omitempty" bson:"price" dynamodbav:"price" parquet:"name=price, type=DOUBLE"`
+	AvgRating     float64  `json:"avg_rating,omitempty" bson:"avg_rating" dynamodbav:"avg_rating" parquet:"name=avg_rating, type=DOUBLE"`
+	FreeBreakfast bool     `json:"free_breakfast,omitempty" bson:"free_breakfast" dynamodbav:"free_breakfast" parquet:"name=free_breakfast, type=BOOLEAN"`
+	Name          string   `json:"name,omitempty" bson:"name" dynamodbav:"name" parquet:"name=name, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	PublicLikes   []string `json:"public_likes,omitempty" bson:"public_likes" dynamodbav:"public_likes" parquet:"name=public_likes, type=LIST"`
+	Email         string   `json:"email,omitempty" bson:"email" dynamodbav:"email" parquet:"name=email, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	Mutated       float64  `json:"mutated" bson:"mutated" dynamodbav:"mutated" parquet:"name=mutated, type=DOUBLE"`
+	Padding       string   `json:"padding" bson:"padding" dynamodbav:"padding" parquet:"name=padding, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
 }
 
 // buildReview generates the Review slice to be added into Hotel struct

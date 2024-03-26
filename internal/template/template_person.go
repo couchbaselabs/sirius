@@ -63,38 +63,38 @@ var city = []string{"Lake Penelop", "New Charlene", "Prosaccobury", "West Jasenm
 var gender = []string{"male", "female"}
 
 type Address struct {
-	City  string `json:"city,omitempty" dynamodbav:"city" parquet:"name=city, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
-	State string `json:"state,omitempty" dynamodbav:"state" parquet:"name=state, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	City  string `json:"city,omitempty" bson:"city" dynamodbav:"city" parquet:"name=city, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	State string `json:"state,omitempty" bson:"state" dynamodbav:"state" parquet:"name=state, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
 }
 
 type Hair struct {
-	HairType   string `json:"hair_type,omitempty" dynamodbav:"hair_type" parquet:"name=hair_type, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
-	HairColour string `json:"hair_colour,omitempty" dynamodbav:"hair_colour" parquet:"name=hair_colour, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
-	Length     string `json:"length,omitempty" dynamodbav:"length" parquet:"name=length, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
-	Thickness  string `json:"thickness,omitempty" dynamodbav:"thickness" parquet:"name=thickness, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	HairType   string `json:"hair_type,omitempty" bson:"hair_type" dynamodbav:"hair_type" parquet:"name=hair_type, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	HairColour string `json:"hair_colour,omitempty" bson:"hair_colour" dynamodbav:"hair_colour" parquet:"name=hair_colour, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	Length     string `json:"length,omitempty" bson:"length" dynamodbav:"length" parquet:"name=length, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	Thickness  string `json:"thickness,omitempty" bson:"thickness" dynamodbav:"thickness" parquet:"name=thickness, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
 }
 
 type Attribute struct {
-	Weight   float64 `json:"weight,omitempty" dynamodbav:"weight" parquet:"name=weight, type=DOUBLE"`
-	Height   float64 `json:"height,omitempty" dynamodbav:"height" parquet:"name=height, type=DOUBLE"`
-	Colour   string  `json:"colour,omitempty" dynamodbav:"colour" parquet:"name=colour, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
-	Hair     Hair    `json:"hair,omitempty" dynamodbav:"hair" parquet:"name=hair"`
-	BodyType string  `json:"body_type,omitempty" dynamodbav:"body_type" parquet:"name=body_type, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	Weight   float64 `json:"weight,omitempty" bson:"weight" dynamodbav:"weight" parquet:"name=weight, type=DOUBLE"`
+	Height   float64 `json:"height,omitempty" bson:"height" dynamodbav:"height" parquet:"name=height, type=DOUBLE"`
+	Colour   string  `json:"colour,omitempty" bson:"colour" dynamodbav:"colour" parquet:"name=colour, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	Hair     Hair    `json:"hair,omitempty" bson:"hair" dynamodbav:"hair" parquet:"name=hair"`
+	BodyType string  `json:"body_type,omitempty" bson:"body_type" dynamodbav:"body_type" parquet:"name=body_type, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
 }
 
 type Person struct {
 	ID            string    `json:"id" bson:"_id" dynamodbav:"id" parquet:"name=id, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
-	TemplateName  string    `json:"template_name" dynamodbav:"template_name" parquet:"name=template_name, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
-	FirstName     string    `json:"first_name,omitempty" dynamodbav:"first_name" parquet:"name=first_name, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
-	Age           float64   `json:"age,omitempty" dynamodbav:"age" parquet:"name=age, type=DOUBLE"`
-	Email         string    `json:"email,omitempty" dynamodbav:"email" parquet:"name=email, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
-	Address       Address   `json:"address,omitempty" dynamodbav:"address" parquet:"name=address"`
-	Gender        string    `json:"gender,omitempty" dynamodbav:"gender" parquet:"name=gender, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
-	MaritalStatus string    `json:"marital_status,omitempty" dynamodbav:"marital_status" parquet:"name=marital_status, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
-	Hobbies       string    `json:"hobbies,omitempty" dynamodbav:"hobbies" parquet:"name=hobbies, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
-	Attributes    Attribute `json:"attributes,omitempty" dynamodbav:"attributes" parquet:"name=attributes"`
-	Mutated       float64   `json:"mutated" dynamodbav:"mutated" parquet:"name=mutated, type=DOUBLE"`
-	Padding       string    `json:"padding" dynamodbav:"padding" parquet:"name=padding, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	TemplateName  string    `json:"template_name" bson:"template_name" dynamodbav:"template_name" parquet:"name=template_name, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	FirstName     string    `json:"first_name,omitempty" bson:"first_name" dynamodbav:"first_name" parquet:"name=first_name, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	Age           float64   `json:"age,omitempty" bson:"age" dynamodbav:"age" parquet:"name=age, type=DOUBLE"`
+	Email         string    `json:"email,omitempty" bson:"email" dynamodbav:"email" parquet:"name=email, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	Address       Address   `json:"address,omitempty" bson:"address" dynamodbav:"address" parquet:"name=address"`
+	Gender        string    `json:"gender,omitempty" bson:"gender" dynamodbav:"gender" parquet:"name=gender, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	MaritalStatus string    `json:"marital_status,omitempty" bson:"marital_status" dynamodbav:"marital_status" parquet:"name=marital_status, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	Hobbies       string    `json:"hobbies,omitempty" bson:"hobbies" dynamodbav:"hobbies" parquet:"name=hobbies, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
+	Attributes    Attribute `json:"attributes,omitempty" bson:"attributes" dynamodbav:"attributes" parquet:"name=attributes"`
+	Mutated       float64   `json:"mutated" bson:"mutated" dynamodbav:"mutated" parquet:"name=mutated, type=DOUBLE"`
+	Padding       string    `json:"padding" bson:"padding" dynamodbav:"padding" parquet:"name=padding, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY"`
 }
 
 func (p *Person) GenerateDocument(fake *faker.Faker, key string, documentSize int) interface{} {

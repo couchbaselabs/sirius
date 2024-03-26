@@ -198,6 +198,10 @@ func loadDocumentsInBatches(task *GenericLoadingTask) {
 		}
 	}
 
+	if task.DBType == "dynamodb" {
+		batchSize = 25
+	}
+
 	if batchSize > 0 {
 		numOfBatches = (task.OperationConfig.End - task.OperationConfig.Start) / (batchSize)
 	}
