@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"github.com/couchbaselabs/sirius/internal/server_requests"
 	"github.com/couchbaselabs/sirius/internal/sirius_documentation"
@@ -30,7 +31,11 @@ func set_port_to_use() {
 }
 
 func main() {
-	set_port_to_use()
+	flag.StringVar(&webPort, "port", "", "Port to listen")
+	flag.Parse()
+	if webPort == "" {
+		set_port_to_use()
+	}
 	registerInterfaces()
 
 	logFile, err := os.OpenFile(getFileName(), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)

@@ -5,7 +5,7 @@ SERVER_REQUESTS_PATH=./internal/server_requests/server_requests_logs
 TASK_REQUEST_PATH=./internal/tasks/request_logs
 
 run: build
-	./${DOC_LOADER_SERVER}
+	./${DOC_LOADER_SERVER} -port "$(port)"
 
 deploy: build_sirius_for_docker
 	@echo "Stopping docker images (if running...)"
