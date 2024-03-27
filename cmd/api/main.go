@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"github.com/couchbaselabs/sirius/internal/server_requests"
 	"github.com/couchbaselabs/sirius/internal/sirius_documentation"
@@ -13,6 +12,7 @@ import (
 )
 
 var webPort = ""
+
 const DefaultWebPort = "4000"
 const TaskQueueSize = 100
 
@@ -21,23 +21,9 @@ type Config struct {
 	serverRequests *server_requests.ServerRequests
 }
 
-func set_port_to_use() {
-	value := os.Getenv("SIRIUS_PORT")
-	if len(value) == 0 {
-		webPort = DefaultWebPort
-	} else {
-		webPort = value
-	}
-}
-
 func main() {
-	flag.StringVar(&webPort, "port", "", "Port to listen")
-	flag.Parse()
-	if webPort == "" {
-		set_port_to_use()
-	}
+	configureAppPort()
 	registerInterfaces()
-
 	logFile, err := os.OpenFile(getFileName(), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		log.Fatalf("error opening file: %v", err)
