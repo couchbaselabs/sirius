@@ -4,6 +4,7 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"errors"
+	"flag"
 	"github.com/couchbaselabs/sirius/internal/meta_data"
 	"github.com/couchbaselabs/sirius/internal/server_requests"
 	"github.com/couchbaselabs/sirius/internal/sirius_documentation"
@@ -17,7 +18,25 @@ import (
 	"github.com/couchbaselabs/sirius/internal/tasks/util_sirius"
 	"github.com/couchbaselabs/sirius/internal/template"
 	"net/http"
+	"os"
 )
+
+func setPortToUse() {
+	value := os.Getenv("SIRIUS_PORT")
+	if len(value) == 0 {
+		webPort = DefaultWebPort
+	} else {
+		webPort = value
+	}
+}
+
+func configureAppPort() {
+	flag.StringVar(&webPort, "port", "", "Port to listen")
+	flag.Parse()
+	if webPort == "" {
+		setPortToUse()
+	}
+}
 
 type jsonResponse struct {
 	Error   bool   `json:"error"`
